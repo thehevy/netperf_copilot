@@ -194,8 +194,8 @@ case "$enable_demo" in
 		use_demo=false
 		;;
 	'')
-		# whatever
-		use_demo=false
+		# default to enabled for better user experience
+		use_demo=true
 		;;
 	*)
 		AC_MSG_ERROR([--enable-demo takes yes or no])
