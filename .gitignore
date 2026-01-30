@@ -14,3 +14,12 @@ Makefile
 /stamp-h1
 /src/netperf
 /src/netserver
+
+# Build directory - all compiled artifacts go here
+/build/
+
+# Development reports and temporary analysis
+/dev/reports/*.html
+/dev/reports/*.pdf
+/dev/reports/*.csv
+/dev/reports/tmp/
