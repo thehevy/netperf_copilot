@@ -24,6 +24,8 @@
 
 */
 
+/* Define _GNU_SOURCE for splice() and other GNU extensions */
+#define _GNU_SOURCE
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>

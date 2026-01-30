@@ -21,6 +21,9 @@
 # USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/* Define _GNU_SOURCE for sched_setaffinity and other GNU extensions */
+#define _GNU_SOURCE
+
 char    netlib_id[]="\
 @(#)netlib.c (c) Copyright 1993-2012 Hewlett-Packard Company, 2021 Hewlett Packard Enterprise Development LP. Version 2.6.0";
 
