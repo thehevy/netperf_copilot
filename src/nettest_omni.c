@@ -2530,7 +2530,37 @@ print_omni_init() {
       parse_output_selection(output_selection_spec);
   }
   else {
-      set_output_list_by_test();
+      /* Phase 1 Task 1.2: Try to use default output preset
+         Search for default.out in common locations, fall back to
+         legacy set_output_list_by_test() if not found */
+      const char *default_preset_paths[] = {
+        "./dev/catalog/output-presets/default.out",
+        "/usr/share/netperf/output-presets/default.out",
+        "/usr/local/share/netperf/output-presets/default.out",
+        NULL
+      };
+      int i;
+      int found_default = 0;
+      
+      for (i = 0; default_preset_paths[i] != NULL; i++) {
+        FILE *test_file = fopen(default_preset_paths[i], "r");
+        if (test_file) {
+          fclose(test_file);
+          /* File exists, parse it directly as output selection file */
+          parse_output_selection_file((char *)default_preset_paths[i]);
+          found_default = 1;
+          if (debug) {
+            fprintf(where, "Using default output preset: %s\n", default_preset_paths[i]);
+            fflush(where);
+          }
+          break;
+        }
+      }
+      
+      /* If no default preset found, use legacy behavior */
+      if (!found_default) {
+        set_output_list_by_test();
+      }
   }
 
 }

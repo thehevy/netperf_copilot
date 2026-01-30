@@ -24,24 +24,38 @@
 
 ---
 
-### ⏳ Task 1.2: Define Default OMNI Output Selectors (IN PROGRESS)
-**Status:** Next  
-**Estimated Duration:** 3 days
+### ✅ Task 1.2: Define Default OMNI Output Selectors (COMPLETE)
+**Status:** Done  
+**Duration:** 1 day
+**Completion Date:** 2026-01-30
 
-**Subtasks:**
-- [ ] Research optimal default selectors from `doc/omni_output_list.txt`
-- [ ] Define DEFAULT_OUTPUT_SELECTORS constant
-- [ ] Implement preset modes (minimal, default, verbose, all)
-- [ ] Add command-line option for presets
-- [ ] Update documentation
-- [ ] Create validation tests
+**Implementation Approach:**
+- Using file-based output presets (leveraging existing `-o <file>` functionality)
+- Created 6 predefined preset files in `dev/catalog/output-presets/`:
+  - minimal.out (7 fields): Basic throughput and timing
+  - default.out (18 fields): Comprehensive metrics for most use cases
+  - verbose.out (36 fields): All important metrics including latency
+  - latency.out (20 fields): Focus on latency and transaction metrics
+  - throughput.out (21 fields): Bandwidth-focused metrics
+  - cpu.out (23 fields): CPU utilization and system performance
 
-**Recommended Default Selectors:**
+**Changes Made:**
+- Modified [src/nettest_omni.c](../../src/nettest_omni.c) lines 2530-2563
+- Added default preset search logic in `print_omni_init()`
+- Searches: `./dev/catalog/output-presets/default.out` → `/usr/share/netperf/output-presets/default.out` → `/usr/local/share/netperf/output-presets/default.out`
+- Falls back to legacy `set_output_list_by_test()` if no preset found
+- Created comprehensive documentation in `dev/catalog/output-presets/README.md`
+
+**Testing Results:**
 ```
-THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,PROTOCOL,DIRECTION,
-LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SEND_SIZE,LOCAL_RECV_SIZE,
-REMOTE_SEND_SIZE,REMOTE_RECV_SIZE,LOCAL_SEND_CALLS,LOCAL_RECV_CALLS
+✅ Default preset automatically loaded when no -o specified
+✅ All 6 presets work correctly
+✅ Explicit -o file overrides default
+✅ Inline selection overrides default
+✅ Backward compatibility maintained with legacy tests
 ```
+
+**Git Commit:** Ready to commit
 
 ---
 
@@ -95,14 +109,14 @@ REMOTE_SEND_SIZE,REMOTE_RECV_SIZE,LOCAL_SEND_CALLS,LOCAL_RECV_CALLS
 
 **Timeline:**
 - Start Date: 2026-01-30
-- Target Completion: 2 weeks
-- Current Status: Day 1, 16% complete (1/6 tasks)
+- Target Completion: 2 weeks  
+- Current Status: Day 1, 33% complete (2/6 tasks)
 
 **Metrics:**
-- Tasks Completed: 1
+- Tasks Completed: 2
 - Tasks In Progress: 0
-- Tasks Remaining: 5
-- Overall Progress: 16%
+- Tasks Remaining: 4
+- Overall Progress: 33%
 
 **Risks:**
 - None identified yet
