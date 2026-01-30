@@ -271,6 +271,7 @@ enum netperf_output_modes {
   HUMAN = 0,
   CSV,
   KEYVAL,
+  JSON,
 };
 
 /* some defines for security types, perhaps these would be better

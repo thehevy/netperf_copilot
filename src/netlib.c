@@ -267,7 +267,7 @@ int remote_data_family=AF_UNSPEC;
 
 char *netperf_version;
 
-enum netperf_output_modes netperf_output_mode = HUMAN;
+enum netperf_output_modes netperf_output_mode = KEYVAL;
 
 /* in the past, I was overlaying a structure on an array of ints. now
    I am going to have a "real" structure, and point an array of ints

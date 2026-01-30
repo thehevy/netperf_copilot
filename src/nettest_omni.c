@@ -2771,6 +2771,70 @@ print_omni_keyword()
 }
 
 void
+print_omni_json()
+{
+  /* Output results in JSON format. raj 20260130 */
+
+  int i,j;
+  char tmpval[1024];
+  int vallen;
+  int first_block = 1;
+  int first_item;
+
+  fprintf(where, "{\n");
+
+  for (i = 0; i < NETPERF_MAX_BLOCKS; i++) {
+    first_item = 1;
+    /* Check if this block has any output */
+    if (output_list[i][0] == OUTPUT_END) continue;
+
+    if (!first_block) {
+      fprintf(where, ",\n");
+    }
+    first_block = 0;
+
+    for (j = 0;
+	 ((j < NETPERF_OUTPUT_MAX) &&
+	  (output_list[i][j] != OUTPUT_END));
+	 j++) {
+      if ((netperf_output_source[output_list[i][j]].format != NULL) &&
+	  (netperf_output_source[output_list[i][j]].display_value != NULL)) {
+	vallen =
+	  my_snprintf(tmpval,
+		      1024,
+		      &(netperf_output_source[output_list[i][j]]));
+	if (vallen == -1) {
+	  snprintf(tmpval,
+		   1024,
+		   "my_snprintf failed with format %s\n",
+		   netperf_output_source[output_list[i][j]].format);
+	}
+	
+	if (!first_item) {
+	  fprintf(where, ",\n");
+	}
+	first_item = 0;
+
+	/* Determine if value should be quoted based on type */
+	if (netperf_output_source[output_list[i][j]].output_type == NETPERF_TYPE_CHAR) {
+	  fprintf(where,
+		  "  \"%s\": \"%s\"",
+		  netperf_output_enum_to_str(output_list[i][j]),
+		  tmpval);
+	} else {
+	  fprintf(where,
+		  "  \"%s\": %s",
+		  netperf_output_enum_to_str(output_list[i][j]),
+		  tmpval);
+	}
+      }
+    }
+  }
+  fprintf(where, "\n}\n");
+  fflush(where);
+}
+
+void
 print_omni_human()
 {
 
@@ -2918,6 +2982,9 @@ print_omni()
     break;
   case HUMAN:
     print_omni_human();
+    break;
+  case JSON:
+    print_omni_json();
     break;
   default:
     fprintf(where,"Yo Rick! There is a bug in netperf_output_mode!\n");
@@ -7150,7 +7217,10 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -h                Display this text\n\
     -H name[/mask],fam  Use name (or IP) and family as target of data connection\n\
                       A mask value will cause randomization of the IP used\n\
-    -k [file]         Generate keyval output optionally based on file\n\
+    -j number         Run number parallel/concurrent connections\n\
+    -J [file]         Generate JSON output optionally based on file\n\
+                      Use filename of '?' to get the list of choices\n\
+    -k [file]         Generate keyval output (key=value pairs) optionally based on file\n\
                       Use filename of '?' to get the list of choices\n\
     -K loc[,rem]      Set the local and/or remote congestion control\n\
                       algorithm to use on those platforms where it can\n\
@@ -7163,8 +7233,9 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -N                Use the connected socket for UDP remotely\n\
     -o [file]         Generate CSV output optionally based on file\n\
                       Use filename of '?' to get the list of choices\n\
-    -O [file]         Generate classic-style output based on file\n\
-                      Use filename of '?' to get the list of choices\n\
+    -O [file]         Generate human-readable columnar output optionally\n\
+                      based on file. Use filename of '?' to get list.\n\
+                      Note: default output is keyval (key=value pairs)\n\
     -p min[,max]      Set the min/max port numbers for TCP_CRR, TCP_TRR\n\
     -P local[,remote] Set the local/remote port for the data socket\n\
     -r req,[rsp]      Set request/response sizes (TCP_RR, UDP_RR)\n\
@@ -7202,7 +7273,7 @@ scan_omni_args(int argc, char *argv[])
 
 {
 
-#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:kK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
+#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
 
   extern char	*optarg;	  /* pointer to option string	*/
 
@@ -7377,6 +7448,27 @@ scan_omni_args(int argc, char *argv[])
       break;
     case 'j':
       parallel_connections = atoi(optarg);
+      break;
+    case 'J':
+      netperf_output_mode = JSON;
+      legacy = 0;
+      /* obliterate any previous file name */
+      if (output_selection_spec) {
+	free(output_selection_spec);
+	output_selection_spec = NULL;
+      }
+      if (argv[optind] && ((unsigned char)argv[optind][0] != '-')) {
+	/* we assume that what follows is the name of a file with the
+	   list of desired output values. */
+	output_selection_spec = strdup(argv[optind]);
+	optind++;
+	/* special case - if the file name is "?" then we will emit a
+	   list of the available outputs */
+	if (strcmp(output_selection_spec,"?") == 0) {
+	  dump_netperf_output_choices(stdout,1);
+	  exit(1);
+	}
+      }
       break;
     case 'k':
       netperf_output_mode = KEYVAL;
