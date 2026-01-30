@@ -59,14 +59,18 @@
 
 ---
 
-### 🔜 Task 1.3: Enable Interval Reporting by Default
-**Status:** Planned  
+### ✅ Task 1.3: Enable Interval Reporting by Default
+**Status:** **COMPLETE** (2025-01-30)  
+**Commit:** adec3ca  
 **Estimated Duration:** 1 day
 
-**Tasks:**
-- [ ] Modify `configure.ac` to default `use_demo=true`
-- [ ] Test performance impact
-- [ ] Update documentation
+**Completed Tasks:**
+- [x] Modify `configure.ac` to default `use_demo=true`
+- [x] Regenerated configure script using `./autogen.sh`
+- [x] Verified `WANT_DEMO` is defined in build/config.h
+- [x] Tested interim results display during test execution
+
+**Outcome**: Users now see real-time progress during tests without needing `--enable-demo` flag.
 
 ---
 
