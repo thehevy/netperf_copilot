@@ -14,6 +14,7 @@ Complete guide to installing and building the modernized netperf fork.
 ## System Requirements
 
 ### Minimum Requirements
+
 - **OS**: Linux, macOS, BSD, Solaris, AIX, HP-UX
 - **Compiler**: GCC 4.8+ or Clang 3.5+
 - **Build Tools**: GNU Make, autoconf, automake
@@ -21,6 +22,7 @@ Complete guide to installing and building the modernized netperf fork.
 - **Disk**: 50 MB free space
 
 ### Recommended Requirements
+
 - **OS**: Linux 4.x+ or macOS 10.14+
 - **Compiler**: GCC 9+ or Clang 10+
 - **Python**: 3.8+ (for advanced tools)
@@ -28,7 +30,9 @@ Complete guide to installing and building the modernized netperf fork.
 - **Network**: High-speed link (1 Gbps+)
 
 ### Optional Dependencies
+
 For advanced tools functionality:
+
 ```bash
 # Python packages
 pip3 install jinja2 numpy matplotlib pyyaml
@@ -107,11 +111,13 @@ If building from git (not needed for release tarballs):
 ### Step 3: Configure Build
 
 #### Quick Configure (Recommended)
+
 ```bash
 ./dev/scripts/build.sh --type optimized
 ```
 
 #### Manual Configure
+
 ```bash
 ./configure \
   --enable-omni \
@@ -123,9 +129,11 @@ If building from git (not needed for release tarballs):
 ```
 
 #### Configuration Options
+
 See [BUILD_CONFIGURATION.md](../dev/docs/BUILD_CONFIGURATION.html) for comprehensive guide.
 
 Common options:
+
 - `--enable-omni` - OMNI test framework (default: enabled)
 - `--enable-demo` - Interval reporting (default: enabled)
 - `--enable-histogram` - Per-operation timing (affects performance)
@@ -321,7 +329,9 @@ netperf-template --sample
 ## Build Types
 
 ### Release Build (Default)
+
 Standard build with optimizations:
+
 ```bash
 ./dev/scripts/build.sh
 # or
@@ -329,24 +339,30 @@ Standard build with optimizations:
 ```
 
 ### Optimized Build (Recommended)
+
 Maximum performance with aggressive optimizations:
+
 ```bash
 ./dev/scripts/build.sh --type optimized
 ```
 
 Includes:
+
 - `-O3` optimization level
 - `-march=native` CPU-specific optimizations
 - `MAXCPUS=2048` for large systems
 - All features enabled
 
 ### Debug Build
+
 For development and troubleshooting:
+
 ```bash
 ./dev/scripts/build.sh --type debug
 ```
 
 Includes:
+
 - `-g` debug symbols
 - `-O0` no optimization
 - Extra error checking
@@ -360,6 +376,7 @@ Includes:
 **Problem**: `configure: error: C compiler cannot create executables`
 
 **Solution**:
+
 ```bash
 # Install build tools
 sudo apt install build-essential  # Debian/Ubuntu
@@ -371,6 +388,7 @@ sudo yum groupinstall "Development Tools"  # RHEL/CentOS
 **Problem**: `configure: error: makeinfo is missing`
 
 **Solution**:
+
 ```bash
 # Install texinfo
 sudo apt install texinfo  # Debian/Ubuntu
@@ -385,6 +403,7 @@ sudo yum install texinfo  # RHEL/CentOS
 **Problem**: `ModuleNotFoundError: No module named 'jinja2'`
 
 **Solution**:
+
 ```bash
 # Install Python dependencies
 pip3 install jinja2 numpy matplotlib pyyaml
@@ -398,6 +417,7 @@ sudo apt install python3-jinja2 python3-numpy  # Debian/Ubuntu
 **Problem**: `Permission denied` when running tools
 
 **Solution**:
+
 ```bash
 # Make tools executable
 chmod +x dev/tools/*

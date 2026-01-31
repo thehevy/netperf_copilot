@@ -104,6 +104,7 @@ netperf -H remotehost -- -O
 ## Using Advanced Tools
 
 ### Parallel Testing
+
 ### Parallel Testing
 
 Run multiple tests simultaneously:
@@ -124,6 +125,7 @@ cd /opt/netperf
 ```
 
 **Important**: Always use `--netperf` to specify the built netperf binary:
+
 ```bash
 # Correct: Use the built binary
 netperf-multi --netperf ./build/src/netperf -n 4 -H host --aggregate
@@ -175,6 +177,7 @@ netperf-profile --list
 ```
 
 Available profiles:
+
 - `baseline` - Quick validation
 - `throughput` - Maximum bandwidth
 - `latency` - Request-response focus
@@ -391,6 +394,7 @@ netperf -H remotehost -l 300 -- -i 5
 
 # Output shows interim results during test
 ```
+
 ### Tip 4: Combine Tools for Statistical Analysis
 
 ```bash
@@ -474,17 +478,20 @@ netperf -H host -t UDP_RR
 ## Next Steps
 
 ### Learn More
+
 - [OMNI Test Framework](../dev/docs/OMNI_REFERENCE.html) - Complete guide
 - [Output Formats](../dev/docs/OUTPUT_FORMATS.html) - Detailed format reference
 - [Build Configuration](../dev/docs/BUILD_CONFIGURATION.html) - Customize your build
 
 ### Advanced Features
+
 - [Statistical Analysis Guide](tools/netperf-stats.html) - Deep dive into statistics
 - [Test Profiles Reference](tools/netperf-profile.html) - All profile details
 - [Orchestration Guide](../dev/docs/ORCHESTRATION.html) - Multi-host testing
 - [Monitoring Guide](../dev/docs/MONITORING.html) - Real-time visualization
 
 ### Get Help
+
 - Read the [full documentation](../dev/docs/)
 - Check the [examples directory](https://github.com/thehevy/netperf_copilot/tree/master/dev/examples)
 - Review [integration test results](../dev/docs/INTEGRATION_TESTING.html)

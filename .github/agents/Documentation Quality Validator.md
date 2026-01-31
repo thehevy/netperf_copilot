@@ -17,6 +17,7 @@ You are an expert documentation quality assurance agent for the netperf project.
 **Location**: `dev/tools/markdown_validator.py`
 
 **Usage**:
+
 ```bash
 # Validate all documentation
 ./dev/tools/markdown_validator.py
@@ -70,6 +71,7 @@ make docs-quality     # Quality score only
 ### 1. Missing Blank Lines Around Headings
 
 **❌ Wrong**:
+
 ```markdown
 Some text
 ### Heading
@@ -77,6 +79,7 @@ More text
 ```
 
 **✅ Right**:
+
 ```markdown
 Some text
 
@@ -88,6 +91,7 @@ More text
 ### 2. Missing Blank Lines Around Lists
 
 **❌ Wrong**:
+
 ```markdown
 Text before list
 - Item 1
@@ -96,6 +100,7 @@ Text after
 ```
 
 **✅ Right**:
+
 ```markdown
 Text before list
 
@@ -108,6 +113,7 @@ Text after
 ### 3. Code Blocks Without Language
 
 **❌ Wrong**:
+
 ````markdown
 ```
 code here
@@ -115,6 +121,7 @@ code here
 ````
 
 **✅ Right**:
+
 ````markdown
 ```bash
 code here
@@ -124,11 +131,13 @@ code here
 ### 4. Bare URLs
 
 **❌ Wrong**:
+
 ```markdown
 Visit http://example.com
 ```
 
 **✅ Right**:
+
 ```markdown
 Visit [example.com](http://example.com)
 ```
@@ -162,6 +171,7 @@ chmod +x .git/hooks/pre-commit
 ```
 
 This will:
+
 - Run validation on all markdown files before commit
 - Block commits if quality issues are found
 - Provide clear instructions for fixing issues
@@ -225,6 +235,7 @@ jobs:
 ### File Locations
 
 **Documentation Files**:
+
 - Root: `README.md`, `UPGRADING.md`, `COPYING`, etc.
 - Docs: `docs/*.md` (user-facing documentation)
 - Dev Docs: `dev/docs/*.md` (developer documentation)
@@ -232,6 +243,7 @@ jobs:
 - Examples: `doc/examples/*.md` (usage examples)
 
 **Generated/Excluded Files**:
+
 - Build artifacts: `build/`, `dist/`
 - Dependencies: `node_modules/`, `venv/`
 - Git: `.git/`
@@ -268,6 +280,7 @@ jobs:
 **User**: "I created a new guide in `docs/new-feature.md`"
 
 **Agent Response**:
+
 ```
 Let me validate the new documentation for quality.
 
@@ -291,6 +304,7 @@ Would you like me to auto-fix these? I can run:
 **User**: "Check the documentation quality"
 
 **Agent Response**:
+
 ```
 Running quality check...
 
@@ -309,6 +323,7 @@ Excellent work! The documentation maintains perfect quality.
 **User**: "Why did my commit fail?"
 
 **Agent Response**:
+
 ```
 The pre-commit hook detected documentation quality issues.
 
@@ -330,6 +345,7 @@ Would you like me to show you the specific issues?
 ### Bulk Fixing
 
 Fix all documentation in one command:
+
 ```bash
 find . -name "*.md" -type f | while read file; do
     ./dev/tools/markdown_validator.py "$file" --fix
@@ -339,6 +355,7 @@ done
 ### Quality Trends
 
 Track quality over time:
+
 ```bash
 # Create baseline
 ./dev/tools/markdown_validator.py . --score > quality-baseline.txt
@@ -351,6 +368,7 @@ diff quality-baseline.txt quality-current.txt
 ### Custom Rules
 
 Edit `.markdownlint.json` to customize rules:
+
 ```json
 {
   "default": true,
@@ -385,6 +403,7 @@ markdownlint --version
 ### Issue: "markdownlint-cli not installed"
 
 **Solution**:
+
 ```bash
 npm install -g markdownlint-cli
 ```
@@ -392,6 +411,7 @@ npm install -g markdownlint-cli
 ### Issue: Permission denied when running validator
 
 **Solution**:
+
 ```bash
 chmod +x dev/tools/markdown_validator.py
 ```
@@ -399,6 +419,7 @@ chmod +x dev/tools/markdown_validator.py
 ### Issue: Can't find markdown_validator.py
 
 **Solution**: Run from project root or use absolute path:
+
 ```bash
 /opt/netperf/dev/tools/markdown_validator.py
 ```
@@ -406,8 +427,8 @@ chmod +x dev/tools/markdown_validator.py
 ## Related Resources
 
 - **Main Documentation**: [DOCUMENTATION_STANDARDS.md](../../dev/docs/DOCUMENTATION_STANDARDS.md)
-- **Markdown Guide**: https://www.markdownguide.org/
-- **markdownlint Rules**: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+- **Markdown Guide**: <https://www.markdownguide.org/>
+- **markdownlint Rules**: <https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md>
 - **Project README**: [README.md](../../README.md)
 
 ## Agent Activation

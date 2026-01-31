@@ -27,6 +27,7 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 ✅ Command line in output
 
 **What Phase 2 adds on top:**
+
 - Enhanced JSON with metadata, timestamps, structured data
 - CSV with headers and proper escaping
 - Direct file output without shell redirection
@@ -36,10 +37,12 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 ## Task Breakdown
 
 ### Task 2.1: Enhanced JSON Output (3 days)
+
 **Priority**: High  
 **Dependencies**: Phase 1 JSON foundation
 
 **Objectives**:
+
 - Add metadata (version, timestamp, hostname)
 - Structure results hierarchically
 - Support nested objects for complex data
@@ -47,6 +50,7 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 - Add array support for multi-iteration results
 
 **Implementation**:
+
 ```json
 {
   "metadata": {
@@ -81,11 +85,13 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 ```
 
 **Files to modify**:
+
 - `src/nettest_omni.c` - Enhance `print_omni_json()`
 - `src/netlib.c` - Add metadata functions
 - `src/netlib.h` - Add JSON structure definitions
 
 **Deliverables**:
+
 - Enhanced JSON output function
 - Metadata collection functions
 - Unit tests for JSON structure
@@ -94,16 +100,19 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 ---
 
 ### Task 2.2: CSV Output Enhancement (2 days)
+
 **Priority**: High  
 **Dependencies**: None
 
 **Objectives**:
+
 - Add proper CSV headers (field names row)
 - Implement field escaping (quotes, commas, newlines)
 - Support custom delimiter option
 - Add option to suppress headers for appending
 
 **Implementation**:
+
 ```bash
 # With headers (default)
 netperf -H host -- -o csv-header
@@ -119,17 +128,20 @@ netperf -H host -- -o csv-header,delimiter=|
 ```
 
 **CSV Escaping Rules**:
+
 - Fields containing delimiter → quoted
 - Fields containing quotes → escaped with double quotes
 - Fields containing newlines → quoted
 - Empty fields → empty (not "null" or "N/A")
 
 **Files to modify**:
+
 - `src/nettest_omni.c` - Enhance `print_omni_csv()`
 - `src/netlib.c` - Add CSV escaping functions
 - `src/netlib.h` - Add CSV options structure
 
 **Deliverables**:
+
 - CSV header support
 - Field escaping functions
 - Custom delimiter support
@@ -138,10 +150,12 @@ netperf -H host -- -o csv-header,delimiter=|
 ---
 
 ### Task 2.3: Direct File Output (2 days)
+
 **Priority**: Medium  
 **Dependencies**: None
 
 **Objectives**:
+
 - Add `-O <filename>` global option for direct file output
 - Support format auto-detection from extension
 - Add append mode option
@@ -149,6 +163,7 @@ netperf -H host -- -o csv-header,delimiter=|
 - Add file output error handling
 
 **Usage**:
+
 ```bash
 # Auto-detect format from extension
 netperf -H host -O results.json      # JSON output
@@ -163,6 +178,7 @@ netperf -H host -O results.csv -A    # Append to existing file
 ```
 
 **Implementation**:
+
 - Add output file path to global options
 - Redirect `where` file handle to output file
 - Auto-detect format from extension (.json, .csv, .txt)
@@ -170,11 +186,13 @@ netperf -H host -O results.csv -A    # Append to existing file
 - Add file permission handling
 
 **Files to modify**:
+
 - `src/netsh.c` - Add `-O` and `-A` option parsing
 - `src/netperf.c` - Handle file output setup
 - `src/netlib.c` - Add file output functions
 
 **Deliverables**:
+
 - File output implementation
 - Format auto-detection
 - Append mode support
@@ -183,16 +201,19 @@ netperf -H host -O results.csv -A    # Append to existing file
 ---
 
 ### Task 2.4: Output Templates (3 days)
+
 **Priority**: Medium  
 **Dependencies**: Task 2.3
 
 **Objectives**:
+
 - Create template engine for custom output formats
 - Support variable substitution
 - Add conditional output sections
 - Create library of common templates
 
 **Template Syntax**:
+
 ```
 # Template file: custom-report.tmpl
 === Network Performance Test ===
@@ -213,12 +234,14 @@ Command: ${COMMAND_LINE}
 ```
 
 **Usage**:
+
 ```bash
 netperf -H host -- -T dev/templates/custom-report.tmpl
 netperf -H host -- -T report.tmpl -O report.txt
 ```
 
 **Template Features**:
+
 - Variable substitution: `${FIELD_NAME}`
 - Conditionals: `${IF condition}...${ENDIF}`
 - Loops: `${FOREACH item in array}...${ENDFOREACH}`
@@ -226,11 +249,13 @@ netperf -H host -- -T report.tmpl -O report.txt
 - Formatting: `${FORMAT THROUGHPUT %.2f}`
 
 **Files to create**:
+
 - `src/netlib_template.c` - Template engine
 - `src/netlib_template.h` - Template interface
 - `dev/templates/` - Template library
 
 **Template Library**:
+
 - `summary.tmpl` - Brief summary report
 - `detailed.tmpl` - Comprehensive report
 - `comparison.tmpl` - Side-by-side comparison
@@ -239,6 +264,7 @@ netperf -H host -- -T report.tmpl -O report.txt
 - `prometheus.tmpl` - Prometheus metrics format
 
 **Deliverables**:
+
 - Template engine implementation
 - Variable substitution
 - Conditional logic
@@ -248,10 +274,12 @@ netperf -H host -- -T report.tmpl -O report.txt
 ---
 
 ### Task 2.5: Result Aggregation Tool (3 days)
+
 **Priority**: Medium  
 **Dependencies**: Task 2.1, 2.2
 
 **Objectives**:
+
 - Create `netperf-aggregate` tool
 - Parse multiple result files
 - Calculate statistics (mean, median, stddev)
@@ -259,6 +287,7 @@ netperf -H host -- -T report.tmpl -O report.txt
 - Detect performance regressions
 
 **Tool Usage**:
+
 ```bash
 # Aggregate multiple test runs
 netperf-aggregate results/*.json -o summary.json
@@ -274,6 +303,7 @@ netperf-aggregate results/*.json --stats
 ```
 
 **Features**:
+
 - Parse JSON, CSV, key-value formats
 - Calculate aggregate statistics:
   - Mean, median, mode
@@ -290,6 +320,7 @@ netperf-aggregate results/*.json --stats
   - JSON aggregate
 
 **Implementation**:
+
 ```python
 #!/usr/bin/env python3
 # dev/tools/netperf-aggregate
@@ -318,12 +349,14 @@ class NetperfAggregator:
 ```
 
 **Files to create**:
+
 - `dev/tools/netperf-aggregate` - Main tool (Python)
 - `dev/tools/netperf_parser.py` - Result parser
 - `dev/tools/netperf_stats.py` - Statistics calculator
 - `dev/tools/netperf_reporter.py` - Report generator
 
 **Deliverables**:
+
 - Aggregation tool
 - Parser for all formats
 - Statistics calculator
@@ -333,16 +366,19 @@ class NetperfAggregator:
 ---
 
 ### Task 2.6: Documentation (2 days)
+
 **Priority**: High  
 **Dependencies**: All above tasks
 
 **Objectives**:
+
 - Document all output formats
 - Create usage examples
 - Write integration guides
 - Add troubleshooting section
 
 **Documentation files**:
+
 1. **OUTPUT_FORMATS.md** - Comprehensive format reference
    - JSON schema and examples
    - CSV format and escaping rules
@@ -372,11 +408,13 @@ class NetperfAggregator:
    - Example workflows
 
 **Update existing docs**:
+
 - README.md - Add Phase 2 features
 - UPGRADING.md - Phase 2 migration notes
 - PHASE2_FEATURES.md - Technical documentation
 
 **Deliverables**:
+
 - 4 new documentation files (~500 lines each)
 - Updated existing documentation
 - Example outputs and templates
@@ -398,6 +436,7 @@ class NetperfAggregator:
 **Total estimated time**: 15 days (3 weeks)
 
 **Parallel work possible**:
+
 - Tasks 2.1 and 2.2 can run in parallel
 - Task 2.3 can overlap with 2.1/2.2
 - Task 2.5 can start after 2.1 completes
@@ -410,6 +449,7 @@ class NetperfAggregator:
 ## Success Criteria
 
 ### Functional Requirements
+
 - ✅ Enhanced JSON with metadata and structure
 - ✅ CSV with headers and proper escaping
 - ✅ Direct file output working reliably
@@ -418,6 +458,7 @@ class NetperfAggregator:
 - ✅ All features documented
 
 ### Quality Requirements
+
 - ✅ No performance regression vs Phase 1
 - ✅ Backward compatible with Phase 1 output
 - ✅ Cross-platform compatibility (Linux, BSD, macOS)
@@ -425,6 +466,7 @@ class NetperfAggregator:
 - ✅ Unit tests for new functions
 
 ### Documentation Requirements
+
 - ✅ Complete API/format documentation
 - ✅ Integration guides for 3+ systems
 - ✅ Template creation guide
@@ -436,6 +478,7 @@ class NetperfAggregator:
 ## Testing Strategy
 
 ### Unit Tests
+
 - JSON structure validation
 - CSV escaping edge cases
 - File output atomicity
@@ -443,6 +486,7 @@ class NetperfAggregator:
 - Statistics calculations
 
 ### Integration Tests
+
 - End-to-end format tests
 - File output with different formats
 - Template rendering with real data
@@ -450,12 +494,14 @@ class NetperfAggregator:
 - Cross-format compatibility
 
 ### Performance Tests
+
 - JSON generation overhead
 - File I/O performance
 - Template rendering speed
 - Aggregation tool on large datasets
 
 ### Compatibility Tests
+
 - Phase 1 output still works
 - Old scripts continue functioning
 - Cross-version compatibility
@@ -465,14 +511,17 @@ class NetperfAggregator:
 ## Risk Assessment
 
 ### High Risk
+
 - **Template engine complexity**: Mitigation: Start simple, iterate
 - **File output race conditions**: Mitigation: Use atomic writes (temp + rename)
 
 ### Medium Risk
+
 - **CSV escaping edge cases**: Mitigation: Use established CSV library patterns
 - **Aggregation tool performance**: Mitigation: Stream processing for large files
 
 ### Low Risk
+
 - **JSON enhancement**: Building on Phase 1 foundation
 - **Documentation**: Straightforward, time-consuming
 
@@ -481,6 +530,7 @@ class NetperfAggregator:
 ## Deliverables Checklist
 
 ### Code
+
 - [ ] Enhanced JSON output function
 - [ ] CSV header and escaping functions
 - [ ] File output implementation
@@ -489,6 +539,7 @@ class NetperfAggregator:
 - [ ] Template library (6+ templates)
 
 ### Documentation
+
 - [ ] OUTPUT_FORMATS.md
 - [ ] OUTPUT_INTEGRATION.md
 - [ ] TEMPLATE_GUIDE.md
@@ -497,12 +548,14 @@ class NetperfAggregator:
 - [ ] Updated UPGRADING.md
 
 ### Testing
+
 - [ ] Unit tests for all new functions
 - [ ] Integration test suite
 - [ ] Performance benchmarks
 - [ ] Cross-platform validation
 
 ### Examples
+
 - [ ] Example JSON outputs
 - [ ] Example CSV outputs
 - [ ] Example templates
@@ -514,6 +567,7 @@ class NetperfAggregator:
 ## Post-Phase 2
 
 After Phase 2 completion, we'll have:
+
 - Comprehensive output format support
 - Professional reporting capabilities
 - Integration-ready outputs
@@ -527,6 +581,7 @@ After Phase 2 completion, we'll have:
 ## Notes
 
 **Phase 2 vs Original Roadmap**:
+
 - Original: Week 5-7 (3 weeks)
 - This plan: 15 days (~3 weeks) with parallel work potential
 - Scope similar but more detailed breakdown

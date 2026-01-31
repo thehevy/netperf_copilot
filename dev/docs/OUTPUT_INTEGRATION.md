@@ -30,11 +30,13 @@ Guide for integrating netperf with monitoring, logging, and analysis systems.
 **Setup:**
 
 1. Configure Node Exporter with textfile collector:
+
 ```bash
 node_exporter --collector.textfile.directory=/var/lib/node_exporter/textfile
 ```
 
-2. Create netperf export script:
+1. Create netperf export script:
+
 ```bash
 #!/bin/bash
 # /usr/local/bin/netperf-prometheus-export.sh
@@ -69,7 +71,8 @@ netperf_cpu_utilization_percent{{host=\"{r.get("REMOTE_HOST","unknown")}\",side=
 mv "$TEMP_FILE" "$PROM_FILE"
 ```
 
-3. Add to cron:
+1. Add to cron:
+
 ```cron
 */5 * * * * /usr/local/bin/netperf-prometheus-export.sh netserver-host
 ```

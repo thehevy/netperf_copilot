@@ -11,6 +11,7 @@ This guide helps users migrate from upstream netperf to this modernized fork, co
 ### Command Path Conventions
 
 This guide uses two command formats:
+
 - **Build directory**: `./build/src/netperf` - Run from build directory without installation
 - **Installed**: `netperf` - Run after `make install` (typically in `/usr/local/bin`)
 
@@ -21,6 +22,7 @@ All examples show complete commands with full paths when applicable.
 ### Default Test Type
 
 **Upstream**: TCP_STREAM (classic BSD sockets test)
+
 ```bash
 # Using installed version
 netperf -H host
@@ -37,6 +39,7 @@ netperf -H host
 ```
 
 **This Fork**: TCP_STREAM (same as upstream - full backwards compatibility)
+
 ```bash
 # Using installed version
 netperf -H host
@@ -53,6 +56,7 @@ netperf -H host
 ```
 
 **Modern OMNI Test**: Use the `-M` flag
+
 ```bash
 # Using installed version
 netperf -H host -M
@@ -70,6 +74,7 @@ netperf -H host -M
 ### Default Output Format
 
 **Upstream**: Columnar/tabular format (HUMAN mode)
+
 ```bash
 # Command
 netperf -H host -l 10
@@ -84,6 +89,7 @@ netperf -H host -l 10
 ```
 
 **This Fork (Default)**: Same columnar format (backwards compatible)
+
 ```bash
 # Using installed version
 netperf -H host -l 10
@@ -100,6 +106,7 @@ netperf -H host -l 10
 ```
 
 **This Fork (OMNI with -M)**: Key-value format (easier to parse)
+
 ```bash
 # Using installed version
 netperf -H host -M -l 10
@@ -120,6 +127,7 @@ netperf -H host -M -l 10
 **Upstream**: Disabled by default (requires `--enable-demo` at configure time)
 
 **This Fork**: Enabled by default (shows progress during long tests)
+
 ```bash
 # Using installed version
 netperf -H host -M -l 30
@@ -134,6 +142,7 @@ netperf -H host -M -l 30
 ```
 
 **Migration**: To disable interim results (for cleaner output in scripts):
+
 ```bash
 # Using installed version
 netperf -H host -M -l 30 -D -1
@@ -155,6 +164,7 @@ netperf -H host -M -l 30 -D -1
 ### Command-Line Compatibility
 
 All upstream command-line options work identically:
+
 ```bash
 # These all work exactly as before (installed)
 netperf -H host -l 10 -t TCP_RR
@@ -172,6 +182,7 @@ netperf -H host -f g
 ### Test Names
 
 All classic test names still work:
+
 - TCP_STREAM
 - TCP_RR (request-response)
 - TCP_CRR (connect-request-response)
@@ -183,6 +194,7 @@ All classic test names still work:
 ### Network Protocol
 
 Client and server remain compatible:
+
 - This fork's netperf can talk to upstream netserver
 - Upstream netperf can talk to this fork's netserver
 - No protocol changes
@@ -190,6 +202,7 @@ Client and server remain compatible:
 ### Installation Paths
 
 Default installation remains `/usr/local`:
+
 ```bash
 make install          # Installs to /usr/local
 make install PREFIX=/opt/netperf  # Custom location
@@ -210,6 +223,7 @@ netperf -H host -M -- -J
 ```
 
 Output:
+
 ```json
 {
   "THROUGHPUT": 54623.45,
@@ -223,6 +237,7 @@ Output:
 ```
 
 **Use cases**:
+
 - REST APIs
 - Modern monitoring systems
 - Data pipelines
@@ -241,12 +256,14 @@ netperf -H host -M -- -o
 ```
 
 Output:
+
 ```csv
 Throughput,Throughput Units,Elapsed Time,Protocol,Direction
 54623.45,10^6bits/s,1.00,TCP,Send
 ```
 
 **Use cases**:
+
 - Excel/LibreOffice analysis
 - Data visualization
 - Statistical analysis
@@ -270,6 +287,7 @@ netperf -H host -M -- -P TCP_RR -k dev/catalog/output-presets/latency.out
 ```
 
 Available presets:
+
 - `minimal.out` - Throughput and time only
 - `default.out` - Balanced set of common fields
 - `verbose.out` - All available fields
@@ -280,6 +298,7 @@ Available presets:
 ### Enhanced Build System
 
 #### Build Types
+
 ```bash
 # Release build (default, optimized)
 ./dev/scripts/build.sh
@@ -292,6 +311,7 @@ Available presets:
 ```
 
 #### Convenience Makefile
+
 ```bash
 cd dev
 
@@ -311,6 +331,7 @@ make clean         # Clean build
 **Migration options**:
 
 1. **No changes needed**: Default is TCP_STREAM columnar (backwards compatible)
+
 ```bash
 # Using installed version
 netperf -H host -t TCP_STREAM > results.txt
@@ -321,7 +342,8 @@ netperf -H host -t TCP_STREAM > results.txt
 # Your existing parser works unchanged
 ```
 
-2. **Modernize gradually**: Switch to JSON for new scripts (requires -M)
+1. **Modernize gradually**: Switch to JSON for new scripts (requires -M)
+
 ```bash
 # Using installed version
 netperf -H host -M -- -J > results.json
@@ -340,6 +362,7 @@ jq .THROUGHPUT results.json
 **Migration**:
 
 1. Update build in CI:
+
 ```bash
 # Old
 ./configure && make
@@ -348,7 +371,8 @@ jq .THROUGHPUT results.json
 ./dev/scripts/build.sh --type optimized
 ```
 
-2. Keep existing test commands (they work as-is):
+1. Keep existing test commands (they work as-is):
+
 ```bash
 # Using installed version
 netperf -H $TARGET_HOST -l 10 -t TCP_STREAM
@@ -357,7 +381,8 @@ netperf -H $TARGET_HOST -l 10 -t TCP_STREAM
 ./build/src/netperf -H $TARGET_HOST -l 10 -t TCP_STREAM
 ```
 
-3. Or modernize output (requires -M for JSON):
+1. Or modernize output (requires -M for JSON):
+
 ```bash
 # Using installed version
 netperf -H $TARGET_HOST -M -l 10 -- -J | jq .THROUGHPUT
@@ -413,6 +438,7 @@ netperf -H host -M -l 300
 ```
 
 To disable for cleaner output:
+
 ```bash
 # Using installed version
 netperf -H host -M -l 300 -D -1
@@ -443,6 +469,7 @@ netperf -H host -M -l 300 -D -1
 **Note**: This shouldn't happen - default is TCP_STREAM columnar (same as upstream)
 
 **Solution**: If you see keyval output, you may be using `-M` flag. Remove it for columnar:
+
 ```bash
 # Default TCP_STREAM columnar (backwards compatible)
 netperf -H host
@@ -454,6 +481,7 @@ netperf -H host
 **Cause**: Demo/interval support enabled with `-M` flag and long tests
 
 **Solution**: Disable with `-D -1`
+
 ```bash
 # Using installed version
 netperf -H host -M -l 60 -D -1
@@ -467,6 +495,7 @@ netperf -H host -M -l 60 -D -1
 **Note**: TCP_STREAM is the default - scripts should work unchanged
 
 **Solution**: Ensure you're not using `-M` flag
+
 ```bash
 # Default TCP_STREAM (backwards compatible)
 netperf -H host
@@ -482,6 +511,7 @@ netperf -H host -t TCP_STREAM
 **Cause**: Need to use `-M` flag for OMNI features
 
 **Solution**: Add `-M` flag:
+
 ```bash
 # For keyval output
 netperf -H host -M
@@ -497,6 +527,7 @@ netperf -H host -M -- -J
 **Cause**: Incompatible netserver version (old vs new)
 
 **Solution**: Update both netperf and netserver to same version
+
 ```bash
 # On server (using installed version)
 killall netserver
@@ -529,6 +560,7 @@ make
 ```
 
 Or use the provided script:
+
 ```bash
 ./dev/scripts/configure-optimized.sh --minimal
 ```
@@ -550,6 +582,7 @@ netperf -H host -M -l 60 -D -1
 ### For Production Use
 
 1. **Use full paths**: Be explicit about binary location
+
    ```bash
    # Installed
    /usr/local/bin/netperf -H host -t TCP_STREAM
@@ -559,11 +592,13 @@ netperf -H host -M -l 60 -D -1
    ```
 
 2. **Explicit test types**: Specify `-t TEST_NAME` for clarity
+
    ```bash
    netperf -H host -t TCP_STREAM
    ```
 
 3. **Explicit output format**: Use `-M` flag when you need OMNI features
+
    ```bash
    # Columnar (default)
    netperf -H host -t TCP_STREAM
@@ -594,12 +629,14 @@ netperf -H host -M -l 60 -D -1
 If you need to revert to upstream netperf:
 
 1. **Uninstall this fork**:
+
 ```bash
 cd /opt/netperf/build
 sudo make uninstall
 ```
 
-2. **Build upstream**:
+1. **Build upstream**:
+
 ```bash
 git clone https://github.com/HewlettPackard/netperf.git
 cd netperf
@@ -608,7 +645,8 @@ make
 sudo make install
 ```
 
-3. **Verify**:
+1. **Verify**:
+
 ```bash
 netperf -V  # Check version
 ```
@@ -616,18 +654,21 @@ netperf -V  # Check version
 ## Getting Help
 
 ### For This Fork
+
 - Check [README.md](README.md) for feature documentation
 - Review [BUILD_CONFIGURATION.md](dev/docs/BUILD_CONFIGURATION.md) for build options
 - See [Phase 1 Progress](dev/plans/phase-1-progress.md) for development status
 
 ### For Upstream Netperf
-- Mailing list: netperf-talk@netperf.org
+
+- Mailing list: <netperf-talk@netperf.org>
 - Original documentation: [doc/netperf.txt](doc/netperf.txt)
-- Website: http://www.netperf.org (archived)
+- Website: <http://www.netperf.org> (archived)
 
 ## Summary
 
 **Key Takeaways**:
+
 1. ✅ **Fully backward compatible** - existing scripts work unchanged
 2. 🎁 **New features are opt-in** - use when ready
 3. 📊 **Better defaults** - improved out-of-box experience
@@ -635,6 +676,7 @@ netperf -V  # Check version
 5. 📈 **Enhanced output** - JSON and CSV for modern tools
 
 **Recommended Migration Path**:
+
 1. Build and install fork alongside upstream
 2. Test with existing workflows using `-- -O` flag
 3. Gradually adopt new features (JSON, presets)

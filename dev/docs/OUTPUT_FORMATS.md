@@ -39,12 +39,14 @@ Netperf supports four primary output formats:
 **Description:** Simple key=value pairs, one per line.
 
 **When to use:**
+
 - Default output format
 - Simple scripts and automation
 - Grepping for specific values
 - Appending to log files
 
 **Example:**
+
 ```
 THROUGHPUT=9420.15
 THROUGHPUT_UNITS=10^6bits/s
@@ -56,6 +58,7 @@ COMMAND_LINE=./netperf -H 192.168.10.2 -l 10 -c -C
 ```
 
 **Usage:**
+
 ```bash
 # KEYVAL is the default
 netperf -H host
@@ -65,6 +68,7 @@ netperf -H host | grep THROUGHPUT= | cut -d= -f2
 ```
 
 **Parsing (shell):**
+
 ```bash
 while IFS='=' read -r key value; do
     case $key in
@@ -75,6 +79,7 @@ done < results.txt
 ```
 
 **Parsing (Python):**
+
 ```python
 results = {}
 with open('results.txt') as f:
@@ -91,12 +96,14 @@ with open('results.txt') as f:
 **Description:** Comma-separated values with header row and proper RFC 4180 escaping.
 
 **When to use:**
+
 - Excel/spreadsheet import
 - Database imports
 - Time-series data collection
 - Batch processing multiple tests
 
 **Example:**
+
 ```csv
 THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,PROTOCOL
 9420.15,10^6bits/s,10.00,12.4,15.8,TCP
@@ -105,6 +112,7 @@ THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,PROTOCOL
 ```
 
 **Usage:**
+
 ```bash
 # CSV output with header
 netperf -H host -- -o csv
@@ -116,18 +124,21 @@ done
 ```
 
 **Features:**
+
 - **Header row:** First line contains field names
 - **Field escaping:** Handles quotes, commas, newlines
 - **Header management:** Header printed only once
 - **Delimiter:** Comma (customizable in future)
 
 **Escaping Rules:**
+
 - Fields containing `,` → quoted with `"`
 - Fields containing `"` → quotes doubled (`""`)
 - Fields containing newlines → quoted
 - Empty fields → empty (not NULL)
 
 **Example with escaping:**
+
 ```csv
 TEST_NAME,COMMAND_LINE,THROUGHPUT
 TCP_STREAM,"./netperf -H host -t TCP_STREAM -- -m 1024,1024",9420.15
@@ -135,6 +146,7 @@ TCP_STREAM,"./netperf -H host -t TCP_STREAM -- -m 1024,1024",9420.15
 ```
 
 **Parsing (Python):**
+
 ```python
 import csv
 with open('results.csv') as f:
@@ -151,12 +163,14 @@ with open('results.csv') as f:
 **Description:** Structured JSON with metadata and hierarchical organization.
 
 **When to use:**
+
 - API integrations
 - Modern monitoring systems (Prometheus, Grafana)
 - Complex data analysis
 - Archival with full context
 
 **Example:**
+
 ```json
 {
   "metadata": {
@@ -178,6 +192,7 @@ with open('results.csv') as f:
 ```
 
 **Usage:**
+
 ```bash
 # JSON output
 netperf -H host -- -J
@@ -208,11 +223,13 @@ The JSON output follows this structure:
 ```
 
 **Type Handling:**
+
 - Numeric values: Not quoted (JSON numbers)
 - String values: Quoted (JSON strings)
 - No trailing commas (valid JSON)
 
 **Parsing (Python):**
+
 ```python
 import json
 with open('results.json') as f:
@@ -223,6 +240,7 @@ print(f"Throughput: {data['results']['THROUGHPUT']}")
 ```
 
 **Parsing (jq examples):**
+
 ```bash
 # Extract throughput
 jq -r '.results.THROUGHPUT' results.json
@@ -241,11 +259,13 @@ jq -s '.' *.json  # Combine into array
 **Description:** Traditional netperf columnar output with aligned columns.
 
 **When to use:**
+
 - Terminal/console viewing
 - Legacy scripts expecting old format
 - Visual inspection
 
 **Example:**
+
 ```
 MIGRATED TCP STREAM TEST from 0.0.0.0 (0.0.0.0) port 0 AF_INET to 192.168.10.2 () port 0 AF_INET
 Recv   Send    Send                          
@@ -257,6 +277,7 @@ bytes  bytes   bytes    secs.    10^6bits/s
 ```
 
 **Usage:**
+
 ```bash
 # Explicitly request HUMAN format
 netperf -H host -- -O human
@@ -496,6 +517,7 @@ done
 **Cause:** Likely output mixed with debug/error messages
 
 **Solution:**
+
 ```bash
 # Redirect stderr to separate file
 netperf -H host -- -J 2> errors.log > results.json

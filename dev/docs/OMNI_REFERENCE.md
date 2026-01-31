@@ -11,6 +11,7 @@
 OMNI is the modern unified test framework in netperf that replaces the classic TCP_STREAM, TCP_RR, UDP_STREAM, etc. tests with a single flexible test type that can emulate all patterns.
 
 **Why OMNI?**
+
 - Single test implementation for all protocols and patterns
 - Extensible output formatting
 - More consistent behavior across test types
@@ -22,6 +23,7 @@ OMNI is the modern unified test framework in netperf that replaces the classic T
 ## Basic Usage
 
 ### Simple OMNI Test
+
 ```bash
 # Default: TCP send/stream test
 netperf -H server1
@@ -34,6 +36,7 @@ netperf -H server1 -t OMNI -- -d send
 ```
 
 ### Classic Test Migration
+
 ```bash
 # Old style                    # New OMNI equivalent
 TCP_STREAM                     OMNI -d send -T tcp
@@ -58,6 +61,7 @@ Controls the test pattern and direction relative to netperf process.
 **Syntax**: `-d <direction>` (case-insensitive)
 
 #### Stream/Send Patterns
+
 Send data from netperf to netserver (unidirectional):
 
 ```bash
@@ -69,16 +73,19 @@ Send data from netperf to netserver (unidirectional):
 ```
 
 **Use Cases**:
+
 - Maximum throughput testing (client sending)
 - Upload bandwidth measurement
 - Transmit buffer tuning
 
 **Example**:
+
 ```bash
 netperf -H server1 -- -d send
 ```
 
 #### Receive/MAERTS Patterns
+
 Send data from netserver to netperf (reverse direction):
 
 ```bash
@@ -89,16 +96,19 @@ Send data from netserver to netperf (reverse direction):
 ```
 
 **Use Cases**:
+
 - Download bandwidth measurement
 - Receive buffer tuning
 - Server-to-client throughput
 
 **Example**:
+
 ```bash
 netperf -H server1 -- -d recv
 ```
 
 #### Request/Response Patterns
+
 Bidirectional transaction-based testing:
 
 ```bash
@@ -107,16 +117,19 @@ Bidirectional transaction-based testing:
 ```
 
 **Use Cases**:
+
 - Latency measurement
 - Transaction rate testing
 - Request/response workloads (web, database, etc.)
 
 **Example**:
+
 ```bash
 netperf -H server1 -- -d rr
 ```
 
 #### Combined Directions
+
 Combine multiple directions with `|` (OR operation):
 
 ```bash
@@ -125,6 +138,7 @@ Combine multiple directions with `|` (OR operation):
 ```
 
 **Use Cases**:
+
 - Analyzing output from request/response tests
 - Parsing DIRECTION output selector
 - Custom test patterns
@@ -140,12 +154,14 @@ Explicitly sets the protocol for the test.
 #### Supported Protocols
 
 ##### TCP (Transmission Control Protocol)
+
 ```bash
 -T tcp        # Default for most tests
 -T TCP        # Case-insensitive
 ```
 
 **Characteristics**:
+
 - Connection-oriented
 - Reliable delivery
 - In-order delivery
@@ -153,47 +169,55 @@ Explicitly sets the protocol for the test.
 - Congestion control
 
 **Use Cases**:
+
 - General purpose throughput/latency testing
 - Most common network workloads
 - Baseline performance measurement
 
 ##### UDP (User Datagram Protocol)
+
 ```bash
 -T udp
 -T UDP
 ```
 
 **Characteristics**:
+
 - Connectionless
 - Unreliable (no retransmissions)
 - No flow control
 - Lower overhead than TCP
 
 **Use Cases**:
+
 - Streaming media simulation
 - Real-time applications
 - Maximum packet rate testing
 - Low-latency scenarios
 
 **Important**: UDP streams need careful message size selection:
+
 ```bash
 # Avoid fragmentation (Ethernet MTU 1500 - headers)
 netperf -H server1 -- -T udp -d send -m 1472
 ```
 
 ##### SCTP (Stream Control Transport Protocol)
+
 ```bash
 -T sctp
 -T SCTP
 ```
 
 **Characteristics**:
+
 - Connection-oriented like TCP
 - Message-oriented (preserves boundaries)
 - Multi-streaming
 - Multi-homing support
 
 **Use Cases**:
+
 - Signaling protocols (SS7, Diameter)
 - Multi-stream applications
 - Applications requiring message boundaries
@@ -201,17 +225,20 @@ netperf -H server1 -- -T udp -d send -m 1472
 **Note**: Requires kernel SCTP support (Linux: `modprobe sctp`)
 
 ##### SDP (Sockets Direct Protocol)
+
 ```bash
 -T sdp
 -T SDP
 ```
 
 **Characteristics**:
+
 - TCP-like semantics
 - RDMA acceleration
 - Kernel bypass
 
 **Use Cases**:
+
 - InfiniBand networks
 - High-performance computing
 - Low-latency data centers
@@ -219,34 +246,40 @@ netperf -H server1 -- -T udp -d send -m 1472
 **Requirements**: InfiniBand hardware and SDP-enabled kernel
 
 ##### DCCP (Datagram Congestion Control Protocol)
+
 ```bash
 -T dccp
 -T DCCP
 ```
 
 **Characteristics**:
+
 - Unreliable like UDP
 - Congestion control like TCP
 - Message-oriented
 
 **Use Cases**:
+
 - Streaming with congestion control
 - Real-time applications needing fairness
 
 **Note**: Less commonly available, check kernel support
 
 ##### UDP Lite
+
 ```bash
 -T udplite
 -T UDPLITE
 ```
 
 **Characteristics**:
+
 - UDP variant
 - Partial checksum coverage
 - Tolerates some corruption
 
 **Use Cases**:
+
 - Error-tolerant multimedia
 - Wireless networks with bit errors
 
@@ -258,18 +291,21 @@ Includes connection establishment and tear-down in the test.
 
 **Syntax**: `-c` (flag, no argument)
 
-**Effect**: 
+**Effect**:
+
 - Each transaction includes TCP connect/close
 - Equivalent to classic TCP_CRR test
 - Measures connection overhead
 
 **Use Cases**:
+
 - Web server simulation (new connection per request)
 - Connection establishment performance
 - Connection rate testing
 - SYN/SYN-ACK latency measurement
 
 **Example**:
+
 ```bash
 # Request/response with connections (like TCP_CRR)
 netperf -H server1 -- -d rr -c
@@ -279,6 +315,7 @@ netperf -H server1 -- -d rr -c -r 1,1
 ```
 
 **Performance Impact**:
+
 - Significantly higher latency per transaction
 - Tests TCP handshake performance
 - Stresses ephemeral port allocation
@@ -289,6 +326,7 @@ netperf -H server1 -- -d rr -c -r 1,1
 ## Common OMNI Test Patterns
 
 ### Maximum Throughput (TCP)
+
 ```bash
 # Send direction (upload)
 netperf -H server1 -- -d send -T tcp
@@ -301,6 +339,7 @@ netperf -H server1 -- -d send -T tcp -s 262144 -S 262144
 ```
 
 ### Latency Testing (TCP)
+
 ```bash
 # Basic request/response
 netperf -H server1 -- -d rr -T tcp
@@ -313,6 +352,7 @@ netperf -H server1 -- -d rr -T tcp -b 10
 ```
 
 ### Connection Rate Testing
+
 ```bash
 # Connections per second
 netperf -H server1 -- -d rr -T tcp -c -r 1,1
@@ -322,6 +362,7 @@ netperf -H server1 -- -d rr -T tcp -c -r 64,1024
 ```
 
 ### UDP Throughput
+
 ```bash
 # UDP send with optimal message size
 netperf -H server1 -- -d send -T udp -m 1472
@@ -331,12 +372,14 @@ netperf -H server1 -- -d recv -T udp -m 1472
 ```
 
 ### UDP Latency
+
 ```bash
 # UDP request/response
 netperf -H server1 -- -d rr -T udp -r 1,1
 ```
 
 ### SCTP Testing
+
 ```bash
 # SCTP stream
 netperf -H server1 -- -d send -T sctp
@@ -350,6 +393,7 @@ netperf -H server1 -- -d rr -T sctp
 ## OMNI with Output Formats
 
 ### JSON Output
+
 ```bash
 # OMNI test with JSON output
 netperf -H server1 -J -- -d send
@@ -359,6 +403,7 @@ netperf -H server1 -J -- -d send -T tcp
 ```
 
 ### CSV Output
+
 ```bash
 # CSV with headers
 netperf -H server1 -o csv -- -d send
@@ -368,6 +413,7 @@ netperf -H server1 -o csv -k THROUGHPUT,MEAN_LATENCY -- -d rr
 ```
 
 ### KEYVAL Output (Default)
+
 ```bash
 # Default keyval format
 netperf -H server1 -- -d send
@@ -383,12 +429,14 @@ netperf -H server1 -o keyval -k THROUGHPUT,LOCAL_CPU_UTIL -- -d send
 OMNI provides extensive output selectors via `-k` option:
 
 ### Throughput Selectors
+
 - `THROUGHPUT` - Throughput in configured units
 - `THROUGHPUT_UNITS` - Units (e.g., Mbps, trans/s)
 - `LOCAL_SEND_THROUGHPUT` - Send-side throughput
 - `REMOTE_RECV_THROUGHPUT` - Receive-side throughput
 
 ### Latency Selectors
+
 - `MEAN_LATENCY` - Mean latency (microseconds)
 - `MIN_LATENCY` - Minimum latency
 - `MAX_LATENCY` - Maximum latency
@@ -397,12 +445,14 @@ OMNI provides extensive output selectors via `-k` option:
 - `P99_LATENCY` - 99th percentile
 
 ### CPU Selectors
+
 - `LOCAL_CPU_UTIL` - Local CPU utilization (%)
 - `REMOTE_CPU_UTIL` - Remote CPU utilization (%)
 - `LOCAL_SERVICE_DEMAND` - CPU per unit throughput
 - `REMOTE_SERVICE_DEMAND` - Remote service demand
 
 ### Test Configuration Selectors
+
 - `PROTOCOL` - Protocol used (TCP, UDP, SCTP)
 - `DIRECTION` - Test direction (Send, Recv, Send|Recv)
 - `SOCKET_SIZE` - Socket buffer size
@@ -410,6 +460,7 @@ OMNI provides extensive output selectors via `-k` option:
 - `TEST_TYPE` - Test type (OMNI)
 
 ### Example with Custom Selectors
+
 ```bash
 netperf -H server1 -o keyval \
   -k THROUGHPUT,MEAN_LATENCY,LOCAL_CPU_UTIL,PROTOCOL,DIRECTION \
@@ -425,6 +476,7 @@ netperf -H server1 -o keyval \
 OMNI works seamlessly with the multi-instance runner:
 
 ### Parallel Throughput
+
 ```bash
 # 4 parallel OMNI send tests
 netperf-multi -H server1 -n 4 -- -d send
@@ -434,6 +486,7 @@ netperf-multi -H server1 -n 8 --affinity -- -d send
 ```
 
 ### Parallel Latency
+
 ```bash
 # 4 parallel request/response tests
 netperf-multi -H server1 -n 4 -- -d rr
@@ -443,6 +496,7 @@ netperf-multi -H server1 -n 4 -- -d rr -r 64,64
 ```
 
 ### Mixed Protocols
+
 ```bash
 # TCP tests on multiple instances
 netperf-multi -H server1 -n 4 -- -d send -T tcp
@@ -456,6 +510,7 @@ netperf-multi -H server1 -n 4 -- -d send -T udp -m 1472
 ## Advanced OMNI Options
 
 ### Socket Options
+
 ```bash
 -s <size>     # Local socket send buffer size
 -S <size>     # Local socket recv buffer size
@@ -465,6 +520,7 @@ netperf-multi -H server1 -n 4 -- -d send -T udp -m 1472
 ```
 
 ### Test Control
+
 ```bash
 -l <seconds>  # Test duration (default: 10)
 -i <max>,<min> # Maximum and minimum iterations
@@ -473,12 +529,14 @@ netperf-multi -H server1 -n 4 -- -d send -T udp -m 1472
 ```
 
 ### CPU Binding
+
 ```bash
 -T <cpu>      # Bind netperf to CPU (local)
 -t <cpu>      # Bind netserver to CPU (remote)
 ```
 
 ### Advanced Features
+
 ```bash
 -F <file>     # Send from file (file I/O testing)
 -f <format>   # Output format (deprecated, use global -o)
@@ -494,18 +552,21 @@ netperf-multi -H server1 -n 4 -- -d send -T udp -m 1472
 ### Throughput Optimization
 
 #### Large Socket Buffers
+
 ```bash
 # Increase socket buffers for high-bandwidth links
 netperf -H server1 -- -d send -s 4M -S 4M
 ```
 
 #### Multiple Streams
+
 ```bash
 # Aggregate bandwidth across multiple connections
 netperf-multi -H server1 -n 4 -- -d send
 ```
 
 #### Protocol Selection
+
 ```bash
 # UDP for maximum packet rate
 netperf -H server1 -- -d send -T udp -m 1472
@@ -517,18 +578,21 @@ netperf -H server1 -- -d send -T tcp
 ### Latency Optimization
 
 #### Small Messages
+
 ```bash
 # Minimum latency with 1-byte messages
 netperf -H server1 -- -d rr -r 1,1
 ```
 
 #### Burst Testing
+
 ```bash
 # Test queueing effects with bursts
 netperf -H server1 -- -d rr -b 10 -r 1,1
 ```
 
 #### TCP_NODELAY
+
 ```bash
 # Disable Nagle's algorithm (enabled by default in OMNI)
 # OMNI automatically enables TCP_NODELAY for RR tests
@@ -540,6 +604,7 @@ netperf -H server1 -- -d rr
 ## OMNI Migration from Classic Tests
 
 ### TCP_STREAM → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t TCP_STREAM -l 30
@@ -552,6 +617,7 @@ netperf -H server1 -- -d send -T tcp
 ```
 
 ### TCP_MAERTS → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t TCP_MAERTS
@@ -561,6 +627,7 @@ netperf -H server1 -- -d recv
 ```
 
 ### TCP_RR → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t TCP_RR -- -r 1,1
@@ -570,6 +637,7 @@ netperf -H server1 -- -d rr -r 1,1
 ```
 
 ### TCP_CRR → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t TCP_CRR -- -r 1,1
@@ -579,6 +647,7 @@ netperf -H server1 -- -d rr -c -r 1,1
 ```
 
 ### UDP_STREAM → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t UDP_STREAM -- -m 1472
@@ -588,6 +657,7 @@ netperf -H server1 -- -d send -T udp -m 1472
 ```
 
 ### UDP_RR → OMNI
+
 ```bash
 # Old
 netperf -H server1 -t UDP_RR -- -r 1,1
@@ -603,11 +673,13 @@ netperf -H server1 -- -d rr -T udp -r 1,1
 ### Issue: Test Hangs or Times Out
 
 **Possible Causes**:
+
 1. Netserver not running on target
 2. Firewall blocking connection
 3. Wrong IP address/hostname
 
 **Solutions**:
+
 ```bash
 # Verify netserver is running
 ssh server1 pgrep netserver
@@ -625,6 +697,7 @@ telnet server1 12865  # netperf control port
 **Cause**: Message size too large, causing IP fragmentation and drops
 
 **Solution**: Use MTU-appropriate message size
+
 ```bash
 # Ethernet MTU 1500 - 20 IP - 8 UDP = 1472
 netperf -H server1 -- -d send -T udp -m 1472
@@ -638,6 +711,7 @@ netperf -H server1 -- -d send -T udp -m 8972
 **Cause**: SCTP module not loaded
 
 **Solution**:
+
 ```bash
 # Load SCTP module
 sudo modprobe sctp
@@ -651,6 +725,7 @@ lsmod | grep sctp
 **Cause**: Ephemeral port range exhausted (common with TCP_CRR/connection tests)
 
 **Solution**: Increase ephemeral port range
+
 ```bash
 # Linux
 echo "1024 65535" > /proc/sys/net/ipv4/ip_local_port_range
@@ -664,9 +739,11 @@ echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse
 ## OMNI Best Practices
 
 ### 1. Use OMNI as Default
+
 OMNI is the modern, maintained test framework. Classic tests are legacy.
 
 ### 2. Specify Direction and Protocol Explicitly
+
 ```bash
 # Good: explicit and clear
 netperf -H server1 -- -d send -T tcp
@@ -676,16 +753,19 @@ netperf -H server1
 ```
 
 ### 3. Match Test to Workload
+
 - **Stream (-d send/recv)**: Bulk transfer, file downloads, backups
 - **Request/Response (-d rr)**: Web, database, API calls
 - **Connection (-c)**: Connection rate, HTTP, short-lived connections
 
 ### 4. Use Appropriate Protocols
+
 - **TCP**: Most applications, reliable delivery needed
 - **UDP**: Streaming, real-time, low latency priority
 - **SCTP**: Signaling, multi-stream requirements
 
 ### 5. Tune Socket Buffers for Long-Haul
+
 ```bash
 # Calculate: bandwidth (Mbps) × RTT (ms) / 8 = buffer (KB)
 # Example: 1 Gbps × 50ms RTT = 6.25 MB buffer
@@ -693,18 +773,21 @@ netperf -H server1 -- -d send -s 8M -S 8M
 ```
 
 ### 6. Use Multi-Instance for Parallel Tests
+
 ```bash
 # Multiple streams for aggregate bandwidth
 netperf-multi -H server1 -n 4 -- -d send
 ```
 
 ### 7. Enable JSON Output for Automation
+
 ```bash
 # Easy to parse programmatically
 netperf -H server1 -J -- -d send | jq '.throughput'
 ```
 
 ### 8. Use Output Selectors for Specific Metrics
+
 ```bash
 # Only get what you need
 netperf -H server1 -o keyval -k THROUGHPUT,MEAN_LATENCY -- -d rr

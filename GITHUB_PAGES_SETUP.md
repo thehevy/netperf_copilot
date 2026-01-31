@@ -5,6 +5,7 @@ The documentation site has been created and pushed to the repository. Follow the
 ## Enable GitHub Pages
 
 1. **Go to Repository Settings**:
+
    ```
    https://github.com/thehevy/netperf_copilot/settings/pages
    ```
@@ -23,6 +24,7 @@ GitHub will automatically build and deploy your site using Jekyll.
 ## Access Your Site
 
 Once deployed, your site will be available at:
+
 ```
 https://thehevy.github.io/netperf_copilot/
 ```
@@ -41,6 +43,7 @@ netperf_copilot/
 ## Features
 
 ### Landing Page (docs/index.md)
+
 - Feature overview (Phases 1-3)
 - Quick start section
 - Tool documentation links
@@ -48,6 +51,7 @@ netperf_copilot/
 - Resource links
 
 ### Installation Guide (docs/installation.md)
+
 - System requirements
 - Multiple installation methods
 - Platform-specific instructions
@@ -55,6 +59,7 @@ netperf_copilot/
 - Build types explained
 
 ### Quick Start Guide (docs/quickstart.md)
+
 - 5-minute tutorial
 - Common test scenarios
 - Advanced tool examples
@@ -65,6 +70,7 @@ netperf_copilot/
 ## Theme
 
 Using **Cayman** theme:
+
 - Clean, modern design
 - Responsive layout
 - Syntax highlighting
@@ -75,11 +81,13 @@ Using **Cayman** theme:
 ### Change Theme
 
 Edit `_config.yml`:
+
 ```yaml
 theme: jekyll-theme-minimal  # or slate, architect, etc.
 ```
 
 Available themes:
+
 - cayman (current)
 - minimal
 - slate
@@ -90,6 +98,7 @@ Available themes:
 ### Add Google Analytics
 
 Edit `_config.yml`:
+
 ```yaml
 google_analytics: UA-XXXXXXXXX-X
 ```
@@ -97,11 +106,13 @@ google_analytics: UA-XXXXXXXXX-X
 ### Add Custom Domain
 
 1. Add `CNAME` file to `docs/`:
+
    ```
    docs.netperf.example.com
    ```
 
 2. Configure DNS:
+
    ```
    CNAME docs.netperf.example.com -> thehevy.github.io
    ```
@@ -111,6 +122,7 @@ google_analytics: UA-XXXXXXXXX-X
 ## Navigation
 
 The site uses relative links between pages:
+
 - `[Installation](installation.html)` - Within docs/
 - `[OMNI Reference](../dev/docs/OMNI_REFERENCE.html)` - To dev/docs/
 - `[Back to Documentation](index.html)` - Return to main
@@ -147,17 +159,21 @@ bundle exec jekyll serve --source docs
 After enabling GitHub Pages:
 
 1. **Check Actions Tab**:
+
    ```
    https://github.com/thehevy/netperf_copilot/actions
    ```
+
    Look for "pages build and deployment" workflow
 
 2. **Check Deployment Status**:
+
    ```
    https://github.com/thehevy/netperf_copilot/deployments
    ```
 
 3. **Visit Site**:
+
    ```
    https://thehevy.github.io/netperf_copilot/
    ```
@@ -203,7 +219,7 @@ Update navigation in `docs/index.md` to link to new page.
 
 After enabling GitHub Pages:
 
-1. ✅ Visit https://thehevy.github.io/netperf_copilot/
+1. ✅ Visit <https://thehevy.github.io/netperf_copilot/>
 2. ✅ Test all navigation links
 3. ✅ Verify theme rendering
 4. ✅ Check mobile responsiveness

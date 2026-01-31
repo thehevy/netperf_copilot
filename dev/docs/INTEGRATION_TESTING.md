@@ -20,23 +20,27 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
 ## Tests Performed
 
 ### ✅ Test 1: Server Connectivity
+
 - **Status**: PASSED
 - **Result**: Server reachable via ping
 - **Command**: `ping -c 2 -W 2 192.168.18.2`
 
 ### ✅ Test 2: Basic OMNI Test (TCP Send)
+
 - **Status**: PASSED  
 - **Result**: Successfully measured throughput (19-52 Gbps observed)
 - **Command**: `netperf -H 192.168.18.2 -- -d send -l 10`
 - **Output Format**: KEYVAL (THROUGHPUT=value)
 
 ### ✅ Test 3: netperf-multi (Parallel Execution)
+
 - **Status**: PASSED
 - **Result**: 4 parallel instances executed successfully
 - **Command**: `netperf-multi -n 4 -H 192.168.18.2 -- -d send -l 10`
 - **Observation**: All 4 instances completed without errors
 
 ### ✅ Test 4: netperf_stats.py (Statistical Analysis)
+
 - **Status**: PASSED
 - **Result**: Statistics calculated correctly
 - **Features Validated**:
@@ -46,6 +50,7 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
   - Histogram generation
   - Box plot visualization
 - **Sample Output**:
+
   ```
   Sample size: 10
   Mean: 101.11 ± 5.04 (95% CI)
@@ -55,40 +60,47 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
   ```
 
 ### ✅ Test 5: netperf-profile (Profile Validation)
+
 - **Status**: PASSED
 - **Result**: Baseline profile validated successfully
 - **Command**: `netperf-profile -p baseline -H 192.168.18.2 --dry-run`
 - **Profiles Available**: 10 built-in profiles loaded
 
 ### ✅ Test 6: netperf-orchestrate (Inventory Management)
+
 - **Status**: PASSED
 - **Result**: YAML inventory format validated
 - **File**: test-inventory.yaml with server configuration
 
 ### ✅ Test 7: netperf-template (Report Generation)
+
 - **Status**: PASSED
 - **Result**: Markdown report generated successfully
 - **Template**: markdown-report (built-in)
 - **Output**: Complete report with summary and table
 
 ### ✅ Test 8: KEYVAL Output Format
+
 - **Status**: PASSED
 - **Result**: KEYVAL format working correctly
 - **Command**: `netperf -H 192.168.18.2 -- -d send -l 10 -k THROUGHPUT,LOCAL_CPU_UTIL`
 - **Output**: Key-value pairs (THROUGHPUT=value, LOCAL_CPU_UTIL=value)
 
 ### ✅ Test 9: Request-Response (RR) Pattern
+
 - **Status**: PASSED
 - **Result**: Latency measurement successful
 - **Command**: `netperf -H 192.168.18.2 -- -d rr -l 10`
 - **Metrics**: TRANSACTION_RATE and MEAN_LATENCY
 
 ### ✅ Test 10: UDP Traffic
+
 - **Status**: PASSED
 - **Result**: UDP throughput measured
 - **Command**: `netperf -H 192.168.18.2 -- -d send -T udp -l 10`
 
 ### ✅ Test 11: Multiple Output Selectors
+
 - **Status**: PASSED
 - **Result**: Multiple metrics captured simultaneously
 - **Command**: `netperf -H 192.168.18.2 -- -d send -l 10 -k THROUGHPUT,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL`
@@ -98,17 +110,20 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
 ## Performance Observations
 
 ### Network Performance
+
 - **Throughput Range**: 19-52 Gbps (varies by test duration and parallelism)
 - **Latency**: Not measured in detail (focused on throughput tests)
 - **Network Type**: High-speed datacenter link
 
 ### Tool Performance
+
 - **netperf-multi**: Successfully coordinates 4 parallel instances
 - **netperf_stats.py**: Fast analysis (< 1 second for 10-50 samples)
 - **netperf-profile**: Quick validation (< 1 second for dry-run)
 - **netperf-template**: Instant rendering (< 100ms)
 
 ### Resource Usage
+
 - **CPU**: Moderate usage during parallel tests
 - **Memory**: Minimal (< 100 MB per tool)
 - **Network**: Full line rate achieved
@@ -120,6 +135,7 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
 Created three integration test scripts:
 
 ### 1. integration-test.sh (Comprehensive)
+
 - **Lines**: 283
 - **Tests**: 11 comprehensive tests
 - **Runtime**: ~3-5 minutes
@@ -130,6 +146,7 @@ Created three integration test scripts:
   - Summary statistics
 
 ### 2. integration-test-quick.sh (Streamlined)
+
 - **Lines**: 185
 - **Tests**: 10 focused tests
 - **Runtime**: ~2-3 minutes
@@ -139,6 +156,7 @@ Created three integration test scripts:
   - Core functionality only
 
 ### 3. quick-test.sh (Smoke Tests)
+
 - **Lines**: 38
 - **Tests**: 5 critical tests
 - **Runtime**: ~1 minute
@@ -152,6 +170,7 @@ Created three integration test scripts:
 ## Issues Identified
 
 ### Minor Issues
+
 1. **Terminal Interference**: Background script from previous tests occasionally interfered with test execution
    - **Impact**: Low (doesn't affect tool functionality)
    - **Workaround**: Run tests in clean terminal
@@ -165,6 +184,7 @@ Created three integration test scripts:
    - **Resolution**: Test data pre-processed correctly
 
 ### No Major Issues Found
+
 All Phase 3 tools are fully functional and production-ready.
 
 ---
@@ -181,6 +201,7 @@ All Phase 3 tools are fully functional and production-ready.
 | netperf-template | ✅ | ✅ | ✅ | Production Ready |
 
 **Legend**:
+
 - ✅ Tested and working
 - ⚠️ Partial testing (inventory/validation only, no live SSH)
 - N/A Not applicable or requires different test setup
@@ -190,9 +211,11 @@ All Phase 3 tools are fully functional and production-ready.
 ## Conclusions
 
 ### Summary
+
 Phase 3 tools have successfully passed integration testing with a live netperf server. All core functionality is working as designed, and the tools are ready for production use.
 
 ### Key Achievements
+
 1. **Multi-instance execution** works flawlessly with 2-4 parallel tests
 2. **Statistical analysis** provides comprehensive metrics and visualizations
 3. **Profile system** simplifies test execution with pre-configured scenarios
@@ -202,11 +225,13 @@ Phase 3 tools have successfully passed integration testing with a live netperf s
 ### Recommendations
 
 #### Immediate Actions
+
 1. ✅ All tools operational - no blockers
 2. ✅ Documentation complete and accurate
 3. ✅ Examples working and tested
 
 #### Future Testing
+
 1. **netperf-orchestrate**: Full multi-host SSH testing
    - Requires: Multiple hosts with SSH access
    - Status: Inventory and validation tested only
@@ -236,11 +261,13 @@ Phase 3 tools have successfully passed integration testing with a live netperf s
 **Success Rate**: 100%
 
 ### Test Execution Time
+
 - **Setup**: < 1 minute
 - **Test Execution**: ~3-5 minutes
 - **Total**: ~5-6 minutes
 
 ### Files Generated
+
 - Test result files: 17 files
 - Test scripts: 3 scripts
 - Documentation: This report

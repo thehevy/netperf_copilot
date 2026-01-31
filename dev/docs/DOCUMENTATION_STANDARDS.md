@@ -38,22 +38,27 @@ We use `markdown_validator.py` to enforce consistent documentation standards acr
 The validator enforces markdownlint rules including:
 
 ### Heading Standards
+
 - **MD022**: Headings must be surrounded by blank lines
 - **MD025**: Only one H1 heading per document
 - **MD041**: First line must be a top-level heading
 
 ### List Standards
+
 - **MD032**: Lists must be surrounded by blank lines
 - **MD030**: Consistent spacing after list markers
 
 ### Code Block Standards
+
 - **MD031**: Fenced code blocks must be surrounded by blank lines
 - **MD040**: Fenced code blocks should have a language specified
 
 ### Link Standards
+
 - **MD034**: No bare URLs (use proper markdown links)
 
 ### Formatting Standards
+
 - **MD009**: No trailing spaces
 - **MD012**: No multiple consecutive blank lines
 
@@ -86,6 +91,7 @@ Add to your CI pipeline:
 ## Current Status
 
 As of January 31, 2026:
+
 - ✅ All 33 markdown files pass quality checks
 - ✅ Average quality score: 100/100
 - ✅ Zero violations detected
@@ -93,6 +99,7 @@ As of January 31, 2026:
 ## Quality Score
 
 The validator calculates a quality score (0-100):
+
 - **100**: Perfect - no violations
 - **90-99**: Excellent - minor issues
 - **70-89**: Good - some improvements needed
@@ -142,13 +149,16 @@ More text
 ```markdown
 <!-- Wrong -->
 ```
+
 code here
+
 ```
 
 <!-- Right -->
 ```bash
 code here
 ```
+
 ```
 
 ### Bare URLs
@@ -164,6 +174,7 @@ Visit [example website](http://example.com)
 ## Excluding Files
 
 The validator automatically excludes:
+
 - `.git` directory
 - `node_modules`
 - `venv` and `.venv`

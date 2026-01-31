@@ -12,6 +12,7 @@ Complete guide to using the `netperf-aggregate` tool for result analysis.
 `netperf-aggregate` is a Python tool for parsing, aggregating, comparing, and reporting netperf test results across multiple runs.
 
 **Features:**
+
 - Parse JSON, CSV, and key=value formats
 - Calculate comprehensive statistics
 - Compare baseline vs current results
@@ -89,6 +90,7 @@ netperf-aggregate test_*.json --stats
 ```
 
 **Output:**
+
 ```
 ============================================================
 Netperf Aggregated Statistics
@@ -135,6 +137,7 @@ netperf-aggregate baseline.json current.json --compare
 ```
 
 **Output:**
+
 ```
 ============================================================
 Netperf Results Comparison
@@ -168,6 +171,7 @@ netperf-aggregate results/*.json --stats --report json -o stats.json
 ```
 
 **Output (stats.json):**
+
 ```json
 {
   "throughput": {
@@ -195,6 +199,7 @@ netperf-aggregate results/*.json --stats --report markdown -o report.md
 ```
 
 **Output (report.md):**
+
 ```markdown
 # Netperf Aggregated Statistics
 
@@ -229,6 +234,7 @@ netperf-aggregate \
 ```
 
 Supported formats:
+
 - `.json` - JSON format
 - `.csv` - CSV with headers
 - `.txt`, `.dat` - Key=value format
@@ -505,11 +511,13 @@ plt.savefig('analysis.png', dpi=300)
 **Problem:** `Error: No valid results found in input files`
 
 **Causes:**
+
 1. File format not recognized
 2. JSON parse errors
 3. Empty or corrupted files
 
 **Solutions:**
+
 ```bash
 # Check file format
 file results.json
@@ -531,6 +539,7 @@ netperf-aggregate results.txt --format keyval
 **Cause:** Field names don't match expected names
 
 **Solution:** Check field names in source files:
+
 ```bash
 # For JSON
 jq '.results | keys' results.json
@@ -544,6 +553,7 @@ grep -E "^[A-Z_]+=" results.txt | cut -d= -f1 | sort -u
 **Problem:** Slow processing of many files
 
 **Solutions:**
+
 ```bash
 # Process in batches
 for batch in batch_*; do

@@ -16,11 +16,13 @@ Version 3.0.0 completes Phase 3 of the netperf modernization project, delivering
 ### What Changed (January 31, 2026)
 
 **Default Behavior:**
+
 - Default test is **TCP_STREAM** (not OMNI) - fully backwards compatible
 - Use `-M` flag to enable modern OMNI test framework
 - All existing scripts work unchanged - **no migration needed!**
 
 **Examples:**
+
 ```bash
 # Default (backwards compatible)
 netperf -H host                    # TCP_STREAM columnar output
@@ -32,6 +34,7 @@ netperf -H host -M -D 1            # Interim results
 ```
 
 **Why This Matters:**
+
 - Existing production scripts continue to work unchanged
 - Easy adoption of modern features via explicit `-M` flag
 - Clear intent when using OMNI mode
@@ -46,9 +49,11 @@ See [BACKWARDS_COMPATIBILITY_SUMMARY.md](BACKWARDS_COMPATIBILITY_SUMMARY.md) for
 ### 6 Advanced Production Tools
 
 #### 1. netperf-multi - Parallel Test Execution
+
 Execute multiple netperf instances in parallel for aggregate performance testing.
 
 **Features:**
+
 - Concurrent execution of 2-16 parallel instances
 - Automatic result aggregation
 - Success/failure tracking
@@ -56,6 +61,7 @@ Execute multiple netperf instances in parallel for aggregate performance testing
 - Support for custom netperf binary paths
 
 **Usage:**
+
 ```bash
 # Run 4 parallel tests
 netperf-multi -n 4 -H remotehost -- -d send -l 10
@@ -69,9 +75,11 @@ netperf-multi -n 8 --netperf /path/to/netperf -H host
 ---
 
 #### 2. netperf_stats.py - Statistical Analysis
+
 Advanced statistical analysis with confidence intervals, outlier detection, and visualization.
 
 **Features:**
+
 - Mean, median, standard deviation calculation
 - 95% confidence intervals
 - Outlier detection using IQR method
@@ -81,6 +89,7 @@ Advanced statistical analysis with confidence intervals, outlier detection, and 
 - Support for stdin and file input
 
 **Usage:**
+
 ```bash
 # Analyze test results (use -M for OMNI keyval output)
 for i in {1..20}; do netperf -H host -M; done | \
@@ -99,9 +108,11 @@ netperf_stats.py results.txt --histogram hist.png
 ---
 
 #### 3. netperf-profile - Test Profile System
+
 Pre-configured test profiles for common network testing scenarios.
 
 **Built-in Profiles (10):**
+
 - **baseline**: Quick validation (10s, basic metrics)
 - **throughput**: Maximum bandwidth measurement (60s)
 - **latency**: Request-response latency focus (30s)
@@ -114,6 +125,7 @@ Pre-configured test profiles for common network testing scenarios.
 - **mixed-workload**: Combined TCP/UDP testing (120s)
 
 **Usage:**
+
 ```bash
 # Run baseline profile
 netperf-profile -p baseline -H remotehost
@@ -130,9 +142,11 @@ netperf-profile -p throughput -H host --dry-run
 ---
 
 #### 4. netperf-orchestrate - Multi-Host Coordination
+
 Orchestrate network tests across multiple hosts with YAML-based configuration.
 
 **Features:**
+
 - YAML inventory management (hosts, credentials, profiles)
 - Parallel or sequential execution across hosts
 - SSH-based remote execution
@@ -141,6 +155,7 @@ Orchestrate network tests across multiple hosts with YAML-based configuration.
 - Dry-run mode
 
 **Usage:**
+
 ```bash
 # Run tests across inventory
 netperf-orchestrate -i hosts.yaml -p throughput --parallel
@@ -153,6 +168,7 @@ netperf-orchestrate --generate-inventory > hosts.yaml
 ```
 
 **Sample Inventory:**
+
 ```yaml
 hosts:
   - name: server1
@@ -170,9 +186,11 @@ hosts:
 ---
 
 #### 5. netperf-monitor - Real-Time Monitoring
+
 Terminal-based UI for real-time netperf test monitoring.
 
 **Features:**
+
 - Live throughput display with sparklines
 - Latency tracking (mean, P50, P95, P99)
 - Packet loss monitoring
@@ -183,6 +201,7 @@ Terminal-based UI for real-time netperf test monitoring.
 - Demo mode with simulated data
 
 **Usage:**
+
 ```bash
 # Monitor live tests
 netperf-monitor --host remotehost --interval 1
@@ -195,6 +214,7 @@ netperf-monitor --host host --metrics throughput,latency,cpu
 ```
 
 **Display Components:**
+
 - Real-time throughput graph (ASCII sparkline)
 - Latency statistics (mean, percentiles)
 - Connection status (color-coded)
@@ -206,9 +226,11 @@ netperf-monitor --host host --metrics throughput,latency,cpu
 ---
 
 #### 6. netperf-template - Report Generation
+
 Generate formatted reports from netperf results using Jinja2 templates.
 
 **Built-in Templates (5):**
+
 - **markdown-report**: Professional markdown with tables
 - **html-dashboard**: Interactive HTML dashboard
 - **json-summary**: Structured JSON output
@@ -216,6 +238,7 @@ Generate formatted reports from netperf results using Jinja2 templates.
 - **text-summary**: Plain text report
 
 **Features:**
+
 - Jinja2 template engine
 - JSON input format
 - Custom template support
@@ -223,6 +246,7 @@ Generate formatted reports from netperf results using Jinja2 templates.
 - Sample data generation
 
 **Usage:**
+
 ```bash
 # Generate markdown report
 netperf-template -t markdown-report results.json
@@ -262,6 +286,7 @@ netperf-template --sample
 | Multiple Selectors | ✅ PASS | Multiple metrics captured |
 
 **Test Suites Created:**
+
 - `dev/tests/integration-test.sh` - 11 comprehensive tests (283 lines)
 - `dev/tests/integration-test-quick.sh` - 10 streamlined tests (185 lines)
 - `dev/tests/quick-test.sh` - 5 smoke tests (38 lines)
@@ -297,6 +322,7 @@ netperf-template --sample
    - Next steps and recommendations
 
 ### Updated Documentation
+
 - README.md: Complete Phase 3 feature overview
 - Development plans: Phase 3 progress tracking
 - Examples directory: Sample configs and scripts
@@ -306,6 +332,7 @@ netperf-template --sample
 ## 🔧 Technical Details
 
 ### Files Added
+
 - **46 files** (8,396 insertions)
 - 6 production tools (executable)
 - 10 test profiles (YAML)
@@ -316,6 +343,7 @@ netperf-template --sample
 - 5 example files
 
 ### Code Quality
+
 - Comprehensive error handling
 - Input validation
 - Help text and documentation
@@ -324,6 +352,7 @@ netperf-template --sample
 - Python 3.6+ compatibility
 
 ### Dependencies
+
 - **Core Tools**: bash, python3
 - **Optional**: jinja2 (templates), numpy (stats), matplotlib (visualization), pyyaml (orchestration)
 - **Platform**: Linux (tested), macOS compatible, WSL supported
@@ -333,6 +362,7 @@ netperf-template --sample
 ## 🔄 Backward Compatibility
 
 **100% Backward Compatible** with all previous versions:
+
 - All Phase 1 and Phase 2 features maintained
 - Original netperf command-line unchanged
 - Classic test names still work
@@ -344,6 +374,7 @@ netperf-template --sample
 ## 📦 Installation
 
 ### From Release
+
 ```bash
 git clone https://github.com/thehevy/netperf_copilot.git
 cd netperf_copilot
@@ -358,6 +389,7 @@ sudo cp -r dev/profiles /usr/local/share/netperf/
 ```
 
 ### Using Existing Installation
+
 ```bash
 cd /opt/netperf
 git pull origin master
@@ -372,12 +404,14 @@ git checkout v3.0.0
 ## 🚀 Quick Start Examples
 
 ### Parallel Testing
+
 ```bash
 # Run 4 parallel tests for aggregate bandwidth
 netperf-multi -n 4 -H 192.168.18.2 -- -d send -l 30
 ```
 
 ### Statistical Analysis
+
 ```bash
 # Run 20 tests and analyze (using OMNI with -M)
 for i in {1..20}; do 
@@ -386,6 +420,7 @@ done | netperf_stats.py - --histogram results.png
 ```
 
 ### Profile-Based Testing
+
 ```bash
 # Run datacenter profile
 netperf-profile -p datacenter -H 192.168.18.2
@@ -397,6 +432,7 @@ done
 ```
 
 ### Multi-Host Orchestration
+
 ```bash
 # Create inventory
 cat > hosts.yaml << 'EOF'
@@ -416,6 +452,7 @@ netperf-orchestrate -i hosts.yaml --parallel
 ```
 
 ### Real-Time Monitoring
+
 ```bash
 # Start server
 netserver -D
@@ -428,6 +465,7 @@ netperf -H localhost -l 300
 ```
 
 ### Report Generation
+
 ```bash
 # Collect results (using OMNI with -M for JSON)
 netperf -H host -M -- -J > results.json
@@ -444,26 +482,31 @@ netperf-template -t html-dashboard results.json > dashboard.html
 ## 🎯 Use Cases
 
 ### High-Performance Computing
+
 - **netperf-multi**: Measure aggregate bandwidth with multiple streams
 - **netperf-profile**: Use datacenter profile for jumbo frames
 - **netperf_stats.py**: Analyze variance in large-scale tests
 
 ### Cloud Networking
+
 - **netperf-orchestrate**: Test across multiple cloud instances
 - **netperf-profile**: Use cloud profile optimized for variable latency
 - **netperf-template**: Generate reports for stakeholders
 
 ### WiFi/Mobile Testing
+
 - **netperf-profile**: Use wireless profile with mixed traffic
 - **netperf-monitor**: Real-time visualization of connection quality
 - **netperf_stats.py**: Identify outliers in lossy networks
 
 ### Quality Assurance
+
 - **netperf-profile**: Baseline profile for quick validation
 - **netperf_stats.py**: Regression detection with confidence intervals
 - **netperf-template**: Automated test reports
 
 ### Capacity Planning
+
 - **netperf-profile**: Stress profile for system limits
 - **netperf-multi**: Maximum concurrent connection testing
 - **netperf-orchestrate**: Multi-path analysis
@@ -473,17 +516,21 @@ netperf-template -t html-dashboard results.json > dashboard.html
 ## � Important Update: Backwards Compatibility (January 31, 2026)
 
 ### Commits
+
 - `e519a9a` - BREAKING: Restore full backwards compatibility - default is TCP_STREAM
 - `dc2061c` - Update all documentation for backwards compatible approach
 - `43928c0` - Add backwards compatibility implementation summary
 
 ### Changes
+
 **Reverted to TCP_STREAM as default** for 100% backwards compatibility:
+
 - Default: `netperf -H host` → TCP_STREAM (columnar)
 - Modern: `netperf -H host -M` → OMNI (keyval/JSON)
 - Result: **Zero breaking changes** for existing users
 
 **All tools updated:**
+
 - netperf-multi default test type: TCP_STREAM
 - All documentation examples show `-M` for OMNI features
 - Test scripts validate backwards compatibility
@@ -495,12 +542,14 @@ See [BACKWARDS_COMPATIBILITY_SUMMARY.md](BACKWARDS_COMPATIBILITY_SUMMARY.md) for
 ## �🐛 Known Issues
 
 ### Minor Issues
+
 1. **netperf-orchestrate SSH**: Full multi-host SSH testing pending (inventory and validation tested only)
 2. **netperf-monitor Live Mode**: Requires compatible netperf output format (demo mode works)
 3. **Template Dependencies**: jinja2 required for netperf-template
 4. **Stats Dependencies**: numpy/matplotlib optional but recommended for netperf_stats.py
 
 ### No Major Issues
+
 All tools fully functional and production-ready.
 
 ---
@@ -508,6 +557,7 @@ All tools fully functional and production-ready.
 ## 🔮 Future Roadmap (Phase 4)
 
 ### Planned Features
+
 - **Web Dashboard**: Browser-based monitoring and control
 - **Result Database**: Historical data storage and retrieval
 - **Regression Detection**: Automated comparison with baselines

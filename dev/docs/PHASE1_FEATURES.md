@@ -22,11 +22,13 @@ Phase 1 focused on modernizing netperf's defaults and user experience while main
 ## 1. Full Backwards Compatibility (Task 1.1)
 
 ### Overview
+
 Preserved TCP_STREAM as the default test to maintain 100% backwards compatibility. Modern OMNI test available via `-M` flag.
 
 ### Technical Details
 
 **Implementation**:
+
 ```c
 // src/netsh.c - default_test remains "TCP_STREAM"
 char test_name[BUFSIZ] = "TCP_STREAM",  /* 100% backwards compatible */
@@ -41,6 +43,7 @@ case 'M':
 ### User Impact
 
 **Default behavior (unchanged)**:
+
 ```bash
 $ netperf -H host
 MIGRATED TCP STREAM TEST from...
@@ -48,6 +51,7 @@ MIGRATED TCP STREAM TEST from...
 ```
 
 **Modern behavior (opt-in with -M)**:
+
 ```bash
 $ netperf -H host -M
 OMNI Send TEST from...  
@@ -60,18 +64,21 @@ THROUGHPUT=54623.45
 ### Compatibility
 
 **No migration needed**: Existing scripts work unchanged!
+
 ```bash
 netperf -H host                # Works as-is (TCP_STREAM)
 netperf -H host -t TCP_STREAM  # Also works (explicit)
 ```
 
 **New scripts can use modern features**:
+
 ```bash
 netperf -H host -M             # OMNI with keyval
 netperf -H host -M -- -J       # OMNI with JSON
 ```
 
 ### Benefits
+
 - More flexible output format selection
 - Modern JSON/CSV support
 - Customizable field selection
@@ -79,11 +86,13 @@ netperf -H host -M -- -J       # OMNI with JSON
 - OMNI is the recommended test type in recent netperf documentation
 
 ### Configuration
+
 No configuration needed - automatic. Test type can be overridden with `-t` flag.
 
 ## 2. Output Format Improvements (Task 1.2)
 
 ### Overview
+
 Introduced multiple output formats to support different use cases, with key-value as the new default for easier parsing.
 
 ### Available Formats
@@ -93,6 +102,7 @@ Introduced multiple output formats to support different use cases, with key-valu
 **Format**: `FIELD_NAME=value`
 
 **Example**:
+
 ```
 THROUGHPUT=54623.45
 THROUGHPUT_UNITS=10^6bits/s
@@ -105,6 +115,7 @@ COMMAND_LINE="./netperf -H host -l 1"
 ```
 
 **Advantages**:
+
 - Easy to parse with grep/awk
 - Self-documenting field names
 - No column alignment issues
@@ -117,6 +128,7 @@ COMMAND_LINE="./netperf -H host -l 1"
 **Format**: Valid JSON object
 
 **Example**:
+
 ```json
 {
   "THROUGHPUT": 54623.45,
@@ -131,12 +143,14 @@ COMMAND_LINE="./netperf -H host -l 1"
 ```
 
 **Implementation Details**:
+
 - Added `JSON` to `netperf_output_modes` enum (src/netlib.h)
 - Implemented `print_omni_json()` function (src/nettest_omni.c:2771-2856)
 - Proper type handling: strings quoted, numbers unquoted
 - Valid JSON structure with proper escaping
 
 **Advantages**:
+
 - Native support in modern languages
 - Easy integration with APIs
 - Structured data for databases
@@ -145,6 +159,7 @@ COMMAND_LINE="./netperf -H host -l 1"
 **Usage**: `netperf -H host -- -J`
 
 **Code Example**:
+
 ```c
 void print_omni_json() {
   fprintf(where, "{\n");
@@ -165,12 +180,14 @@ void print_omni_json() {
 **Format**: Comma-separated values with header row
 
 **Example**:
+
 ```csv
 Throughput,Throughput Units,Elapsed Time,Protocol,Direction
 54623.45,10^6bits/s,1.00,TCP,Send
 ```
 
 **Advantages**:
+
 - Excel/LibreOffice compatible
 - Spreadsheet analysis
 - Easy data import
@@ -183,6 +200,7 @@ Throughput,Throughput Units,Elapsed Time,Protocol,Direction
 **Format**: Traditional table layout
 
 **Example**:
+
 ```
 Local       Remote      Local  Elapsed Throughput Throughput  
 Send Socket Recv Socket Send   Time               Units       
@@ -193,6 +211,7 @@ Final       Final       (bytes)
 ```
 
 **Advantages**:
+
 - Human-readable tables
 - Familiar to existing users
 - Good for terminal viewing
@@ -208,11 +227,13 @@ Pre-configured field selections for common scenarios.
 **Available Presets**:
 
 1. **minimal.out** - Essential metrics only
+
    ```
    THROUGHPUT,ELAPSED_TIME
    ```
 
 2. **default.out** - Balanced selection (18 fields)
+
    ```
    THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,PROTOCOL,DIRECTION,
    LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SEND_SIZE,LOCAL_RECV_SIZE,
@@ -224,24 +245,28 @@ Pre-configured field selections for common scenarios.
 3. **verbose.out** - All available fields (30+ fields)
 
 4. **latency.out** - Request-response focused
+
    ```
    THROUGHPUT,ELAPSED_TIME,MEAN_LATENCY,MIN_LATENCY,MAX_LATENCY,
    P50_LATENCY,P90_LATENCY,P99_LATENCY,STDDEV_LATENCY
    ```
 
 5. **throughput.out** - Bandwidth focused
+
    ```
    THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,LOCAL_SEND_SIZE,
    REMOTE_RECV_SIZE,LOCAL_SEND_CALLS,REMOTE_RECV_CALLS
    ```
 
 6. **cpu.out** - CPU utilization focused
+
    ```
    THROUGHPUT,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SERVICE_DEMAND,
    REMOTE_SERVICE_DEMAND
    ```
 
 **Usage**:
+
 ```bash
 netperf -H host -- -k dev/catalog/output-presets/minimal.out
 netperf -H host -- -k dev/catalog/output-presets/verbose.out -J  # JSON with verbose fields
@@ -252,11 +277,13 @@ netperf -H host -- -k dev/catalog/output-presets/verbose.out -J  # JSON with ver
 Added `COMMAND_LINE` field to default output preset for reproducibility.
 
 **Example**:
+
 ```
 COMMAND_LINE="./netperf -H 192.168.10.2 -l 10 -c -C"
 ```
 
 **Benefits**:
+
 - Easily reproduce tests
 - Better logging
 - Audit trail for results
@@ -264,11 +291,13 @@ COMMAND_LINE="./netperf -H 192.168.10.2 -l 10 -c -C"
 ## 3. Interval Reporting (Task 1.3)
 
 ### Overview
+
 Enabled demo/interval support by default to provide progress feedback during long tests.
 
 ### Technical Details
 
 **Change**: Modified `configure.ac` line 197:
+
 ```bash
 # Old
 use_demo=false
@@ -282,6 +311,7 @@ use_demo=true
 ### User Impact
 
 **Before**:
+
 ```bash
 $ netperf -H host -l 300
 # [Wait 5 minutes with no feedback]
@@ -289,6 +319,7 @@ $ netperf -H host -l 300
 ```
 
 **After**:
+
 ```bash
 $ netperf -H host -l 300
 OMNI Send TEST... : demo
@@ -304,11 +335,13 @@ THROUGHPUT=54623.45   # Final result
 Minimal overhead: 0-2% throughput reduction in testing.
 
 **Disable for benchmarking**:
+
 ```bash
 netperf -H host -l 300 -D -1
 ```
 
 ### Benefits
+
 - Better user experience during long tests
 - Early detection of issues
 - Ability to see if test is running correctly
@@ -321,6 +354,7 @@ netperf -H host -l 300 -D -1
 **File**: `dev/catalog/configure-options.csv`
 
 Comprehensive analysis of all 15 configure options:
+
 - Default values
 - Performance impact
 - Use cases
@@ -328,6 +362,7 @@ Comprehensive analysis of all 15 configure options:
 - Recommendations
 
 **Key Findings**:
+
 - `--enable-histogram`: -5% to -15% throughput (per-op timing overhead)
 - `--enable-dirty`: -20% to -40% throughput (forces cache misses)
 - `--enable-demo`: -0% to -2% throughput (acceptable for UX)
@@ -341,6 +376,7 @@ Comprehensive analysis of all 15 configure options:
 Intelligent wrapper with recommended options:
 
 **Features**:
+
 - Three presets: standard, minimal, all-protocols
 - Override options for specific needs
 - Color-coded output
@@ -348,6 +384,7 @@ Intelligent wrapper with recommended options:
 - Platform-specific CPU detection
 
 **Usage**:
+
 ```bash
 ./dev/scripts/configure-optimized.sh                  # Standard
 ./dev/scripts/configure-optimized.sh --minimal        # Minimal
@@ -356,6 +393,7 @@ Intelligent wrapper with recommended options:
 ```
 
 **Default Configuration**:
+
 - Enable: omni, demo, burst, sctp, unixdomain
 - Disable: histogram, dirty, intervals, spin
 - CPU method: auto-detect
@@ -367,6 +405,7 @@ Intelligent wrapper with recommended options:
 Flexible build script with multiple options:
 
 **Features**:
+
 - Build types: release, debug, optimized
 - Parallel job control
 - Clean-before-build option
@@ -376,6 +415,7 @@ Flexible build script with multiple options:
 - Success validation
 
 **Usage**:
+
 ```bash
 ./dev/scripts/build.sh                        # Release build
 ./dev/scripts/build.sh --type debug           # Debug build
@@ -391,6 +431,7 @@ Flexible build script with multiple options:
 Convenience wrapper for common tasks:
 
 **Targets**:
+
 - **Build**: `build`, `debug`, `optimized`, `rebuild`, `clean`
 - **Install**: `install` (with PREFIX override)
 - **Testing**: `test`, `test-formats`, `test-protocols`, `benchmark`
@@ -398,6 +439,7 @@ Convenience wrapper for common tasks:
 - **Advanced**: `build-minimal`, `build-all-protocols`
 
 **Usage**:
+
 ```bash
 cd dev
 make help          # Show all targets
@@ -412,6 +454,7 @@ make install PREFIX=/opt/netperf
 **File**: `dev/docs/BUILD_CONFIGURATION.md` (350+ lines)
 
 Comprehensive guide covering:
+
 - All configure options with detailed descriptions
 - Performance impact analysis
 - Use-case specific configurations
@@ -422,11 +465,13 @@ Comprehensive guide covering:
 ## 5. Large System Support (MAXCPUS)
 
 ### Overview
+
 Increased MAXCPUS from 512 to 2048 to support modern high-core-count servers.
 
 ### Technical Details
 
 **Change**: Modified `src/netlib.h` line 46:
+
 ```c
 // Old
 #define MAXCPUS 512
@@ -438,6 +483,7 @@ Increased MAXCPUS from 512 to 2048 to support modern high-core-count servers.
 ### Affected Components
 
 **Static arrays increased**:
+
 - `src/netlib.c`: `lib_local_per_cpu_util[MAXCPUS]`, `lib_cpu_map[MAXCPUS]`
 - `src/netcpu_procstat.c`: `lib_start_count[MAXCPUS]`, `lib_end_count[MAXCPUS]`
 - `src/netcpu_pstat.c`: Similar arrays
@@ -446,6 +492,7 @@ Increased MAXCPUS from 512 to 2048 to support modern high-core-count servers.
 ### Memory Impact
 
 Approximately +8KB per netperf/netserver process:
+
 - `lib_local_per_cpu_util[2048]` = 2048 × 4 bytes = 8KB
 - `lib_cpu_map[2048]` = 2048 × 4 bytes = 8KB
 - Platform-specific arrays vary
@@ -453,11 +500,13 @@ Approximately +8KB per netperf/netserver process:
 ### Testing
 
 **Tested on**:
+
 - 288-core system (Rocky Linux 10)
 - 512-core system (original issue report)
 - Works correctly with `-c -C` options
 
 **Error before fix**:
+
 ```
 Sorry, this system has more CPUs (512) than I can handle (512).
 Please alter MAXCPUS in netlib.h and recompile.
@@ -466,6 +515,7 @@ Please alter MAXCPUS in netlib.h and recompile.
 **After fix**: Works correctly on systems up to 2048 cores
 
 ### Benefits
+
 - Supports modern AMD EPYC (up to 384 cores)
 - Supports modern Intel Xeon (up to 288+ cores)
 - Future-proof for next-generation processors
@@ -544,10 +594,12 @@ All Phase 1 features maintain 100% backward compatibility:
 ## Testing Coverage
 
 ### Platforms Tested
+
 - Rocky Linux 10 (kernel 6.12.0, 288 cores)
 - Linux x86_64 (kernel 5.x, 512 cores)
 
 ### Test Scenarios
+
 ✅ Basic throughput tests (TCP_STREAM, OMNI)
 ✅ Request-response tests (TCP_RR)
 ✅ UDP tests (UDP_STREAM)
@@ -558,6 +610,7 @@ All Phase 1 features maintain 100% backward compatibility:
 ✅ Cross-system compatibility
 
 ### Automated Tests
+
 - `make test` - Basic functional tests
 - `make test-formats` - Output format validation
 - `make test-protocols` - Protocol coverage
@@ -566,6 +619,7 @@ All Phase 1 features maintain 100% backward compatibility:
 ## Usage Examples
 
 ### Example 1: JSON Output to Monitoring System
+
 ```bash
 #!/bin/bash
 while true; do
@@ -577,6 +631,7 @@ done
 ```
 
 ### Example 2: CSV Batch Testing
+
 ```bash
 #!/bin/bash
 echo "host,throughput,latency" > results.csv
@@ -588,6 +643,7 @@ done
 ```
 
 ### Example 3: Automated Performance CI
+
 ```bash
 #!/bin/bash
 # CI/CD performance test

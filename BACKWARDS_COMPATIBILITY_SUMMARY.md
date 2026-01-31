@@ -7,18 +7,22 @@ Successfully implemented **perfect backwards compatibility** for netperf while m
 ## The Solution
 
 ### Default Behavior (No Flags Required)
+
 ```bash
 netperf -H host
 ```
+
 - Runs TCP_STREAM test (classic behavior)
 - Outputs columnar format
 - **100% compatible with existing scripts**
 - No migration needed!
 
 ### Modern Features (Requires -M Flag)
+
 ```bash
 netperf -H host -M
 ```
+
 - Runs OMNI test (modern framework)
 - Outputs keyval format (THROUGHPUT=value)
 - Access to JSON output: `netperf -H host -M -- -J`
@@ -27,6 +31,7 @@ netperf -H host -M
 ## Code Changes
 
 ### src/netsh.c
+
 ```c
 // Line 129: Default remains TCP_STREAM
 char test_name[BUFSIZ] = "TCP_STREAM",
@@ -42,18 +47,21 @@ case 'M':
 ```
 
 ### src/nettest_omni.c
+
 - Added missing `#include <sys/utsname.h>` for JSON output
 - Added `extern char *netperf_version;` declaration
 
 ## Documentation Updates
 
 All documentation updated to reflect:
+
 1. TCP_STREAM is the default (not OMNI)
 2. Use `-M` flag for modern OMNI features
 3. All examples show `-M` when using OMNI
 4. No migration guide needed (backwards compatible!)
 
 **Files Updated:**
+
 - README.md
 - UPGRADING.md
 - docs/quickstart.md
@@ -79,7 +87,9 @@ Tests verified:
 ## Migration Path
 
 ### For Existing Scripts
+
 **No changes needed!** Scripts using:
+
 - `netperf -H host`
 - `netperf -H host -t TCP_STREAM`
 - `netperf -H host -t TCP_RR`
@@ -88,7 +98,9 @@ Tests verified:
 Continue to work exactly as before.
 
 ### For New Scripts Wanting Modern Features
+
 Add `-M` flag:
+
 ```bash
 # Old approach (if you were using OMNI as default)
 netperf -H host | grep THROUGHPUT

@@ -39,6 +39,7 @@ make
 These options directly affect benchmark results and should be chosen carefully:
 
 #### `--enable-histogram` (default: **no**)
+
 - **Impact**: HIGH - Adds per-operation timing overhead
 - **Affects Results**: YES - May reduce throughput by 5-15%
 - **Purpose**: Records detailed per-operation latency histograms
@@ -51,6 +52,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-dirty` (default: **no**)
+
 - **Impact**: MEDIUM - Forces cache misses
 - **Affects Results**: YES - Reduces throughput significantly (20-40%)
 - **Purpose**: Writes to buffers each time to avoid cache effects
@@ -63,6 +65,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-intervals` (default: **no**)
+
 - **Impact**: MEDIUM - Adds pacing/throttling overhead
 - **Affects Results**: YES - May reduce throughput by 1-5%
 - **Purpose**: Enables paced/throttled operations for rate limiting
@@ -75,6 +78,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-spin` (default: **no**)
+
 - **Impact**: HIGH - Busy-waits instead of sleeping
 - **Affects Results**: YES - Distorts CPU utilization dramatically
 - **Purpose**: Makes paced operations busy-wait
@@ -89,6 +93,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ### User Experience Options
 
 #### `--enable-demo` (default: **yes** as of Phase 1)
+
 - **Impact**: LOW - Minimal overhead
 - **Affects Results**: MAYBE - Slight I/O overhead for interim output
 - **Purpose**: Shows interim results during test runs
@@ -101,6 +106,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-burst` (default: **yes**)
+
 - **Impact**: LOW - Changes test behavior, not overhead
 - **Affects Results**: MAYBE - Models TCP slow-start
 - **Purpose**: Enables initial burst in request-response tests
@@ -110,6 +116,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ### Protocol Options
 
 #### `--enable-omni` (default: **yes**)
+
 - **Impact**: NONE - Core test framework
 - **Affects Results**: NO
 - **Purpose**: Includes modern OMNI test framework
@@ -117,6 +124,7 @@ These options directly affect benchmark results and should be chosen carefully:
 - **Note**: Also enables `WANT_MIGRATION` for classic test compatibility
 
 #### `--enable-sctp` (default: **no**)
+
 - **Impact**: NONE - Just adds test code
 - **Affects Results**: NO
 - **Purpose**: Includes SCTP protocol tests
@@ -128,6 +136,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-unixdomain` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes Unix domain socket tests
@@ -139,6 +148,7 @@ These options directly affect benchmark results and should be chosen carefully:
 ```
 
 #### `--enable-dccp` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes DCCP (Datagram Congestion Control Protocol) tests
@@ -146,6 +156,7 @@ These options directly affect benchmark results and should be chosen carefully:
 - **Dependencies**: Requires kernel DCCP support
 
 #### `--enable-dlpi` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes DLPI (Data Link Provider Interface) tests
@@ -153,6 +164,7 @@ These options directly affect benchmark results and should be chosen carefully:
 - **Note**: Rarely used, very specialized
 
 #### `--enable-xti` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes XTI (X/Open Transport Interface) tests
@@ -160,6 +172,7 @@ These options directly affect benchmark results and should be chosen carefully:
 - **Note**: XTI is deprecated, use BSD sockets instead
 
 #### `--enable-sdp` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes SDP (Sockets Direct Protocol) tests
@@ -167,6 +180,7 @@ These options directly affect benchmark results and should be chosen carefully:
 - **Dependencies**: Requires `libsdp`
 
 #### `--enable-exs` (default: **no**)
+
 - **Impact**: NONE
 - **Affects Results**: NO
 - **Purpose**: Includes ICSC-EXS async socket tests
@@ -177,12 +191,14 @@ These options directly affect benchmark results and should be chosen carefully:
 ### CPU Measurement Options
 
 #### `--enable-cpuutil=METHOD` (default: **auto**)
+
 - **Impact**: NONE - Measurement method
 - **Affects Results**: NO
 - **Purpose**: Selects CPU utilization measurement method
 - **Recommendation**: Let configure auto-detect
 
 Platform-specific methods:
+
 - **procstat** - Linux `/proc/stat` interface
 - **pstat/pstatnew** - HP-UX `pstat()` interface
 - **perfstat** - AIX `perfstat()` interface
@@ -308,11 +324,13 @@ Based on internal testing on Linux x86_64:
 ## Configuration File Reference
 
 All configuration options are documented in:
+
 - **configure.ac** - Autoconf input (source of truth)
 - **dev/catalog/configure-options.csv** - Spreadsheet analysis
 - **config.h** - Generated C preprocessor definitions
 
 Key preprocessor macros:
+
 - `WANT_OMNI` - OMNI tests enabled
 - `WANT_DEMO` - Interim results enabled
 - `WANT_HISTOGRAM` - Per-operation timing enabled
@@ -335,6 +353,7 @@ Recommended configuration with sensible defaults:
 ```
 
 Options:
+
 - `--minimal` - Minimal build (OMNI + demo only)
 - `--all-protocols` - Enable all protocol tests
 - `--with-histogram` - Override: enable histogram
@@ -368,6 +387,7 @@ If you modify `configure.ac`:
 ```
 
 This runs:
+
 1. `aclocal` - Generate `aclocal.m4` from m4 macros
 2. `autoheader` - Generate `config.h.in` template
 3. `automake` - Generate `Makefile.in` templates
@@ -380,11 +400,13 @@ This runs:
 If CPU utilization shows `-1.00`:
 
 1. Check which method was selected:
+
    ```bash
    grep USE_ build/config.h | grep CPU
    ```
 
 2. Try different methods:
+
    ```bash
    ./configure --enable-cpuutil=looper  # Fallback method
    ```
@@ -394,12 +416,14 @@ If CPU utilization shows `-1.00`:
 If SCTP/DCCP/etc. fail to compile:
 
 1. Check dependencies:
+
    ```bash
    dpkg -l | grep libsctp    # Debian/Ubuntu
    rpm -qa | grep lksctp     # RHEL/CentOS
    ```
 
 2. Disable problematic protocols:
+
    ```bash
    ./configure --disable-sctp
    ```
@@ -409,11 +433,13 @@ If SCTP/DCCP/etc. fail to compile:
 If results seem wrong:
 
 1. Check for performance-affecting options:
+
    ```bash
    grep -E 'WANT_HISTOGRAM|DIRTY|WANT_SPIN' build/config.h
    ```
 
 2. Rebuild with baseline configuration:
+
    ```bash
    ./dev/scripts/configure-optimized.sh
    ./dev/scripts/build.sh
@@ -429,11 +455,13 @@ If results seem wrong:
 ## Summary
 
 **Recommended default configuration** (already implemented in Phase 1):
+
 ```bash
 ./dev/scripts/configure-optimized.sh
 ```
 
 This enables:
+
 - ✅ OMNI test framework
 - ✅ Interim results (demo)
 - ✅ Initial burst in RR tests

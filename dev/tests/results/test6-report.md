@@ -14,7 +14,6 @@
 |------|-----------|------------|---------|-----------|------------|
 | Integration Test | send | 9.47 Gbps | 0.00 us | 45.2% | 32.1% |
 
-
 ## Notes
 
 - All tests run with OMNI test framework

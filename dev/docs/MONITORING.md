@@ -98,6 +98,7 @@ Monitor pre-recorded netperf output:
 ```
 
 This will be useful for:
+
 - Analyzing historical tests
 - Monitoring tests running in screen/tmux
 - Post-processing existing output
@@ -112,6 +113,7 @@ Monitor multiple tests simultaneously:
 ```
 
 **tests.json** format:
+
 ```json
 [
   {
@@ -128,6 +130,7 @@ Monitor multiple tests simultaneously:
 ```
 
 Dashboard layout:
+
 ```
  ════════════════════════ Netperf Dashboard ════════════════════════
  2026-01-31 14:23:45              4 Tests Running
@@ -166,6 +169,7 @@ Visualizes metric trends:
 ```
 
 Sparkline characters (8 levels):
+
 - `▁` = Lowest value
 - `▂▃▄▅▆▇` = Intermediate values
 - `█` = Highest value
@@ -254,6 +258,7 @@ Monitor orchestrated test (future):
 ### ANSI Color Support
 
 The monitor uses ANSI escape codes for:
+
 - Cursor positioning
 - Screen clearing
 - Color (91-97 bright colors)
@@ -373,6 +378,7 @@ Export metrics to Prometheus:
 ```
 
 Metrics exposed:
+
 ```
 netperf_throughput_mbps{host="server"} 9473.56
 netperf_latency_us{host="server"} 125.43

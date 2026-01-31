@@ -1,16 +1,19 @@
 # Netperf Enhancement Project Roadmap
 
 ## Project Vision
+
 Modernize netperf with enhanced automation, multi-instance testing, comprehensive output formats, and intelligent configuration management while maintaining backward compatibility.
 
 ## Core Objectives
 
 ### Primary Goal
+
 - Change default test from TCP_STREAM to OMNI with sensible default output selectors
 - Enable interval reporting (--enable-demo) by default
 - Optimize default build configuration
 
 ### Enhancement Goals
+
 1. Multi-format output (human-readable, CSV, JSON)
 2. Multi-instance parallel testing with aggregate reporting
 3. Directional testing (Tx/Rx/Bx) with independent metrics
@@ -23,7 +26,9 @@ Modernize netperf with enhanced automation, multi-instance testing, comprehensiv
 ## Phase 0: Analysis & Preparation (Week 1-2)
 
 ### 0.1 Current State Analysis
+
 **Deliverables:**
+
 - [ ] Document current default build configuration
 - [ ] Analyze all configure options and their impact
 - [ ] Review existing OMNI output selectors
@@ -33,6 +38,7 @@ Modernize netperf with enhanced automation, multi-instance testing, comprehensiv
 **Location:** `dev/docs/analysis/`
 
 **Tasks:**
+
 ```bash
 # Document current configure defaults
 ./configure --help > dev/docs/analysis/configure-options.txt
@@ -45,7 +51,9 @@ Modernize netperf with enhanced automation, multi-instance testing, comprehensiv
 ```
 
 ### 0.2 Requirements Documentation
+
 **Deliverables:**
+
 - [ ] Technical requirements for each enhancement
 - [ ] Backward compatibility requirements
 - [ ] Performance impact assessment criteria
@@ -58,26 +66,32 @@ Modernize netperf with enhanced automation, multi-instance testing, comprehensiv
 ## Phase 1: Core Defaults & Build Optimization (Week 3-4)
 
 ### 1.1 Change Default Test to OMNI
+
 **Impact:** Low risk, high value
 **Files to modify:**
+
 - `src/netsh.c` - Change test_name default from "TCP_STREAM" to "OMNI"
 - `src/netsh.h` - Update default constant
 
 **Implementation:**
+
 ```c
 // src/netsh.c line ~129
 test_name[BUFSIZ] = "OMNI",   // Changed from TCP_STREAM
 ```
 
 **Testing:**
+
 - Verify `./netperf -H localhost` runs OMNI by default
 - Verify `-t TCP_STREAM` still works (backward compat)
 - Update documentation
 
 ### 1.2 Define Default OMNI Output Selectors
+
 **Research:** Review `doc/omni_output_list.txt` for optimal defaults
 
 **Recommended defaults:**
+
 ```bash
 -k THROUGHPUT,THROUGHPUT_UNITS,MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY,\
 LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SEND_CALLS,LOCAL_RECV_CALLS,\
@@ -85,37 +99,44 @@ ELAPSED_TIME,PROTOCOL,DIRECTION,SOCKET_TYPE
 ```
 
 **Files to modify:**
+
 - `src/nettest_omni.c` - Add default output selector initialization
 - Create new test-specific option for "default" vs "verbose" vs "minimal"
 
 **Implementation approach:**
+
 - Add global variable for default output format
 - When `-k` not specified, use sensible defaults
 - Add `-k default`, `-k verbose`, `-k minimal` presets
 
 ### 1.3 Enable Interval Reporting by Default
+
 **Files to modify:**
+
 - `configure.ac` - Change --enable-demo to default yes
 - Test performance impact
 - Document how to disable if needed
 
 **Implementation:**
+
 ```bash
 # In configure.ac, around line 200
 case "$enable_demo" in
      yes)
-		use_demo=true
-		;;
+  use_demo=true
+  ;;
      no)
-		use_demo=false
-		;;
+  use_demo=false
+  ;;
      '')
-		use_demo=true    # Changed from false
-		;;
+  use_demo=true    # Changed from false
+  ;;
 ```
 
 ### 1.4 Review & Optimize Build Configuration
+
 **Analysis needed:**
+
 - `--enable-histogram` - Per-op timing, may affect performance
 - `--enable-dirty` - Write to buffers each time
 - `--enable-intervals` - Paced operation support
@@ -125,6 +146,7 @@ case "$enable_demo" in
 - `--enable-sctp` - SCTP protocol support
 
 **Recommendations:**
+
 ```bash
 # Optimal default configure
 ./configure \
@@ -137,6 +159,7 @@ case "$enable_demo" in
 ```
 
 **Deliverables:**
+
 - [ ] Updated configure.ac with new defaults
 - [ ] Documentation: `dev/docs/build-configuration.md`
 - [ ] Script: `dev/scripts/configure-optimized.sh`
@@ -147,18 +170,22 @@ case "$enable_demo" in
 ## Phase 2: Output Format Enhancement (Week 5-7)
 
 ### 2.1 JSON Output Support
+
 **Priority:** High - Industry standard format
 **Files to create:**
+
 - `src/netlib_json.c` - JSON formatting functions
 - `src/netlib_json.h` - JSON output interface
 
 **Implementation approach:**
+
 1. Add `-f json` or `-o json` global option
 2. Create JSON structure for test results
 3. Support nested objects for multi-iteration results
 4. Include metadata (timestamp, hostname, version)
 
 **JSON Schema:**
+
 ```json
 {
   "netperf_version": "2.7.1",
@@ -186,27 +213,33 @@ case "$enable_demo" in
 ```
 
 ### 2.2 CSV Output Enhancement
+
 **Priority:** High - Common for spreadsheet analysis
 **Current state:** OMNI already supports CSV-like output with `-P`
 
 **Enhancement:**
+
 1. Add proper CSV headers option
 2. Ensure proper escaping of fields
 3. Add `-o csv-header` option
 4. Support output to file directly: `-O results.csv`
 
 ### 2.3 Output to File
+
 **Global options to add:**
+
 - `-O <filename>` - Output results to file
 - `-F <format>` - Format: human|csv|json (default: human)
 - Combine: `netperf -H host -O results.json -F json`
 
 **Files to modify:**
+
 - `src/netsh.c` - Add command-line parsing
 - `src/netlib.c` - Add file output functions
 - All test files - Support output redirection
 
 **Implementation:**
+
 ```c
 // Add global variables
 char output_file[PATH_MAX] = "";
@@ -222,6 +255,7 @@ case 'F':
 ```
 
 **Deliverables:**
+
 - [ ] JSON output implementation
 - [ ] CSV with headers
 - [ ] File output support
@@ -234,10 +268,12 @@ case 'F':
 ## Phase 3: Multi-Instance Testing (Week 8-11)
 
 ### 3.1 Multi-Instance Test Controller
+
 **Priority:** High - Core new feature
 **New component:** `netperf-multi`
 
 **Architecture:**
+
 ```
 netperf-multi (orchestrator)
 ├── Spawns multiple netperf instances
@@ -248,6 +284,7 @@ netperf-multi (orchestrator)
 ```
 
 **Implementation approach:**
+
 1. Create new binary: `src/netperf-multi.c`
 2. Configuration file format (JSON or YAML)
 3. Fork/exec management for parallel tests
@@ -255,6 +292,7 @@ netperf-multi (orchestrator)
 5. Aggregate statistics calculation
 
 **Configuration file example:**
+
 ```json
 {
   "test_name": "multi_adapter_throughput",
@@ -281,6 +319,7 @@ netperf-multi (orchestrator)
 ```
 
 **Features:**
+
 - Synchronized start across all instances
 - Real-time progress monitoring
 - Individual and aggregate throughput
@@ -288,7 +327,9 @@ netperf-multi (orchestrator)
 - Failed instance handling and retry
 
 ### 3.2 Aggregate Reporting
+
 **Statistics to aggregate:**
+
 - Total throughput (sum)
 - Average latency (weighted by transaction count)
 - Max/min per-instance throughput
@@ -296,12 +337,14 @@ netperf-multi (orchestrator)
 - Per-adapter efficiency metrics
 
 **Output formats:**
+
 - Summary table (human-readable)
 - JSON aggregate results
 - CSV for time-series analysis
 - Visualization data (for future graphing)
 
 **Deliverables:**
+
 - [ ] netperf-multi implementation
 - [ ] Configuration schema and parser
 - [ ] Aggregate statistics module
@@ -314,10 +357,12 @@ netperf-multi (orchestrator)
 ## Phase 4: Directional Testing (Week 12-13)
 
 ### 4.1 Tx/Rx/Bx Test Modes
+
 **Current state:** OMNI supports `-d send` and `-d recv`
 **Enhancement:** Add intelligent test mode with separate reporting
 
 **Implementation:**
+
 ```bash
 # New test option: -T <mode>
 netperf -H host -T tx    # Send only (client -> server)
@@ -327,12 +372,15 @@ netperf -H host -T simul # Simultaneous bidirectional
 ```
 
 **Files to modify:**
+
 - `src/netsh.c` - Add -T option parsing
 - `src/nettest_omni.c` - Implement test modes
 - Add separate results structure for each direction
 
 ### 4.2 Independent Direction Reporting
+
 **For Bx mode, report:**
+
 ```
 Direction: Send (Tx)
   Throughput: 9420 Mbps
@@ -352,6 +400,7 @@ Direction: Bidirectional (Simul)
 ```
 
 **JSON output structure:**
+
 ```json
 {
   "test_mode": "bidirectional",
@@ -369,6 +418,7 @@ Direction: Bidirectional (Simul)
 ```
 
 **Deliverables:**
+
 - [ ] Directional test modes implementation
 - [ ] Independent reporting for each direction
 - [ ] Documentation: `dev/docs/directional-testing.md`
@@ -379,9 +429,11 @@ Direction: Bidirectional (Simul)
 ## Phase 5: Automated Configuration Testing Agent (Week 14-17)
 
 ### 5.1 Test Scenario Definition Language
+
 **Create DSL for test scenarios:**
 
 **Example scenario file:** `dev/docs/examples/scenario-mtu-tuning.yaml`
+
 ```yaml
 name: "MTU Optimization Test"
 description: "Test different MTU sizes to find optimal value"
@@ -417,9 +469,11 @@ analysis:
 ```
 
 ### 5.2 Configuration Testing Engine
+
 **New component:** `netperf-tuner`
 
 **Features:**
+
 - Parse scenario files
 - Execute pre-test configuration
 - Run netperf tests
@@ -429,6 +483,7 @@ analysis:
 - Generate comparative analysis
 
 **Architecture:**
+
 ```
 netperf-tuner
 ├── Scenario Parser (YAML/JSON)
@@ -445,13 +500,16 @@ netperf-tuner
 ```
 
 ### 5.3 Remote Configuration Support
+
 **Requirements:**
+
 - SSH key-based authentication
 - Sudo capabilities on remote host
 - Safety checks before executing commands
 - Rollback capability on failure
 
 **Implementation:**
+
 ```python
 # Use Python for scripting flexibility
 class RemoteConfigManager:
@@ -467,7 +525,9 @@ class RemoteConfigManager:
 ```
 
 ### 5.4 Analysis and Recommendations
+
 **Analysis capabilities:**
+
 - Statistical significance testing (t-test, ANOVA)
 - Trend detection (linear, polynomial fitting)
 - Outlier detection
@@ -475,6 +535,7 @@ class RemoteConfigManager:
 - Cost-benefit analysis (performance vs. resource usage)
 
 **Recommendation engine:**
+
 ```
 Analysis Results:
 ✓ MTU 9000 provides 15% better throughput vs baseline
@@ -490,6 +551,7 @@ Recommendation:
 ```
 
 **Deliverables:**
+
 - [ ] Scenario definition format and parser
 - [ ] netperf-tuner implementation (Python)
 - [ ] Remote configuration manager
@@ -504,9 +566,11 @@ Recommendation:
 ## Phase 6: Advanced Netserver Management (Week 18-20)
 
 ### 6.1 Netserver Configuration Tool
+
 **New component:** `netserver-manager`
 
 **Features:**
+
 - Start multiple netserver instances
 - CPU affinity binding
 - Memory binding (NUMA)
@@ -515,6 +579,7 @@ Recommendation:
 - Systemd service file generation
 
 **Usage:**
+
 ```bash
 # Single instance with CPU binding
 netserver-manager start --cpu 0 --port 12865 --name "netserver-cpu0"
@@ -545,12 +610,15 @@ netserver-manager start-multi \
 ```
 
 ### 6.2 CPU and NUMA Binding
+
 **Platform support:**
+
 - Linux: `sched_setaffinity()`, `numactl`, `taskset`
 - Detect NUMA topology automatically
 - Validate CPU/NUMA availability before binding
 
 **Implementation:**
+
 ```c
 // In netserver.c
 #ifdef HAVE_SCHED_SETAFFINITY
@@ -573,6 +641,7 @@ void bind_to_numa_node(int node) {
 ```
 
 **Command-line options for netserver:**
+
 ```bash
 netserver \
   -p 12865 \              # Port
@@ -583,7 +652,9 @@ netserver \
 ```
 
 ### 6.3 Service Management
+
 **Generate systemd service files:**
+
 ```bash
 netserver-manager generate-systemd \
   --config multi-netserver.json \
@@ -596,6 +667,7 @@ netserver-manager generate-systemd \
 ```
 
 **Service file template:**
+
 ```ini
 [Unit]
 Description=Netserver Instance numa0-core0
@@ -614,6 +686,7 @@ WantedBy=multi-user.target
 ```
 
 **Deliverables:**
+
 - [ ] netserver CPU/NUMA binding implementation
 - [ ] netserver-manager tool
 - [ ] Systemd service generation
@@ -626,9 +699,11 @@ WantedBy=multi-user.target
 ## Phase 7: Predefined Test Catalog (Week 21-23)
 
 ### 7.1 Test Catalog Structure
+
 **Location:** `dev/catalog/`
 
 **Categories:**
+
 1. **CPU Localization Tests** - Same CPU, cross-CPU, cross-package
 2. **NUMA Tests** - Local node, remote node, cross-node
 3. **PCIe Tests** - Same PCIe root, different root, NIC alignment
@@ -636,9 +711,11 @@ WantedBy=multi-user.target
 5. **Tuning Validation** - Interrupt coalescing, ring buffers, offloads
 
 ### 7.2 CPU Localization Tests
+
 **Test suite:** `dev/catalog/cpu-localization/`
 
 **Tests:**
+
 ```yaml
 # test-1-same-core.yaml
 name: "Same CPU Core Test"
@@ -682,9 +759,11 @@ expected_result: "Higher latency due to inter-package communication"
 ```
 
 ### 7.3 NUMA Tests
+
 **Test suite:** `dev/catalog/numa-alignment/`
 
 **Tests:**
+
 ```yaml
 # numa-local.yaml
 name: "NUMA Local Access"
@@ -715,9 +794,11 @@ expected_result: "QPI/UPI overhead, 20-40% performance degradation"
 ```
 
 ### 7.4 PCIe Tests
+
 **Test suite:** `dev/catalog/pcie-alignment/`
 
 **Tests:**
+
 ```yaml
 # pcie-optimal.yaml
 name: "Optimal PCIe Configuration"
@@ -743,9 +824,11 @@ expected_result: "Additional PCIe hop, measurable latency increase"
 ```
 
 ### 7.5 Test Runner and Analyzer
+
 **New tool:** `netperf-catalog`
 
 **Usage:**
+
 ```bash
 # Run entire category
 netperf-catalog run cpu-localization --output results/
@@ -761,6 +844,7 @@ netperf-catalog detect-optimal --category numa-alignment
 ```
 
 **Output:**
+
 ```
 Test Results Summary:
 ========================================
@@ -782,6 +866,7 @@ Next Steps:
 ```
 
 **Deliverables:**
+
 - [ ] Test catalog structure and format
 - [ ] 20+ predefined tests across all categories
 - [ ] netperf-catalog runner tool
@@ -796,7 +881,9 @@ Next Steps:
 ## Phase 8: Documentation and Polish (Week 24-25)
 
 ### 8.1 Comprehensive Documentation
+
 **Create/update:**
+
 - [ ] User guide with all new features
 - [ ] API documentation for new tools
 - [ ] Migration guide from old netperf
@@ -805,13 +892,16 @@ Next Steps:
 - [ ] Performance tuning cookbook
 
 ### 8.2 Example Repository
+
 **Location:** `dev/docs/examples/`
+
 - Complete working examples for every feature
 - Sample output files
 - Configuration templates
 - Shell scripts for common scenarios
 
 ### 8.3 Testing and Validation
+
 - [ ] Unit tests for all new code
 - [ ] Integration tests for multi-component features
 - [ ] Performance regression tests
@@ -819,6 +909,7 @@ Next Steps:
 - [ ] CI/CD pipeline setup
 
 ### 8.4 Release Preparation
+
 - [ ] Version bump to 3.0.0
 - [ ] Release notes
 - [ ] Migration guide
@@ -844,18 +935,21 @@ Next Steps:
 ## Resource Requirements
 
 ### Development Team
+
 - **Phase 1-2:** 1 C developer (core netperf changes)
 - **Phase 3-5:** 1 C developer + 1 Python developer
 - **Phase 6-7:** 1 C developer + 1 Python/DevOps engineer
 - **Phase 8:** Technical writer + QA engineer
 
 ### Infrastructure
+
 - Test lab with multi-NUMA systems
 - Multiple network adapters (10G, 25G, 100G)
 - Various OS platforms for compatibility testing
 - CI/CD infrastructure
 
 ### Timeline
+
 - **Fast track:** 15-18 weeks (focused team)
 - **Standard:** 20-25 weeks (part-time resources)
 - **With comprehensive testing:** 28-30 weeks
@@ -865,16 +959,19 @@ Next Steps:
 ## Risk Mitigation
 
 ### Backward Compatibility
+
 - Maintain all existing command-line options
 - Default behavior changes are opt-out
 - Provide migration tools and documentation
 
 ### Performance Impact
+
 - Benchmark before and after each phase
 - Ensure new features don't degrade baseline performance
 - Make advanced features opt-in if performance cost
 
 ### Code Maintainability
+
 - Follow existing code style
 - Comprehensive inline documentation
 - Modular design for new features
@@ -885,22 +982,26 @@ Next Steps:
 ## Success Metrics
 
 ### Phase 1-2 Success Criteria
+
 - [ ] Default netperf invocation uses OMNI with useful output
 - [ ] JSON output validates against schema
 - [ ] No performance regression vs. baseline
 - [ ] Documentation complete
 
 ### Phase 3-4 Success Criteria
+
 - [ ] Multi-instance testing demonstrates linear scaling
 - [ ] Aggregate reporting accuracy >99%
 - [ ] Directional tests show expected asymmetry
 
 ### Phase 5 Success Criteria
+
 - [ ] Automated tuning discovers optimal configuration
 - [ ] Recommendations match manual testing results
 - [ ] Can run full tuning suite unattended
 
 ### Phase 6-7 Success Criteria
+
 - [ ] Netserver binding reduces latency by measurable amount
 - [ ] Test catalog demonstrates NUMA impact clearly
 - [ ] All tests run reliably across platforms
@@ -910,6 +1011,7 @@ Next Steps:
 ## Next Steps
 
 ### Immediate Actions (Next 7 days)
+
 1. Review and approve this roadmap
 2. Set up development branch: `git checkout -b dev/phase-1`
 3. Create detailed task breakdown for Phase 0 and Phase 1
@@ -917,6 +1019,7 @@ Next Steps:
 5. Begin current state analysis
 
 ### Week 2-3 Actions
+
 1. Complete Phase 0 analysis
 2. Begin Phase 1 implementation
 3. Create unit test framework

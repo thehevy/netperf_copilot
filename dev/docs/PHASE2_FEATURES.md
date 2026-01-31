@@ -12,6 +12,7 @@ Technical implementation details for Phase 2: Output Format Enhancement.
 ## Overview
 
 Phase 2 enhanced netperf's output capabilities with:
+
 1. Enhanced JSON output with metadata
 2. CSV output with headers and RFC 4180 escaping
 3. Result aggregation and analysis tools
@@ -29,6 +30,7 @@ Enhanced JSON output adds metadata section and hierarchical structure.
 **File:** `src/nettest_omni.c:print_omni_json()`
 
 **Changes:**
+
 ```c
 // Before (Phase 1):
 {
@@ -54,6 +56,7 @@ Enhanced JSON output adds metadata section and hierarchical structure.
 ```
 
 **Features:**
+
 - ISO 8601 UTC timestamps
 - Platform detection (OS, release, architecture)
 - Hierarchical organization
@@ -61,6 +64,7 @@ Enhanced JSON output adds metadata section and hierarchical structure.
 - Valid JSON (no trailing commas)
 
 **Platform Detection:**
+
 - Uses `uname()` system call for Linux/Unix
 - Falls back gracefully on Windows
 - Includes hostname from `gethostname()`
@@ -75,11 +79,13 @@ Enhanced JSON output adds metadata section and hierarchical structure.
 **Implementation:** First call prints header row, subsequent calls skip it.
 
 **State Tracking:**
+
 ```c
 static int csv_header_printed = 0;
 ```
 
 **Logic:**
+
 ```c
 int print_headers = csv_header_printed ? 0 : 1;
 
@@ -92,12 +98,14 @@ if (print_headers) {
 ### CSV Field Escaping
 
 **RFC 4180 Compliance:**
+
 - Fields with delimiter → quoted
 - Fields with quotes → quotes doubled
 - Fields with newlines → quoted
 - Empty fields → empty (not "null")
 
 **Implementation:**
+
 ```c
 static int csv_needs_quoting(const char *str, char delimiter)
 {
@@ -131,6 +139,7 @@ static void csv_escape_field(char *dest, size_t dest_size,
 ```
 
 **Example Output:**
+
 ```csv
 TEST_NAME,COMMAND_LINE,THROUGHPUT
 TCP_STREAM,"./netperf -H host -t TCP_STREAM -- -m 1024,1024",9420.15
@@ -171,6 +180,7 @@ def parse_file(filepath: Path) -> List[NetperfResult]:
 ### Statistics Calculation
 
 **Metrics Calculated:**
+
 - count, mean, median
 - stddev, variance
 - min, max, range
@@ -178,6 +188,7 @@ def parse_file(filepath: Path) -> List[NetperfResult]:
 - coefficient_of_variation
 
 **Implementation:**
+
 ```python
 def calculate_stats(values: List[float]) -> Dict[str, float]:
     values_sorted = sorted(values)
@@ -197,6 +208,7 @@ def calculate_stats(values: List[float]) -> Dict[str, float]:
 ### Comparison Logic
 
 **Thresholds:**
+
 - Improvement: > +5% change
 - Stable: -5% to +5% change
 - Regression: < -5% change
@@ -223,6 +235,7 @@ def compare(baseline, current):
 **Location:** `dev/templates/`
 
 **Templates Included:**
+
 1. **summary.tmpl** - Brief summary report
 2. **markdown.tmpl** - Markdown formatted
 3. **prometheus.tmpl** - Prometheus metrics format
@@ -232,6 +245,7 @@ def compare(baseline, current):
 **Syntax:** `${VARIABLE_NAME}`
 
 **Example:**
+
 ```
 Test: ${TEST_NAME} ${PROTOCOL}
 Throughput: ${THROUGHPUT} ${THROUGHPUT_UNITS}
@@ -240,6 +254,7 @@ Command: ${COMMAND_LINE}
 
 **Supported Variables:**
 All netperf output fields plus:
+
 - TEST_NAME
 - PROTOCOL
 - TIMESTAMP
@@ -250,6 +265,7 @@ All netperf output fields plus:
 ### Future Enhancements
 
 **Planned for Phase 3:**
+
 - Conditional blocks: `${IF condition}...${ENDIF}`
 - Loops: `${FOREACH item}...${ENDFOREACH}`
 - Expressions: `${EXPR THROUGHPUT / 1000}`
@@ -262,6 +278,7 @@ All netperf output fields plus:
 ### Modified Files
 
 **src/nettest_omni.c:**
+
 - `print_omni_json()` - Enhanced with metadata (lines 2773-2855)
 - `csv_needs_quoting()` - New helper function (lines 2614-2625)
 - `csv_escape_field()` - New helper function (lines 2628-2659)
@@ -269,6 +286,7 @@ All netperf output fields plus:
 - `csv_header_printed` - New static variable (line 742)
 
 **Lines Changed:**
+
 - Added: ~200 lines
 - Modified: ~100 lines
 - Total impact: 300 lines
@@ -276,16 +294,19 @@ All netperf output fields plus:
 ### New Files
 
 **dev/tools/netperf-aggregate:**
+
 - 600+ lines of Python
 - Complete aggregation tool
 - No external dependencies
 
 **dev/templates/:**
+
 - summary.tmpl (20 lines)
 - markdown.tmpl (40 lines)
 - prometheus.tmpl (15 lines)
 
 **dev/docs/:**
+
 - OUTPUT_FORMATS.md (800+ lines)
 - OUTPUT_INTEGRATION.md (600+ lines)
 - AGGREGATION_GUIDE.md (600+ lines)
@@ -298,6 +319,7 @@ All netperf output fields plus:
 ### JSON Enhancement
 
 **Overhead:** ~10-20 μs per test
+
 - `gethostname()`: ~5 μs
 - `uname()`: ~5 μs
 - Timestamp formatting: ~5 μs
@@ -308,6 +330,7 @@ All netperf output fields plus:
 ### CSV Escaping
 
 **Overhead:** ~1-5 μs per field
+
 - Scanning: O(n) where n = field length
 - Escaping: O(n) worst case (all quotes)
 
@@ -318,10 +341,12 @@ All netperf output fields plus:
 ### Memory Usage
 
 **JSON:**
+
 - Metadata strings: ~500 bytes
 - No additional allocations for results
 
 **CSV:**
+
 - Escaped field buffer: 2048 bytes stack allocation
 - Reused across fields (no heap allocation)
 
@@ -334,6 +359,7 @@ All netperf output fields plus:
 ### Unit Test Coverage
 
 **CSV Escaping:**
+
 - Empty fields
 - Fields with commas
 - Fields with quotes
@@ -342,6 +368,7 @@ All netperf output fields plus:
 - Long fields (> 1KB)
 
 **JSON Generation:**
+
 - Valid JSON syntax
 - Type correctness (numbers vs strings)
 - Metadata presence
@@ -351,12 +378,14 @@ All netperf output fields plus:
 ### Integration Testing
 
 **Multi-Format:**
+
 - CSV → Aggregation tool
 - JSON → Aggregation tool
 - Keyval → Aggregation tool
 - Mixed formats → Aggregation tool
 
 **Cross-Platform:**
+
 - Linux (Ubuntu, RHEL, Rocky)
 - Tested on 288-core system
 - JSON metadata correct on all platforms
@@ -386,6 +415,7 @@ netperf -H host
 ### Legacy Script Compatibility
 
 **JSON:** Scripts using `jq` need minor updates:
+
 ```bash
 # Old (Phase 1):
 jq -r '.THROUGHPUT' results.json
@@ -395,6 +425,7 @@ jq -r '.results.THROUGHPUT' results.json
 ```
 
 **CSV:** Scripts reading CSV need no changes if they:
+
 - Use CSV parser (handles headers automatically)
 - Skip first line if doing manual parsing
 
@@ -408,7 +439,7 @@ jq -r '.results.THROUGHPUT' results.json
 
 1. **CSV Delimiter:** Fixed to comma (`,`)
    - Future: Add `-o csv:delimiter=|` option
-   
+
 2. **Template Engine:** Basic variable substitution only
    - Future: Add conditionals, loops, expressions
 
@@ -422,10 +453,12 @@ jq -r '.results.THROUGHPUT' results.json
 ### Platform Limitations
 
 **Windows:**
+
 - `uname()` not available → no platform info in JSON
 - Gracefully degrades to just hostname
 
 **Older Systems:**
+
 - Pre-C99 compilers may need adjustments
 - VLAs not used (compatibility with MSVC)
 
@@ -464,6 +497,7 @@ jq -r '.results.THROUGHPUT' results.json
 ### From Phase 1 to Phase 2
 
 **JSON Users:**
+
 ```bash
 # Update jq queries
 # Old:
@@ -477,6 +511,7 @@ jq -r '(.results.THROUGHPUT // .THROUGHPUT)'
 ```
 
 **CSV Users:**
+
 ```bash
 # If parsing manually:
 # Old:

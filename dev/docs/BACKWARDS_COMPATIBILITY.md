@@ -19,6 +19,7 @@ bytes  bytes   bytes    secs.    10^6bits/sec
 ## Output Format Comparison
 
 ### TCP_STREAM (Default - Columnar)
+
 ```bash
 $ netperf -H host
 Recv   Send    Send                          
@@ -27,9 +28,11 @@ Size   Size    Size     Time     Throughput
 bytes  bytes   bytes    secs.    10^6bits/sec
 87380  65536  65536    5.00     45234.67
 ```
+
 **Use when:** Default - 100% backwards compatible
 
 ### OMNI Keyval (Requires -M flag)
+
 ```bash
 $ netperf -H host
 THROUGHPUT=45234.67
@@ -37,9 +40,11 @@ THROUGHPUT_UNITS=10^6bits/s
 ELAPSED_TIME=5.00
 ...
 ```
+
 **Use when:** New scripts, easy parsing with grep/cut
 
 ### OMNI Columnar (-O flag)
+
 ```bash
 $ netperf -H host -- -O
 Throughput Throughput  Elapsed Protocol Direction
@@ -47,9 +52,11 @@ Units       Time
 10^6bits/s  5.00        TCP      Send
 45234.67    
 ```
+
 **Use when:** Human-readable output needed
 
 ### JSON Output (-J flag)
+
 ```bash
 $ netperf -H host -- -J
 {
@@ -58,6 +65,7 @@ $ netperf -H host -- -J
   ...
 }
 ```
+
 **Use when:** Structured data, automation, APIs
 
 ---
@@ -128,7 +136,9 @@ exec /path/to/netperf -o keyval "$@"
 ## Recommendations by Use Case
 
 ### Existing Production Scripts
+
 **Use explicit `-t TCP_STREAM`**
+
 ```bash
 # Update existing scripts:
 for i in {1..10}; do
@@ -137,7 +147,9 @@ done | awk '/^[0-9]/ {print $5}'  # Extract throughput
 ```
 
 ### New Scripts/Automation
+
 **Use keyval format with explicit parsing**
+
 ```bash
 # Better for new scripts:
 for i in {1..10}; do
@@ -146,7 +158,9 @@ done | grep "^THROUGHPUT=" | cut -d= -f2
 ```
 
 ### CI/CD Pipelines
+
 **Use JSON format for structured data**
+
 ```bash
 # Best for automation:
 netperf -H host -- -J > results.json
@@ -154,7 +168,9 @@ jq '.THROUGHPUT' results.json
 ```
 
 ### Interactive Testing
+
 **Use demo mode (OMNI default) for human-readable output**
+
 ```bash
 # Good for human reading:
 netperf -H host -l 30
@@ -168,6 +184,7 @@ netperf -H host -l 30
 ### Step 1: Audit Existing Scripts
 
 Find scripts that call netperf:
+
 ```bash
 grep -r "netperf " /path/to/scripts/
 ```
@@ -175,6 +192,7 @@ grep -r "netperf " /path/to/scripts/
 ### Step 2: Test Output Format
 
 Check what format your scripts expect:
+
 ```bash
 # Run existing script with debug
 bash -x your_script.sh 2>&1 | tee debug.log
@@ -186,6 +204,7 @@ grep -A5 "netperf" your_script.sh
 ### Step 3: Update Scripts
 
 Add explicit test type:
+
 ```bash
 # Before:
 netperf -H $HOST
@@ -200,6 +219,7 @@ netperf -H $HOST -o keyval | grep "^THROUGHPUT=" | cut -d= -f2
 ### Step 4: Add Format Checks
 
 Make scripts robust:
+
 ```bash
 #!/bin/bash
 OUTPUT=$(netperf -H host -t TCP_STREAM -l 5)
@@ -221,6 +241,7 @@ fi
 If netperf is installed via package manager (yum/apt):
 
 ### Check System Version
+
 ```bash
 # Find system netperf
 which netperf
@@ -233,6 +254,7 @@ netperf -H localhost -l 1 2>&1 | head -5
 ```
 
 ### Use Absolute Paths
+
 ```bash
 # Use built version explicitly
 /opt/netperf/build/src/netperf -H host
@@ -245,6 +267,7 @@ which netperf  # Should show /opt/netperf/build/src/netperf
 ### Service Detection
 
 Check if netserver is running as system service:
+
 ```bash
 # SystemD
 systemctl status netserver
@@ -314,6 +337,6 @@ If all three produce numbers, your parsing is format-agnostic!
 
 ## Support
 
-- File issues: https://github.com/thehevy/netperf_copilot/issues
+- File issues: <https://github.com/thehevy/netperf_copilot/issues>
 - Tag with: `backwards-compatibility`
 - Include: netperf version, expected vs actual output

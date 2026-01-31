@@ -1,6 +1,7 @@
 # Phase 1: Core Defaults & Build Optimization - Implementation Plan
 
 ## Overview
+
 This phase focuses on changing netperf defaults to be more useful out-of-the-box while maintaining backward compatibility.
 
 **Duration:** 2 weeks  
@@ -14,7 +15,9 @@ This phase focuses on changing netperf defaults to be more useful out-of-the-box
 ### Task 1.1: Change Default Test to OMNI (2 days)
 
 #### Files to Modify
+
 1. **src/netsh.c** (line ~129)
+
    ```c
    // OLD:
    test_name[BUFSIZ] = "TCP_STREAM",
@@ -24,17 +27,20 @@ This phase focuses on changing netperf defaults to be more useful out-of-the-box
    ```
 
 2. **src/netsh.h** (if constant exists)
+
    ```c
    #define DEFAULT_TEST "OMNI"
    ```
 
 #### Testing Checklist
+
 - [ ] `./netperf -H localhost` runs OMNI
 - [ ] `./netperf -H localhost -t TCP_STREAM` still works
 - [ ] All existing test names work via `-t` option
 - [ ] No performance regression
 
 #### Validation Commands
+
 ```bash
 # Build in test directory
 ./dev/scripts/build.sh
@@ -60,12 +66,15 @@ kill $SERVER_PID
 ### Task 1.2: Define Default OMNI Output Selectors (3 days)
 
 #### Research Phase
+
 Review `doc/omni_output_list.txt` and determine optimal defaults based on:
+
 - Most commonly needed metrics
 - Balance of information vs. readability
 - Industry standard benchmarking practices
 
 #### Recommended Default Selectors
+
 ```
 THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,PROTOCOL,DIRECTION,
 LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SEND_SIZE,LOCAL_RECV_SIZE,
@@ -74,6 +83,7 @@ REMOTE_SEND_CALLS,REMOTE_RECV_CALLS
 ```
 
 #### Optional Extended Defaults (with -v verbose flag)
+
 ```
 Add: MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY,MAX_LATENCY,
      LOCAL_BYTES_SENT,LOCAL_BYTES_RECVD,REMOTE_BYTES_SENT,REMOTE_BYTES_RECVD,
@@ -83,6 +93,7 @@ Add: MEAN_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY,MAX_LATENCY,
 #### Implementation
 
 **Option A: Hardcode defaults in nettest_omni.c**
+
 ```c
 // In nettest_omni.c, add after includes
 #define DEFAULT_OUTPUT_SELECTORS \
@@ -96,6 +107,7 @@ if (output_selectors == NULL || strlen(output_selectors) == 0) {
 ```
 
 **Option B: Add preset modes**
+
 ```c
 // Add new command-line option: -k <preset>
 // Presets: default, verbose, minimal, all
@@ -117,6 +129,7 @@ switch(output_preset) {
 ```
 
 #### Files to Modify
+
 1. **src/nettest_omni.c**
    - Add default selector constants
    - Modify output selector initialization
@@ -131,6 +144,7 @@ switch(output_preset) {
    - Explain preset modes
 
 #### Testing Checklist
+
 - [ ] Default output includes essential metrics
 - [ ] `-k` option still allows custom selectors
 - [ ] Preset modes work correctly
@@ -142,7 +156,9 @@ switch(output_preset) {
 ### Task 1.3: Enable Interval Reporting by Default (1 day)
 
 #### Files to Modify
+
 1. **configure.ac** (around line 200)
+
    ```bash
    # OLD:
    '')
@@ -159,7 +175,9 @@ switch(output_preset) {
 2. Document the change in configure help text
 
 #### Performance Impact Assessment
+
 Before enabling by default, test:
+
 ```bash
 # Test with demo disabled
 ./configure --disable-demo
@@ -179,6 +197,7 @@ diff results-no-demo.txt results-with-demo.txt
 **If overhead >2%:** Consider leaving as opt-in
 
 #### Testing Checklist
+
 - [ ] Interval reporting works by default
 - [ ] Can be disabled with `--disable-demo`
 - [ ] Performance impact <1%
@@ -189,6 +208,7 @@ diff results-no-demo.txt results-with-demo.txt
 ### Task 1.4: Review Build Configuration (3 days)
 
 #### Analysis Spreadsheet
+
 Create: `dev/docs/analysis/configure-options-analysis.md`
 
 | Option | Current Default | Recommended | Reason | Performance Impact |
@@ -205,6 +225,7 @@ Create: `dev/docs/analysis/configure-options-analysis.md`
 | --enable-dirty | no | no | Testing only | None |
 
 #### Recommended Default Configure
+
 ```bash
 #!/bin/bash
 # dev/scripts/configure-optimized.sh
@@ -222,12 +243,15 @@ Create: `dev/docs/analysis/configure-options-analysis.md`
 ```
 
 #### Testing Matrix
+
 Test each configuration combination on:
+
 - Linux (Ubuntu, RHEL)
 - FreeBSD
 - MacOS (if available)
 
 #### Deliverables
+
 - [ ] Analysis document
 - [ ] Optimized configure script
 - [ ] Performance comparison report
@@ -238,6 +262,7 @@ Test each configuration combination on:
 ### Task 1.5: Update Build Scripts (1 day)
 
 #### Update dev/scripts/build.sh
+
 ```bash
 #!/bin/bash
 # Enhanced build script with optimized defaults
@@ -289,6 +314,7 @@ echo "Binaries: ${BUILD_DIR}/src/"
 ```
 
 #### Create Makefile Wrapper
+
 ```makefile
 # dev/Makefile
 # Convenience wrapper for out-of-source builds
@@ -298,29 +324,29 @@ echo "Binaries: ${BUILD_DIR}/src/"
 all: build
 
 configure:
-	@./scripts/configure-optimized.sh
+ @./scripts/configure-optimized.sh
 
 build:
-	@./scripts/build.sh
+ @./scripts/build.sh
 
 clean:
-	@./scripts/clean.sh
+ @./scripts/clean.sh
 
 test:
-	@./scripts/test-basic.sh
+ @./scripts/test-basic.sh
 
 help:
-	@echo "Development Makefile"
-	@echo ""
-	@echo "Targets:"
-	@echo "  configure - Run optimized configure"
-	@echo "  build     - Build with optimized settings"
-	@echo "  clean     - Remove build directory"
-	@echo "  test      - Run basic test suite"
-	@echo ""
-	@echo "Usage:"
-	@echo "  make build"
-	@echo "  make test"
+ @echo "Development Makefile"
+ @echo ""
+ @echo "Targets:"
+ @echo "  configure - Run optimized configure"
+ @echo "  build     - Build with optimized settings"
+ @echo "  clean     - Remove build directory"
+ @echo "  test      - Run basic test suite"
+ @echo ""
+ @echo "Usage:"
+ @echo "  make build"
+ @echo "  make test"
 ```
 
 ---
@@ -330,6 +356,7 @@ help:
 #### Create Documentation Files
 
 **1. dev/docs/build-configuration.md**
+
 ```markdown
 # Netperf Build Configuration Guide
 
@@ -347,17 +374,20 @@ make
 ## Configuration Options
 
 ### Recommended Defaults
+
 - `--enable-demo`: Interval reporting
 - `--enable-intervals`: Paced operations
 - `--enable-burst`: RR burst support
 ...
 
 ### Performance Impact
+
 | Option | Overhead | Use Case |
 |--------|----------|----------|
 | demo | <1% | Always |
 | histogram | 5-10% | Debugging only |
 ...
+
 ```
 
 **2. Update main README.md**
@@ -376,6 +406,7 @@ All existing test names and options still work:
 ```
 
 **3. UPGRADING.md**
+
 ```markdown
 # Upgrading from Netperf 2.x to 3.0
 
@@ -395,6 +426,7 @@ None - 3.0 is fully backward compatible
 ## Testing Strategy
 
 ### Unit Tests
+
 Create: `dev/tests/test-phase1.sh`
 
 ```bash
@@ -423,6 +455,7 @@ echo "All tests passed!"
 ```
 
 ### Integration Tests
+
 ```bash
 # Test across all supported platforms
 for platform in ubuntu-20.04 ubuntu-22.04 rhel8 rhel9 freebsd13; do
@@ -431,6 +464,7 @@ done
 ```
 
 ### Performance Regression Tests
+
 ```bash
 # Compare 2.7.1 vs 3.0.0
 ./dev/scripts/performance-comparison.sh \
@@ -445,6 +479,7 @@ done
 ## Acceptance Criteria
 
 ### Must Have
+
 - [ ] Default test is OMNI
 - [ ] Default OMNI output includes 10-15 useful metrics
 - [ ] Backward compatibility: all existing tests work
@@ -453,11 +488,13 @@ done
 - [ ] Documentation complete and accurate
 
 ### Nice to Have
+
 - [ ] Preset output modes (minimal, default, verbose)
 - [ ] HTML performance report
 - [ ] CI/CD pipeline running tests
 
 ### Success Metrics
+
 - OMNI default reduces need for `-t` flag by 80%
 - Default output eliminates need for `-k` flag for 90% of users
 - Zero user complaints about backward compatibility
@@ -467,15 +504,18 @@ done
 ## Rollout Plan
 
 ### Week 1
+
 - Days 1-2: Implement Task 1.1 (OMNI default)
 - Days 3-5: Implement Task 1.2 (default output selectors)
 
 ### Week 2
+
 - Day 1: Implement Task 1.3 (interval reporting)
 - Days 2-4: Complete Task 1.4 (config review)
 - Day 5: Task 1.5 (build scripts) and start Task 1.6 (docs)
 
 ### Week 3 (buffer)
+
 - Complete documentation
 - Run full test matrix
 - Performance validation

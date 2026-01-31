@@ -46,6 +46,7 @@ hosts:
 ```
 
 **Host Roles**:
+
 - `server`: Can only act as netserver (receives tests)
 - `client`: Can only act as netperf client (initiates tests)
 - `both`: Can act as either client or server
@@ -55,6 +56,7 @@ hosts:
 Simple list of IP addresses (one per line):
 
 **clients.txt**:
+
 ```
 10.0.1.20
 10.0.1.21
@@ -62,6 +64,7 @@ Simple list of IP addresses (one per line):
 ```
 
 **servers.txt**:
+
 ```
 10.0.1.10
 10.0.1.11
@@ -78,6 +81,7 @@ Verify SSH access to all hosts:
 ```
 
 Output:
+
 ```
 Checking connectivity to all hosts...
   ✓ server1            (10.0.1.10)
@@ -110,6 +114,7 @@ Start netserver daemons on all server hosts:
 ```
 
 Output:
+
 ```
 Starting netserver on 2 hosts...
   ✓ server1: Started (PID 12345)
@@ -157,6 +162,7 @@ Check netserver status:
 ```
 
 Output:
+
 ```
 Netserver Status:
   server1             : Running (PID 12345)
@@ -193,6 +199,7 @@ Save results to JSON file for post-processing:
 ```
 
 Result structure:
+
 ```json
 [
   {
@@ -273,12 +280,14 @@ Test every client against every server:
 Test clients in one region against servers in another:
 
 **us-east-clients.txt**:
+
 ```
 10.0.1.20
 10.0.1.21
 ```
 
 **us-west-servers.txt**:
+
 ```
 10.0.2.10
 10.0.2.11
@@ -327,6 +336,7 @@ done
 ```
 
 Update `hosts.yaml`:
+
 ```yaml
 hosts:
   - name: server1
@@ -354,6 +364,7 @@ Host netperf-client1
 ```
 
 Then use aliases in inventory:
+
 ```yaml
 hosts:
   - name: server1
@@ -484,6 +495,7 @@ python3 dev/tools/netperf_stats.py throughput.txt
 ## Examples
 
 See `dev/examples/` for complete working examples:
+
 - `hosts.yaml`: Sample host inventory
 - `clients.txt`, `servers.txt`: Text-based inventory
 - orchestration scripts demonstrating common patterns

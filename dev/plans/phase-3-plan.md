@@ -21,11 +21,13 @@ Phase 3 adds advanced capabilities for production deployments, including multi-i
 ## Tasks
 
 ### Task 3.1: Multi-Instance Test Runner ⏳
+
 **Priority**: High  
 **Estimated Time**: 3 days  
 **Dependencies**: Phase 2 aggregation tool
 
 **Objectives**:
+
 - Create `netperf-multi` tool for parallel test execution
 - Support N simultaneous netperf instances
 - Automatic result collection and aggregation
@@ -33,6 +35,7 @@ Phase 3 adds advanced capabilities for production deployments, including multi-i
 - Coordinated start/stop across instances
 
 **Deliverables**:
+
 - `dev/tools/netperf-multi` (Python script)
 - Parallel execution engine
 - Resource management (CPU pinning, memory limits)
@@ -40,6 +43,7 @@ Phase 3 adds advanced capabilities for production deployments, including multi-i
 - Documentation in `MULTI_INSTANCE.md`
 
 **Implementation Details**:
+
 ```python
 # Usage examples
 netperf-multi -H server1 -n 4                  # 4 parallel OMNI tests (default)
@@ -48,6 +52,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 ```
 
 **Key Features**:
+
 - Process spawning with `subprocess`
 - CPU affinity with `psutil` (optional)
 - Barrier synchronization for coordinated start
@@ -57,11 +62,13 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 ---
 
 ### Task 3.2: Enhanced Statistics Engine ⏳
+
 **Priority**: High  
 **Estimated Time**: 4 days  
 **Dependencies**: Phase 2 aggregation tool
 
 **Objectives**:
+
 - Add confidence intervals (95%, 99%)
 - Variance and coefficient of variation
 - Outlier detection (IQR, Z-score methods)
@@ -69,6 +76,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 - Distribution analysis (normality tests)
 
 **Deliverables**:
+
 - Enhanced `netperf-aggregate` statistics module
 - Confidence interval calculation
 - Outlier detection and filtering
@@ -77,6 +85,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 - Documentation in `STATISTICS.md`
 
 **Implementation Details**:
+
 ```python
 # New statistics
 - Mean with 95% CI: 9500.2 ± 124.5 Mbps
@@ -87,6 +96,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 ```
 
 **Key Features**:
+
 - Use `statistics` and `math` modules (stdlib only)
 - Bootstrap method for CI when appropriate
 - Multiple outlier detection methods
@@ -96,11 +106,13 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 ---
 
 ### Task 3.3: Performance Profiles System ⏳
+
 **Priority**: Medium  
 **Estimated Time**: 3 days  
 **Dependencies**: Task 3.1
 
 **Objectives**:
+
 - Pre-configured test suites for common scenarios
 - Profile templates (throughput, latency, stress, cloud)
 - Profile manager for custom profiles
@@ -108,6 +120,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 - Quick benchmark mode
 
 **Deliverables**:
+
 - `dev/profiles/` directory with 10+ profiles
 - Profile definitions:
   - `throughput.yaml` - Maximum bandwidth testing
@@ -123,6 +136,7 @@ netperf-multi -H server1 -n 16 --aggregate     # Auto-aggregate results
 - Documentation in `PROFILES.md`
 
 **Implementation Details**:
+
 ```yaml
 # Example: throughput.yaml
 name: Maximum Throughput
@@ -145,6 +159,7 @@ output:
 ```
 
 **Key Features**:
+
 - YAML profile parsing (PyYAML or stdlib)
 - Profile inheritance
 - Variable substitution (${HOST}, ${DURATION})
@@ -154,11 +169,13 @@ output:
 ---
 
 ### Task 3.4: Remote Test Orchestration ⏳
+
 **Priority**: High  
 **Estimated Time**: 4 days  
 **Dependencies**: Task 3.1, Task 3.3
 
 **Objectives**:
+
 - Coordinate tests across multiple hosts
 - SSH-based remote execution
 - Automatic netserver deployment
@@ -166,6 +183,7 @@ output:
 - Multi-host test scenarios (client-server matrix)
 
 **Deliverables**:
+
 - `dev/tools/netperf-orchestrate` (Python script)
 - SSH connection manager
 - Remote netserver deployment
@@ -175,6 +193,7 @@ output:
 - Documentation in `ORCHESTRATION.md`
 
 **Implementation Details**:
+
 ```bash
 # Usage examples
 netperf-orchestrate --hosts hosts.yaml --profile throughput
@@ -183,6 +202,7 @@ netperf-orchestrate --deploy  # Auto-deploy netserver to hosts
 ```
 
 **Host Inventory (YAML)**:
+
 ```yaml
 hosts:
   - name: server1
@@ -197,6 +217,7 @@ hosts:
 ```
 
 **Key Features**:
+
 - Paramiko for SSH (optional, fallback to subprocess ssh)
 - SCP for file transfer
 - Remote netserver management (start/stop/status)
@@ -207,11 +228,13 @@ hosts:
 ---
 
 ### Task 3.5: Real-time Monitoring Dashboard ⏳
+
 **Priority**: Medium  
 **Estimated Time**: 3 days  
 **Dependencies**: Task 3.1
 
 **Objectives**:
+
 - Live test monitoring with terminal UI
 - Real-time metrics streaming
 - Progress bars and live graphs
@@ -219,6 +242,7 @@ hosts:
 - Export live data to monitoring systems
 
 **Deliverables**:
+
 - `dev/tools/netperf-monitor` (Python script)
 - Terminal UI with curses or rich library
 - Live metrics display (throughput, latency, CPU)
@@ -228,6 +252,7 @@ hosts:
 - Documentation in `MONITORING.md`
 
 **Implementation Details**:
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Netperf Live Monitor - 4 Active Tests                      │
@@ -253,6 +278,7 @@ hosts:
 ```
 
 **Key Features**:
+
 - Rich library for modern terminal UI (optional)
 - Fallback to basic curses UI
 - Parse netperf interval output (`-P` flag)
@@ -263,11 +289,13 @@ hosts:
 ---
 
 ### Task 3.6: Advanced Template Engine ⏳
+
 **Priority**: Low  
 **Estimated Time**: 3 days  
 **Dependencies**: Phase 2 templates
 
 **Objectives**:
+
 - Full-featured template engine (Jinja2-style)
 - Conditional logic and loops
 - Filters and functions
@@ -275,6 +303,7 @@ hosts:
 - Template inheritance
 
 **Deliverables**:
+
 - Enhanced template system in `netperf-aggregate`
 - Template syntax documentation
 - 10+ advanced template examples
@@ -283,6 +312,7 @@ hosts:
 - Documentation in `TEMPLATES.md`
 
 **Implementation Details**:
+
 ```jinja2
 {# Advanced template example #}
 {% if test_type == "TCP_STREAM" %}
@@ -305,6 +335,7 @@ hosts:
 ```
 
 **Key Features**:
+
 - Jinja2-compatible syntax (use Jinja2 if available, or minimal implementation)
 - Conditionals: `{% if %}`, `{% elif %}`, `{% else %}`
 - Loops: `{% for item in list %}`
@@ -319,18 +350,21 @@ hosts:
 ## Testing Strategy
 
 ### Unit Tests
+
 - Each tool should have comprehensive tests
 - Use Python `unittest` framework
 - Mock external dependencies (SSH, processes)
 - Test edge cases and error handling
 
 ### Integration Tests
+
 - End-to-end test scenarios
 - Real netperf execution tests
 - Multi-host test validation
 - Performance regression tests
 
 ### Documentation Tests
+
 - All examples must be executable
 - Automated documentation validation
 - Link checking
@@ -341,6 +375,7 @@ hosts:
 ## Documentation Requirements
 
 Each task must include:
+
 1. **User Guide**: How to use the feature
 2. **API Reference**: Detailed function/option documentation
 3. **Examples**: At least 5 working examples
@@ -363,6 +398,7 @@ Each task must include:
 ## Backward Compatibility
 
 All Phase 3 features are additive:
+
 - No changes to core netperf/netserver binaries
 - No breaking changes to Phase 1/2 tools
 - All Phase 3 tools are optional
@@ -373,10 +409,12 @@ All Phase 3 features are additive:
 ## Dependencies
 
 ### Required (stdlib only for core features)
+
 - Python 3.6+
 - Standard library modules: subprocess, threading, statistics, json, csv
 
 ### Optional (enhanced features)
+
 - `psutil` - CPU affinity and system monitoring
 - `paramiko` - SSH without external ssh binary
 - `rich` - Modern terminal UI
@@ -384,7 +422,9 @@ All Phase 3 features are additive:
 - `jinja2` - Advanced template engine
 
 ### Fallback Strategy
+
 If optional dependencies unavailable:
+
 - CPU affinity: Skip pinning, log warning
 - Paramiko: Use subprocess ssh/scp
 - Rich: Use basic curses or plain text
@@ -396,6 +436,7 @@ If optional dependencies unavailable:
 ## Success Criteria
 
 Phase 3 complete when:
+
 - [ ] All 6 tasks implemented and tested
 - [ ] 2,500+ lines of documentation written
 - [ ] All tools work without optional dependencies
@@ -409,11 +450,13 @@ Phase 3 complete when:
 ## Risk Assessment
 
 ### High Risk
+
 - Remote orchestration security (SSH key management)
 - Real-time monitoring performance impact
 - Template engine complexity
 
 ### Mitigation
+
 - Secure SSH key handling with user warnings
 - Monitoring as separate process (no impact on tests)
 - Simple template engine first, Jinja2 optional enhancement
@@ -434,6 +477,7 @@ Phase 3 complete when:
 ## Next Phase Preview
 
 **Phase 4: Cloud & Container Integration** (Future)
+
 - Kubernetes operator for netperf
 - Docker containers with automation
 - Cloud provider integrations (AWS, GCP, Azure)
