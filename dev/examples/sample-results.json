@@ -1,0 +1,34 @@
+[
+  {
+    "test_name": "TCP Send Throughput",
+    "direction": "send",
+    "throughput": 9473.56,
+    "latency": 0,
+    "cpu_local": 45.2,
+    "cpu_remote": 32.1
+  },
+  {
+    "test_name": "TCP Recv Throughput",
+    "direction": "recv",
+    "throughput": 9512.34,
+    "latency": 0,
+    "cpu_local": 42.8,
+    "cpu_remote": 35.6
+  },
+  {
+    "test_name": "TCP Request-Response",
+    "direction": "rr",
+    "throughput": 0,
+    "latency": 125.43,
+    "cpu_local": 38.5,
+    "cpu_remote": 29.2
+  },
+  {
+    "test_name": "UDP Send Throughput",
+    "direction": "send",
+    "throughput": 9623.17,
+    "latency": 0,
+    "cpu_local": 41.3,
+    "cpu_remote": 30.8
+  }
+]
