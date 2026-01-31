@@ -1,0 +1,16 @@
+Option,Default,Impact,Affects Results,Purpose,Recommendation,Dependencies,Notes
+--enable-histogram,no,High,Yes,Records per-operation timing histograms,Only for detailed latency analysis,"May increase CPU overhead, can skew results"
+--enable-dirty,no,Medium,Yes,Writes to buffers each time to avoid cache effects,Only when testing real-world scenarios with dirty buffers,"Forces cache misses, reduces throughput"
+--enable-demo,yes,Low,Maybe,Shows interim results during test runs,**RECOMMENDED** - Enabled by default,"Provides progress feedback, minimal overhead"
+--enable-unixdomain,no,None,No,Includes Unix domain socket tests,Enable if testing IPC performance,Requires Unix domain socket support
+--enable-dlpi,no,None,No,Includes DLPI (Data Link Provider Interface) tests,Only for link-layer testing on Solaris,"Requires DLPI support, rarely used"
+--enable-dccp,no,None,No,Includes DCCP (Datagram Congestion Control Protocol) tests,Enable if testing DCCP protocol,Requires kernel DCCP support
+--enable-omni,yes,None,No,Includes modern OMNI test framework,**REQUIRED** - Core test framework,"Enables WANT_MIGRATION for classic test compatibility"
+--enable-xti,no,None,No,Includes XTI (X/Open Transport Interface) tests,Only for legacy XTI testing,"XTI is deprecated, use BSD sockets"
+--enable-sdp,no,None,No,Includes SDP (Sockets Direct Protocol) tests,Enable if testing InfiniBand/RDMA,Requires libsdp
+--enable-exs,no,None,No,Includes ICSC-EXS async socket tests,Only for ICSC hardware,"Requires sys/exs.h and libexs, very specialized"
+--enable-sctp,no,None,No,Includes SCTP (Stream Control Transmission Protocol) tests,Enable if testing SCTP protocol,"Requires netinet/sctp.h, may need libsctp"
+--enable-intervals,no,Medium,Yes,Enables paced/throttled operations for rate limiting,Enable if testing rate-limited scenarios,"Useful for traffic shaping, may add overhead"
+--enable-spin,no,High,Yes,Makes paced operations busy-wait instead of sleep,**AVOID** - Distorts CPU utilization,"Requires --enable-intervals, burns CPU cycles"
+--enable-burst,yes,Low,Maybe,Enables initial burst in request-response tests,**RECOMMENDED** - Useful for realistic workloads,"Models TCP slow-start behavior, enabled by default"
+--enable-cpuutil,auto,None,No,Selects CPU utilization measurement method,**RECOMMENDED** - Auto-detects best method,"Platform-specific: procstat (Linux), pstat (HP-UX), perfstat (AIX), kstat (Solaris), sysctl (BSD), osx (macOS)"
