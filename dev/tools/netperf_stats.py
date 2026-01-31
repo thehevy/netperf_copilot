@@ -104,6 +104,9 @@ class AdvancedStatistics:
             if n >= 8:  # More reliable with larger samples
                 stats['is_normal'] = dist_info['is_normal']
                 stats['normality_p_value'] = dist_info['p_value']
+            else:
+                stats['is_normal'] = None
+                stats['normality_p_value'] = None
         
         return stats
     
@@ -934,7 +937,10 @@ if __name__ == "__main__":
             print(f"  Mean (clean): {stats['mean_clean']:.2f}")
     print(f"  Skewness: {stats['skewness']:.3f} ({stats['skewness_interpretation']})")
     print(f"  Kurtosis: {stats['kurtosis']:.3f} ({stats['kurtosis_interpretation']})")
-    print(f"  Normal: {stats['is_normal']} (p={stats['normality_p_value']:.3f})")
+    if stats.get('is_normal') is not None:
+        print(f"  Normal: {stats['is_normal']} (p={stats['normality_p_value']:.3f})")
+    else:
+        print(f"  Normal: N/A (sample size too small)")
     
     if not args.no_hist:
         print("\n" + AdvancedStatistics.generate_histogram(values, bins=args.bins))
