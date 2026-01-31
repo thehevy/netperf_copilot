@@ -101,7 +101,11 @@ netperf -H remotehost -- -O
 Run multiple tests simultaneously:
 
 ```bash
-# 4 parallel instances
+# 4 parallel instances (from repository)
+cd /opt/netperf
+./dev/tools/netperf-multi -n 4 -H remotehost -- -d send -l 30
+
+# Or after installation
 netperf-multi -n 4 -H remotehost -- -d send -l 30
 
 # Output:
@@ -109,6 +113,15 @@ netperf-multi -n 4 -H remotehost -- -d send -l 30
 # Successful: 4
 # Failed: 0
 # Average Throughput: 42567.89 Mbps
+```
+
+**Note**: netperf-multi outputs a summary. To pipe to stats, extract values first:
+
+```bash
+# Extract throughput values for statistical analysis
+./dev/tools/netperf-multi -n 4 -H remotehost -- -d send -l 30 2>&1 | \
+  grep "THROUGHPUT=" | cut -d= -f2 | \
+  ./dev/tools/netperf_stats.py -
 ```
 
 ### Statistical Analysis
@@ -225,14 +238,19 @@ netperf-template -t markdown-report results.json > benchmark.md
 ### Workflow 3: Parallel Aggregate Testing
 
 ```bash
-# 1. Run parallel tests
-netperf-multi -n 8 -H remotehost -- -d send -l 60 | tee multi-results.txt
+# 1. Run parallel tests and save output
+netperf-multi -n 8 -H remotehost -- -d send -l 60 2>&1 | tee multi-results.txt
 
 # 2. Extract throughput values
-grep "THROUGHPUT" multi-results.txt | awk '{print $2}' > throughputs.txt
+grep "THROUGHPUT=" multi-results.txt | cut -d= -f2 > throughputs.txt
 
 # 3. Get statistics
 netperf_stats.py throughputs.txt
+
+# Or in one pipeline:
+netperf-multi -n 8 -H remotehost -- -d send -l 60 2>&1 | \
+  grep "THROUGHPUT=" | cut -d= -f2 | \
+  netperf_stats.py -
 ```
 
 ### Workflow 4: Multi-Host Testing
@@ -352,9 +370,15 @@ netperf -H remotehost -l 300 -- -i 5
 
 # Output shows interim results during test
 ```
+netperf-multi -n 4 -H host -- -l 60 2>&1 | \
+  grep "THROUGHPUT=" | cut -d= -f2 | \
+  netperf_stats.py - | \
+  tee stats-report.txt
 
-### Tip 4: Combine Tools
-
+# Or sequential tests + Statistics
+for i in {1..10}; do netperf -H host -l 30; done | \
+  grep "THROUGHPUT=" | cut -d= -f2 | \
+  netperf_stats.py -
 ```bash
 # Parallel + Statistics + Report
 netperf-multi -n 4 -H host -- -l 60 | \
