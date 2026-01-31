@@ -81,8 +81,10 @@ This fork modernizes netperf with several key improvements while maintaining ful
 ## 📚 Documentation
 
 ### Core Documentation
+
 - **[BUILD_CONFIGURATION.md](dev/docs/BUILD_CONFIGURATION.md)** - Complete guide to configure options
 - **[UPGRADING.md](UPGRADING.md)** - Migration guide from upstream netperf
+- **[DOCUMENTATION_STANDARDS.md](dev/docs/DOCUMENTATION_STANDARDS.md)** - Markdown quality standards
 - **[Original Manual](doc/netperf.txt)** - Upstream documentation (still relevant)
 
 ### Phase 3 Tools Documentation

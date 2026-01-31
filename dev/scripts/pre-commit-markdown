@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Pre-commit hook for markdown quality validation
+# Install: cp dev/scripts/pre-commit-markdown .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+
+set -e
+
+echo "🔍 Validating markdown documentation..."
+
+# Run markdown validator
+python3 dev/tools/markdown_validator.py
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Documentation quality check failed!"
+    echo ""
+    echo "To fix automatically:"
+    echo "  ./dev/tools/markdown_validator.py . --fix"
+    echo ""
+    echo "To skip this check (not recommended):"
+    echo "  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo "✅ Documentation quality check passed!"
+exit 0

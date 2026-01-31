@@ -3,7 +3,7 @@
 
 .PHONY: help build clean test install configure debug release optimized \
         rebuild test-formats test-protocols benchmark lint check-cpu \
-        git-status git-log
+        git-status git-log validate-docs docs-quality
 
 # Default target
 .DEFAULT_GOAL := help
@@ -36,6 +36,8 @@ help: ## Show this help message
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make check-cpu       Check CPU detection and MAXCPUS"
+	@echo "  make validate-docs   Validate markdown documentation quality"
+	@echo "  make docs-quality    Get documentation quality score"
 	@echo "  make git-status      Show git status"
 	@echo "  make git-log         Show recent commits"
 	@echo ""
@@ -187,6 +189,13 @@ build-all-protocols: ## Build with all protocols enabled
 	@$(SCRIPTS_DIR)/build.sh
 
 # Documentation
+validate-docs: ## Validate markdown documentation quality
+	@echo "🔍 Validating markdown documentation..."
+	@python3 $(PROJECT_ROOT)/dev/tools/markdown_validator.py $(PROJECT_ROOT)
+
+docs-quality: ## Get documentation quality score
+	@python3 $(PROJECT_ROOT)/dev/tools/markdown_validator.py $(PROJECT_ROOT) --score
+
 docs: ## Open documentation in browser (if available)
 	@if [ -f "$(PROJECT_ROOT)/doc/netperf.html" ]; then \
 		xdg-open $(PROJECT_ROOT)/doc/netperf.html 2>/dev/null || \
