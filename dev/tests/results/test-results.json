@@ -1,0 +1,10 @@
+[
+  {
+    "test_name": "Integration Test",
+    "direction": "send",
+    "throughput": 9473.56,
+    "latency": 0,
+    "cpu_local": 45.2,
+    "cpu_remote": 32.1
+  }
+]

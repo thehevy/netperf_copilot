@@ -1,0 +1,5 @@
+hosts:
+  - name: testserver
+    address: 192.168.18.2
+    role: server
+    ssh_user: root
