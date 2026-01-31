@@ -100,14 +100,23 @@
 
 ---
 
-### 🔜 Task 1.5: Update Build Scripts
-**Status:** Planned  
+### ✅ Task 1.5: Update Build Scripts
+**Status:** **COMPLETE** (2025-01-30)  
+**Commits:** 6b6dfef, aa6d502  
 **Estimated Duration:** 1 day
 
-**Tasks:**
-- [ ] Enhance `dev/scripts/build.sh` with options
-- [ ] Create convenience Makefile in `dev/`
-- [ ] Test on multiple platforms
+**Completed Tasks:**
+- [x] Enhanced `dev/scripts/build.sh` with --type, --jobs, --clean, --verbose options
+- [x] Created `dev/Makefile` convenience wrapper with 15+ targets
+- [x] Tested all build modes (release, debug, optimized)
+- [x] Tested all output formats (keyval, CSV, JSON, columnar)
+- [x] Validated functionality on current platform
+
+**Deliverables:**
+- Enhanced build.sh with flexible build options
+- Comprehensive Makefile with build, test, utility targets
+- Color-coded output and improved error handling
+- Help system for both scripts
 
 ---
 
