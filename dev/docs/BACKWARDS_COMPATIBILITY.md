@@ -1,37 +1,65 @@
 # Backwards Compatibility Guide
 
-## The Problem
+## Default Behavior
 
-Different netperf output formats can break existing parsing scripts:
+**netperf DEFAULT:** OMNI test with **keyval output** (as of v2.7.x)
 
-### TCP_STREAM (Legacy) Output
+```bash
+$ netperf -H 192.168.18.2 -l 5
+OMNI Send TEST from 0.0.0.0...
+THROUGHPUT=65432.10
+THROUGHPUT_UNITS=10^6bits/s
+ELAPSED_TIME=5.00
+PROTOCOL=TCP
+DIRECTION=Send
+...
 ```
+
+**This is GOOD** - keyval format is easier to parse than columnar!
+
+## Output Format Comparison
+
+### TCP_STREAM (Legacy Columnar)
+```bash
+$ netperf -H host -t TCP_STREAM
 Recv   Send    Send                          
 Socket Socket  Message  Elapsed              
 Size   Size    Size     Time     Throughput  
 bytes  bytes   bytes    secs.    10^6bits/sec
 87380  65536  65536    5.00     45234.67
 ```
+**Use when:** Legacy scripts expect columnar format
 
-### OMNI (Modern) Demo Output  
-```
-Local   Remote  Local  Elapsed Throughput Throughput
-Send    Recv    Send   Time               Units
-Socket  Socket  Size   (sec)                         
-Final   Final                                        
-65536   87380   65536  5.00    45234.67   10^6bits/s
-```
-
-### OMNI Keyval Output (Recommended for New Scripts)
-```
+### OMNI Keyval (Default)
+```bash
+$ netperf -H host
 THROUGHPUT=45234.67
 THROUGHPUT_UNITS=10^6bits/s
 ELAPSED_TIME=5.00
-PROTOCOL=TCP
 ...
 ```
+**Use when:** New scripts, easy parsing with grep/cut
 
-**Scripts expecting TCP_STREAM columnar format will break with OMNI demo output!**
+### OMNI Columnar (-O flag)
+```bash
+$ netperf -H host -- -O
+Throughput Throughput  Elapsed Protocol Direction
+Units       Time        
+10^6bits/s  5.00        TCP      Send
+45234.67    
+```
+**Use when:** Human-readable output needed
+
+### JSON Output (-J flag)
+```bash
+$ netperf -H host -- -J
+{
+  "THROUGHPUT": 45234.67,
+  "THROUGHPUT_UNITS": "10^6bits/s",
+  ...
+}
+```
+**Use when:** Structured data, automation, APIs
 
 ---
 
@@ -51,11 +79,14 @@ netperf -H host -t TCP_STREAM -l 30
 ### Option 2: Use Keyval Format (Recommended for New Scripts)
 
 ```bash
-# Modern keyval format - easier to parse
+# Modern keyval format - easier to parse (THIS IS THE DEFAULT!)
+netperf -H host -l 30
+
+# Note: -o keyval is OPTIONAL (shown for clarity)
 netperf -H host -t OMNI -o keyval -l 30
 
 # Extract values easily:
-netperf -H host -t OMNI -o keyval | grep "^THROUGHPUT=" | cut -d= -f2
+netperf -H host | grep "^THROUGHPUT=" | cut -d= -f2
 ```
 
 ### Option 3: Environment Variable Configuration
