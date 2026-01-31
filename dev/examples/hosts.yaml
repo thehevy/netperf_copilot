@@ -1,0 +1,38 @@
+# hosts:
+#   - name: <host_name>
+#     address: <ip_or_hostname>
+#     role: <client|server|both>
+#     ssh_user: <username>        # Optional, defaults to $USER
+#     ssh_port: <port>             # Optional, defaults to 22
+#     ssh_key: <path_to_key>       # Optional, uses default SSH keys
+
+hosts:
+  - name: server1
+    address: 10.0.1.10
+    role: server
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
+    
+  - name: server2
+    address: 10.0.1.11
+    role: server
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
+    
+  - name: client1
+    address: 10.0.1.20
+    role: client
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
+    
+  - name: client2
+    address: 10.0.1.21
+    role: client
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
+    
+  - name: both1
+    address: 10.0.1.30
+    role: both
+    ssh_user: root
+    ssh_key: ~/.ssh/id_rsa
