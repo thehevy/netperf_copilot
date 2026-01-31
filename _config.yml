@@ -1,0 +1,11 @@
+theme: jekyll-theme-cayman
+title: Netperf Modern Fork
+description: A modernized fork of netperf with improved defaults, better output formats, and advanced testing tools
+show_downloads: true
+google_analytics: 
+github:
+  is_project_page: true
+  repository_url: https://github.com/thehevy/netperf_copilot
+  repository_name: netperf_copilot
+  owner_name: thehevy
+  owner_url: https://github.com/thehevy
