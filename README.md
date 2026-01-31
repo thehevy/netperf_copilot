@@ -47,18 +47,26 @@ This fork modernizes netperf with several key improvements while maintaining ful
 ### Output Examples
 
 ```bash
-# Default keyval output
-./netperf -H host
+# Default TCP_STREAM (columnar - backwards compatible)
+./build/src/netperf -H host
+# MIGRATED TCP STREAM TEST from 0.0.0.0...
+# Recv   Send    Send                          
+# Socket Socket  Message  Elapsed              
+# Size   Size    Size     Time     Throughput  
+# bytes  bytes   bytes    secs.    10^6bits/sec
+
+# Modern OMNI keyval output (requires -M flag)
+./build/src/netperf -H host -M
 # THROUGHPUT=54623.45
 # ELAPSED_TIME=1.00
 # PROTOCOL=TCP
 
-# JSON output
-./netperf -H host -- -J
+# JSON output (requires -M flag)
+./build/src/netperf -H host -M -- -J
 # {"THROUGHPUT": 54623.45, "ELAPSED_TIME": 1.00, ...}
 
-# CSV output  
-./netperf -H host -- -o
+# CSV output (requires -M flag)
+./build/src/netperf -H host -M -- -o
 # Throughput,Elapsed Time,Protocol
 # 54623.45,1.00,TCP
 ```
