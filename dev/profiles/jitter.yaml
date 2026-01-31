@@ -1,0 +1,79 @@
+# Jitter Profile - Network Consistency Testing
+#
+# Focused on measuring network consistency and jitter rather than
+# raw performance. Uses frequent measurements to detect variance
+# and instability.
+
+name: Network Jitter Analysis
+description: Focus on network consistency and jitter measurement
+version: 1.0
+category: jitter
+
+global:
+  duration: 180                   # Long duration to capture variance
+  output_format: json
+  warmup: 30
+  interval_reporting: 1           # Report every 1 second
+  
+tests:
+  - name: Continuous Latency
+    description: Continuous latency measurement
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    duration: 300                 # 5 minutes continuous
+    
+  - name: Small Burst Pattern
+    description: Detect queueing jitter
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 5
+    duration: 300
+    
+  - name: UDP Timing
+    description: UDP for pure timing (no TCP variance)
+    direction: rr
+    protocol: udp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    duration: 300
+    
+  - name: Background Load Impact
+    description: Latency under background load
+    direction: rr
+    protocol: tcp
+    instances: 2
+    request_size: 64
+    response_size: 64
+    burst: 1
+    duration: 300
+    # Note: Run with background throughput test for full analysis
+
+expectations:
+  mean_latency_max: 500
+  latency_stddev_max: 100         # Low standard deviation
+  jitter_max: 50                  # Low jitter
+  cv_max: 10                      # Low coefficient of variation (%)
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  analyze_variance: true
+  histogram: true
+  track_percentiles: [10, 25, 50, 75, 90, 95, 99, 99.9]
+
+tags:
+  - jitter
+  - consistency
+  - variance
+  - stability
+  - timing

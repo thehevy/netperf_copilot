@@ -1,0 +1,81 @@
+# Stress Profile - Maximum Load Testing
+#
+# Designed to stress-test network infrastructure by generating
+# maximum load across multiple connections and protocols.
+# Tests system stability under sustained high load.
+
+name: Network Stress Test
+description: Maximum load and stability testing
+version: 1.0
+category: stress
+
+global:
+  duration: 300                   # 5 minutes sustained load
+  output_format: json
+  warmup: 30                      # Extended warmup
+  cooldown: 10                    # Cooldown period
+  
+tests:
+  - name: TCP Maximum Streams
+    description: Maximum number of parallel TCP streams
+    direction: send
+    protocol: tcp
+    instances: 32                 # Large number of parallel streams
+    socket_size: 262144
+    message_size: 65536
+    cpu_affinity: true
+    stagger_start: 0.1            # Stagger starts by 100ms
+    
+  - name: TCP Connection Storm
+    description: High connection rate testing
+    direction: rr
+    protocol: tcp
+    instances: 16
+    connection: true              # New connection per transaction (-c flag)
+    request_size: 64
+    response_size: 1024
+    burst: 1
+    
+  - name: UDP Flood
+    description: Maximum UDP packet rate
+    direction: send
+    protocol: udp
+    instances: 16
+    message_size: 1472
+    cpu_affinity: true
+    
+  - name: Mixed Protocol Load
+    description: Simultaneous TCP and UDP load
+    direction: send
+    protocol: tcp
+    instances: 8
+    socket_size: 131072
+    # Note: Run UDP tests in parallel for true mixed load
+    
+  - name: Bidirectional Stress
+    description: Full-duplex stress testing
+    direction: send
+    protocol: tcp
+    instances: 16
+    socket_size: 262144
+    # Run with recv direction in separate execution for bidirectional
+
+expectations:
+  total_throughput_min: 8000      # Minimum aggregate throughput (Mbps)
+  cpu_util_max: 95                # Can run hot under stress
+  error_rate_max: 0.01            # Maximum 1% error rate
+  connection_rate_min: 5000       # Minimum connections per second
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  monitor_system: true            # Monitor system resources
+  check_stability: true           # Check for performance degradation
+
+tags:
+  - stress
+  - load-test
+  - stability
+  - maximum-load
+  - endurance

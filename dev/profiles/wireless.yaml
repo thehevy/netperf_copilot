@@ -1,0 +1,84 @@
+# Wireless Profile - WiFi/Wireless Network Testing
+#
+# Optimized for wireless networks (WiFi, cellular) with higher
+# latency, packet loss, and variability. Uses conservative settings
+# to handle wireless characteristics.
+
+name: Wireless Network Testing
+description: Optimized for WiFi and wireless networks
+version: 1.0
+category: wireless
+
+global:
+  duration: 120                   # Longer duration for wireless variance
+  output_format: json
+  warmup: 20                      # Extended warmup for wireless
+  retry_on_error: true
+  error_tolerance: 0.05           # Allow 5% packet loss
+  
+tests:
+  - name: WiFi Throughput
+    description: Realistic WiFi throughput
+    direction: send
+    protocol: tcp
+    instances: 1                  # Single stream for wireless
+    socket_size: 65536            # Moderate buffers
+    message_size: 8192            # Smaller messages
+    duration: 180                 # Extended for variance
+    
+  - name: WiFi Download
+    description: Download scenario (common for WiFi)
+    direction: recv
+    protocol: tcp
+    instances: 1
+    socket_size: 65536
+    message_size: 8192
+    duration: 180
+    
+  - name: WiFi Latency
+    description: Latency with wireless overhead
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    duration: 180
+    
+  - name: Video Streaming
+    description: Simulating video streaming over WiFi
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1400            # Conservative for WiFi
+    duration: 120
+    
+  - name: Voice Call (VoIP)
+    description: Simulating VoIP traffic
+    direction: rr
+    protocol: udp
+    instances: 1
+    request_size: 160             # Typical VoIP packet
+    response_size: 160
+    burst: 1
+    duration: 120
+
+expectations:
+  tcp_throughput_min: 50          # 50 Mbps minimum for modern WiFi
+  mean_latency_max: 5000          # 5ms typical for WiFi (microseconds)
+  packet_loss_max: 0.02           # 2% packet loss acceptable
+  jitter_max: 2000                # Higher jitter tolerance
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: false          # Don't flag outliers for wireless
+  analyze_variance: true
+  track_retransmissions: true
+
+tags:
+  - wireless
+  - wifi
+  - mobile
+  - variable-latency
+  - packet-loss

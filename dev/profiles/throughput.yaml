@@ -1,0 +1,72 @@
+# Throughput Profile - Maximum Bandwidth Testing
+#
+# Optimized for measuring maximum network throughput across different
+# protocols and configurations. Uses multiple parallel streams and
+# large buffers for optimal bandwidth utilization.
+
+name: Maximum Throughput
+description: Optimized for maximum bandwidth measurement across protocols
+version: 1.0
+category: throughput
+
+# Global settings applied to all tests
+global:
+  duration: 30                    # Test duration in seconds
+  output_format: json             # Output format: json, csv, keyval
+  warmup: 5                       # Warmup period (seconds) before measurement
+  
+# Test definitions
+tests:
+  - name: TCP Bulk Transfer
+    description: TCP throughput with large buffers
+    direction: send               # OMNI direction: send, recv, rr
+    protocol: tcp                 # Protocol: tcp, udp, sctp
+    instances: 4                  # Parallel streams
+    socket_size: 262144           # Socket buffer size (256KB)
+    message_size: 65536           # Message size (64KB)
+    cpu_affinity: true            # Enable CPU pinning
+    
+  - name: TCP Download
+    description: Reverse direction TCP throughput
+    direction: recv
+    protocol: tcp
+    instances: 4
+    socket_size: 262144
+    message_size: 65536
+    cpu_affinity: true
+    
+  - name: UDP Maximum Rate
+    description: UDP streaming with optimal message size
+    direction: send
+    protocol: udp
+    instances: 2
+    message_size: 1472            # MTU-safe size (1500 - 28 headers)
+    cpu_affinity: true
+    
+  - name: UDP Bidirectional
+    description: UDP send and receive simultaneously
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1472
+    # Note: For true bidirectional, run send and recv tests in parallel
+
+# Expected results and thresholds
+expectations:
+  tcp_throughput_min: 9000        # Minimum expected Mbps for 10GbE
+  udp_throughput_min: 8000        # Minimum expected Mbps for UDP
+  cpu_util_max: 80                # Maximum acceptable CPU utilization (%)
+
+# Analysis settings
+analysis:
+  aggregate: true                 # Aggregate results across tests
+  statistics: true                # Calculate comprehensive statistics
+  detect_outliers: true           # Enable outlier detection
+  confidence_level: 0.95          # 95% confidence intervals
+
+# Tags for organization
+tags:
+  - throughput
+  - bandwidth
+  - performance
+  - 10gbe

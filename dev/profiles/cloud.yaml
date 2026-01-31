@@ -1,0 +1,92 @@
+# Cloud Profile - Cloud Network Testing
+#
+# Optimized for cloud environments (AWS, Azure, GCP) where network
+# characteristics differ from traditional data centers. Accounts for
+# virtualization overhead and variable latency.
+
+name: Cloud Network Testing
+description: Optimized for cloud environments and virtualized infrastructure
+version: 1.0
+category: cloud
+
+global:
+  duration: 60                    # Medium duration for cloud variance
+  output_format: json
+  warmup: 15                      # Longer warmup for cloud stabilization
+  retry_on_error: true            # Retry on transient cloud failures
+  
+tests:
+  - name: Inter-AZ Throughput
+    description: Throughput between availability zones
+    direction: send
+    protocol: tcp
+    instances: 4                  # Moderate parallelism for cloud
+    socket_size: 131072           # Moderate buffer sizes
+    message_size: 16384
+    duration: 90                  # Longer to account for variance
+    
+  - name: Intra-Region Latency
+    description: Latency within same region
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    duration: 120                 # Extended for stable cloud latency
+    
+  - name: Sustained Transfer
+    description: Long-duration transfer (simulating data migration)
+    direction: send
+    protocol: tcp
+    instances: 2
+    socket_size: 262144
+    message_size: 65536
+    duration: 180                 # 3 minutes sustained
+    
+  - name: Bursty Traffic
+    description: Simulating typical cloud application traffic
+    direction: rr
+    protocol: tcp
+    instances: 4
+    request_size: 1024
+    response_size: 4096
+    burst: 5
+    
+  - name: UDP Streaming
+    description: UDP for streaming workloads
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1400            # Slightly smaller for cloud overhead
+    
+  - name: Connection Lifecycle
+    description: Cloud API-style connection patterns
+    direction: rr
+    protocol: tcp
+    instances: 4
+    connection: true
+    request_size: 256
+    response_size: 2048
+
+expectations:
+  tcp_throughput_min: 1000        # Lower expectations for cloud (1 Gbps)
+  mean_latency_max: 500           # Higher latency tolerance (microseconds)
+  latency_variance_max: 100       # Expect higher variance
+  connection_rate_min: 1000       # Cloud connection rate expectations
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  confidence_level: 0.95
+  analyze_variance: true          # Important for cloud variability
+  percentiles: [50, 90, 95, 99]   # Track tail latencies
+
+tags:
+  - cloud
+  - aws
+  - azure
+  - gcp
+  - virtualized
+  - inter-az

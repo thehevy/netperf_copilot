@@ -1,0 +1,99 @@
+# Datacenter Profile - Enterprise Datacenter Testing
+#
+# Optimized for enterprise datacenter environments with high-speed
+# networking (10GbE, 25GbE, 40GbE, 100GbE). Assumes low-latency,
+# high-bandwidth, stable network conditions.
+
+name: Enterprise Datacenter
+description: Optimized for high-speed datacenter networking
+version: 1.0
+category: datacenter
+
+global:
+  duration: 30                    # Standard duration
+  output_format: json
+  warmup: 5
+  
+tests:
+  - name: 10GbE Line Rate
+    description: Maximum throughput for 10 Gigabit Ethernet
+    direction: send
+    protocol: tcp
+    instances: 8                  # Multiple streams for line rate
+    socket_size: 524288           # Large buffers (512KB)
+    message_size: 131072          # Large messages (128KB)
+    cpu_affinity: true
+    
+  - name: East-West Traffic
+    description: Server-to-server within same rack
+    direction: send
+    protocol: tcp
+    instances: 4
+    socket_size: 262144
+    message_size: 65536
+    cpu_affinity: true
+    
+  - name: Ultra-Low Latency
+    description: Datacenter-grade low latency
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 1
+    response_size: 1
+    burst: 1
+    cpu_affinity: true
+    
+  - name: Database-Style Traffic
+    description: Simulating database replication
+    direction: rr
+    protocol: tcp
+    instances: 2
+    request_size: 4096            # Typical database page size
+    response_size: 4096
+    burst: 4
+    
+  - name: Storage Replication
+    description: Simulating SAN/NAS replication
+    direction: send
+    protocol: tcp
+    instances: 4
+    socket_size: 1048576          # Very large buffers (1MB)
+    message_size: 262144          # Very large messages (256KB)
+    
+  - name: RDMA-Style Transfer
+    description: Large block transfers (simulating RDMA)
+    direction: send
+    protocol: tcp
+    instances: 1
+    socket_size: 2097152          # 2MB buffers
+    message_size: 1048576         # 1MB messages
+    
+  - name: Jumbo Frames
+    description: Testing with jumbo frames (MTU 9000)
+    direction: send
+    protocol: udp
+    instances: 2
+    message_size: 8972            # Jumbo frame - headers
+
+expectations:
+  tcp_throughput_min: 9500        # Near line rate for 10GbE
+  mean_latency_max: 50            # Very low latency (microseconds)
+  p99_latency_max: 200            # Tight tail latency
+  jitter_max: 20                  # Low jitter
+  cpu_util_max: 70                # Efficient processing
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  confidence_level: 0.99
+  histogram: true
+  boxplot: true
+
+tags:
+  - datacenter
+  - 10gbe
+  - 25gbe
+  - low-latency
+  - high-bandwidth
+  - east-west

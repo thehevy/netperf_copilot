@@ -1,0 +1,75 @@
+# Mixed Workload Profile - Realistic Application Traffic
+#
+# Simulates mixed application traffic with combination of
+# throughput-oriented and latency-sensitive workloads running
+# simultaneously.
+
+name: Mixed Workload
+description: Realistic mixed application traffic patterns
+version: 1.0
+category: mixed
+
+global:
+  duration: 60
+  output_format: json
+  warmup: 10
+  
+tests:
+  - name: Bulk Transfer
+    description: Large file transfer
+    direction: send
+    protocol: tcp
+    instances: 2
+    socket_size: 262144
+    message_size: 65536
+    
+  - name: Interactive Traffic
+    description: Simulating interactive applications
+    direction: rr
+    protocol: tcp
+    instances: 4
+    request_size: 512
+    response_size: 2048
+    burst: 3
+    
+  - name: Database Queries
+    description: Simulating database query patterns
+    direction: rr
+    protocol: tcp
+    instances: 2
+    request_size: 256
+    response_size: 4096
+    burst: 1
+    
+  - name: Streaming Media
+    description: Simulating streaming traffic
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1400
+    
+  - name: API Calls
+    description: RESTful API style traffic
+    direction: rr
+    protocol: tcp
+    instances: 4
+    connection: true
+    request_size: 1024
+    response_size: 8192
+
+expectations:
+  total_throughput_min: 1000
+  mean_latency_max: 1000
+  p99_latency_max: 5000
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  analyze_variance: true
+
+tags:
+  - mixed
+  - realistic
+  - application
+  - workload

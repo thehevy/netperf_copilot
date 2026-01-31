@@ -1,0 +1,85 @@
+# Lossy Network Profile - Testing in Degraded Conditions
+#
+# Designed for testing network behavior under packet loss and
+# degraded conditions. Tests TCP recovery, UDP loss tolerance,
+# and application resilience.
+
+name: Lossy Network Testing
+description: Testing network behavior under packet loss
+version: 1.0
+category: lossy
+
+global:
+  duration: 90
+  output_format: json
+  warmup: 15
+  retry_on_error: true
+  error_tolerance: 0.10           # Tolerate up to 10% loss
+  
+tests:
+  - name: TCP with Loss
+    description: TCP throughput with packet loss
+    direction: send
+    protocol: tcp
+    instances: 1
+    socket_size: 131072
+    message_size: 16384           # Smaller for faster retransmission
+    duration: 120
+    
+  - name: TCP Recovery
+    description: TCP latency under loss
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 512
+    response_size: 512
+    burst: 1
+    duration: 120
+    
+  - name: UDP Loss Measurement
+    description: UDP packet loss measurement
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1400
+    duration: 120
+    # Note: Requires packet loss measurement capability
+    
+  - name: Small Packets TCP
+    description: TCP with small packets (more packets = more loss exposure)
+    direction: send
+    protocol: tcp
+    instances: 1
+    socket_size: 65536
+    message_size: 1024
+    duration: 120
+    
+  - name: Aggressive Retransmit
+    description: Test TCP retransmission behavior
+    direction: rr
+    protocol: tcp
+    instances: 2
+    request_size: 1024
+    response_size: 4096
+    burst: 5
+    duration: 120
+
+expectations:
+  tcp_throughput_min: 10          # Very low expectations
+  mean_latency_max: 50000         # 50ms tolerance
+  retransmission_rate_max: 0.20   # Up to 20% retransmissions
+  packet_loss_max: 0.10           # Up to 10% loss
+
+analysis:
+  aggregate: true
+  statistics: true
+  analyze_variance: true
+  track_retransmissions: true
+  track_timeouts: true
+
+tags:
+  - lossy
+  - packet-loss
+  - degraded
+  - resilience
+  - recovery
