@@ -24,6 +24,8 @@
 
 */
 
+/* Define _GNU_SOURCE for splice() and other GNU extensions */
+#define _GNU_SOURCE
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -731,6 +733,9 @@ netperf_output_elt_t netperf_output_source[NETPERF_OUTPUT_MAX];
    doing.  this should help simplify matters. raj 20110120 */
 
 enum netperf_output_name output_list[NETPERF_MAX_BLOCKS][NETPERF_OUTPUT_MAX];
+
+/* Track whether CSV header has been printed (for append mode) */
+static int csv_header_printed = 0;
 
 /* some things for setting the source IP address on outgoing UDP
    sends. borrows liberally from
@@ -2528,7 +2533,37 @@ print_omni_init() {
       parse_output_selection(output_selection_spec);
   }
   else {
-      set_output_list_by_test();
+      /* Phase 1 Task 1.2: Try to use default output preset
+         Search for default.out in common locations, fall back to
+         legacy set_output_list_by_test() if not found */
+      const char *default_preset_paths[] = {
+        "./dev/catalog/output-presets/default.out",
+        "/usr/share/netperf/output-presets/default.out",
+        "/usr/local/share/netperf/output-presets/default.out",
+        NULL
+      };
+      int i;
+      int found_default = 0;
+      
+      for (i = 0; default_preset_paths[i] != NULL; i++) {
+        FILE *test_file = fopen(default_preset_paths[i], "r");
+        if (test_file) {
+          fclose(test_file);
+          /* File exists, parse it directly as output selection file */
+          parse_output_selection_file((char *)default_preset_paths[i]);
+          found_default = 1;
+          if (debug) {
+            fprintf(where, "Using default output preset: %s\n", default_preset_paths[i]);
+            fflush(where);
+          }
+          break;
+        }
+      }
+      
+      /* If no default preset found, use legacy behavior */
+      if (!found_default) {
+        set_output_list_by_test();
+      }
   }
 
 }
@@ -2583,6 +2618,54 @@ my_snprintf(char *buffer, size_t size, netperf_output_elt_t *output_elt)
   }
 }
 
+/* CSV escaping helper - returns 1 if field needs quoting, 0 otherwise */
+static int
+csv_needs_quoting(const char *str, char delimiter)
+{
+  if (!str) return 0;
+  
+  while (*str) {
+    if (*str == delimiter || *str == '"' || *str == '\n' || *str == '\r')
+      return 1;
+    str++;
+  }
+  return 0;
+}
+
+/* Escape CSV field by doubling quotes and adding outer quotes if needed */
+static void
+csv_escape_field(char *dest, size_t dest_size, const char *src, char delimiter)
+{
+  size_t i = 0, j = 0;
+  int needs_quoting = csv_needs_quoting(src, delimiter);
+  
+  if (!src || dest_size < 3) {
+    if (dest_size > 0) dest[0] = '\0';
+    return;
+  }
+  
+  if (needs_quoting && i < dest_size - 1) {
+    dest[i++] = '"';
+  }
+  
+  while (src[j] && i < dest_size - 2) {
+    if (src[j] == '"') {
+      dest[i++] = '"';  /* Double the quote */
+      if (i < dest_size - 2)
+        dest[i++] = '"';
+    } else {
+      dest[i++] = src[j];
+    }
+    j++;
+  }
+  
+  if (needs_quoting && i < dest_size - 1) {
+    dest[i++] = '"';
+  }
+  
+  dest[i] = '\0';
+}
+
 void
 print_omni_csv()
 {
@@ -2594,6 +2677,9 @@ print_omni_csv()
   char *h1 = NULL;
   char *v1 = NULL;
   char tmpval[1024];
+  char escaped[2048];
+  char delimiter = ',';  /* Can be made configurable later */
+  int print_headers = csv_header_printed ? 0 : 1;  /* Print headers only once */
 
   buflen = 0;
   for (i = 0; i < NETPERF_MAX_BLOCKS; i++) {
@@ -2656,31 +2742,38 @@ print_omni_csv()
 		     (NULL !=
 		      netperf_output_source[output_list[i][j]].line[k]) &&
 		     (strcmp("",netperf_output_source[output_list[i][j]].line[k]))); k++) {
-
-	  len = sprintf(h1,
-			"%s",
-			netperf_output_source[output_list[i][j]].line[k]);
+	  /* Escape the header field */
+	  csv_escape_field(escaped, sizeof(escaped), 
+			   netperf_output_source[output_list[i][j]].line[k], 
+			   delimiter);
+	  len = sprintf(h1, "%s", escaped);
 	  *(h1 + len) = ' ';
-	  /* now move to the next starting column. for csv we aren't worried
-	     about alignment between the header and the value lines */
 	  h1 += len + 1;
 	}
-	*(h1 - 1) = ',';
+	if (len > 0) *(h1 - 1) = delimiter;
       }
       if ((netperf_output_source[output_list[i][j]].format != NULL) &&
 	  (netperf_output_source[output_list[i][j]].display_value != NULL)) {
 	/* tot_line_len is bogus here, but should be "OK" ? */
-	len = my_snprintf(v1,
-			  netperf_output_source[output_list[i][j]].tot_line_len,
+	len = my_snprintf(tmpval,
+			  sizeof(tmpval),
 			  &(netperf_output_source[output_list[i][j]]));
 
+	/* Escape the value if it's a string type */
+	if (netperf_output_source[output_list[i][j]].output_type == NETPERF_TYPE_CHAR) {
+	  csv_escape_field(escaped, sizeof(escaped), tmpval, delimiter);
+	  len = sprintf(v1, "%s", escaped);
+	} else {
+	  len = sprintf(v1, "%s", tmpval);
+	}
+	
 	/* nuke the trailing \n" from the string routine.  */
-	*(v1 + len) = ',';
+	*(v1 + len) = delimiter;
 	v1 += len + 1;
       }
       else {
-	/* we need a ',' even if there is no value */
-	*v1 = ',';
+	/* we need a delimiter even if there is no value */
+	*v1 = delimiter;
 	v1 += 2;
       }
     }
@@ -2688,12 +2781,15 @@ print_omni_csv()
 
   /* ok, _now_ null terminate each line by nuking the last comma.  do
      we have an OBOB here? */
-  if (print_headers) *(h1-1) = 0;
-  *(v1-1) = 0;
+  if (print_headers) *(h1-1) = '\0';
+  *(v1-1) = '\0';
   /* and now spit it out, but only if it is going to have something
      in it. we don't want a bunch of blank lines or nulls...  */
   if (output_list[0][0] != OUTPUT_END) {
-    if (print_headers) printf("%s\n",hdr1);
+    if (print_headers) {
+      printf("%s\n",hdr1);
+      csv_header_printed = 1;  /* Mark that we've printed the header */
+    }
     printf("%s\n",val1);
   }
 
@@ -2735,6 +2831,102 @@ print_omni_keyword()
       }
     }
   }
+  fflush(where);
+}
+
+void
+print_omni_json()
+{
+  /* Enhanced JSON output with metadata and hierarchical structure. raj 20260130 */
+
+  int i,j;
+  char tmpval[1024];
+  char hostname[256];
+  int vallen;
+  int first_item;
+  time_t now;
+  struct tm *tm_info;
+  char timestamp[64];
+  
+#ifndef WIN32
+  struct utsname uname_info;
+#endif
+
+  /* Get timestamp */
+  time(&now);
+  tm_info = gmtime(&now);
+  strftime(timestamp, sizeof(timestamp), "%Y-%m-%dT%H:%M:%SZ", tm_info);
+  
+  /* Get hostname */
+  if (gethostname(hostname, sizeof(hostname)) != 0) {
+    strncpy(hostname, "unknown", sizeof(hostname));
+  }
+
+  fprintf(where, "{\n");
+  
+  /* Metadata section */
+  fprintf(where, "  \"metadata\": {\n");
+  fprintf(where, "    \"netperf_version\": \"%s\",\n", netperf_version);
+  fprintf(where, "    \"timestamp\": \"%s\",\n", timestamp);
+  fprintf(where, "    \"hostname\": \"%s\"", hostname);
+  
+#ifndef WIN32
+  if (uname(&uname_info) == 0) {
+    fprintf(where, ",\n");
+    fprintf(where, "    \"platform\": \"%s %s %s\"", 
+            uname_info.sysname, uname_info.release, uname_info.machine);
+  }
+#endif
+  
+  fprintf(where, "\n  },\n");
+
+  /* Results section */
+  fprintf(where, "  \"results\": {\n");
+
+  first_item = 1;
+  for (i = 0; i < NETPERF_MAX_BLOCKS; i++) {
+    /* Check if this block has any output */
+    if (output_list[i][0] == OUTPUT_END) continue;
+
+    for (j = 0;
+	 ((j < NETPERF_OUTPUT_MAX) &&
+	  (output_list[i][j] != OUTPUT_END));
+	 j++) {
+      if ((netperf_output_source[output_list[i][j]].format != NULL) &&
+	  (netperf_output_source[output_list[i][j]].display_value != NULL)) {
+	vallen =
+	  my_snprintf(tmpval,
+		      1024,
+		      &(netperf_output_source[output_list[i][j]]));
+	if (vallen == -1) {
+	  snprintf(tmpval,
+		   1024,
+		   "my_snprintf failed with format %s\n",
+		   netperf_output_source[output_list[i][j]].format);
+	}
+	
+	if (!first_item) {
+	  fprintf(where, ",\n");
+	}
+	first_item = 0;
+
+	/* Determine if value should be quoted based on type */
+	if (netperf_output_source[output_list[i][j]].output_type == NETPERF_TYPE_CHAR) {
+	  fprintf(where,
+		  "    \"%s\": \"%s\"",
+		  netperf_output_enum_to_str(output_list[i][j]),
+		  tmpval);
+	} else {
+	  fprintf(where,
+		  "    \"%s\": %s",
+		  netperf_output_enum_to_str(output_list[i][j]),
+		  tmpval);
+	}
+      }
+    }
+  }
+  fprintf(where, "\n  }\n");
+  fprintf(where, "}\n");
   fflush(where);
 }
 
@@ -2886,6 +3078,9 @@ print_omni()
     break;
   case HUMAN:
     print_omni_human();
+    break;
+  case JSON:
+    print_omni_json();
     break;
   default:
     fprintf(where,"Yo Rick! There is a bug in netperf_output_mode!\n");
@@ -7118,7 +7313,10 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -h                Display this text\n\
     -H name[/mask],fam  Use name (or IP) and family as target of data connection\n\
                       A mask value will cause randomization of the IP used\n\
-    -k [file]         Generate keyval output optionally based on file\n\
+    -j number         Run number parallel/concurrent connections\n\
+    -J [file]         Generate JSON output optionally based on file\n\
+                      Use filename of '?' to get the list of choices\n\
+    -k [file]         Generate keyval output (key=value pairs) optionally based on file\n\
                       Use filename of '?' to get the list of choices\n\
     -K loc[,rem]      Set the local and/or remote congestion control\n\
                       algorithm to use on those platforms where it can\n\
@@ -7131,8 +7329,9 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -N                Use the connected socket for UDP remotely\n\
     -o [file]         Generate CSV output optionally based on file\n\
                       Use filename of '?' to get the list of choices\n\
-    -O [file]         Generate classic-style output based on file\n\
-                      Use filename of '?' to get the list of choices\n\
+    -O [file]         Generate human-readable columnar output optionally\n\
+                      based on file. Use filename of '?' to get list.\n\
+                      Note: default output is keyval (key=value pairs)\n\
     -p min[,max]      Set the min/max port numbers for TCP_CRR, TCP_TRR\n\
     -P local[,remote] Set the local/remote port for the data socket\n\
     -r req,[rsp]      Set request/response sizes (TCP_RR, UDP_RR)\n\
@@ -7170,7 +7369,7 @@ scan_omni_args(int argc, char *argv[])
 
 {
 
-#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:kK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
+#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
 
   extern char	*optarg;	  /* pointer to option string	*/
 
@@ -7345,6 +7544,27 @@ scan_omni_args(int argc, char *argv[])
       break;
     case 'j':
       parallel_connections = atoi(optarg);
+      break;
+    case 'J':
+      netperf_output_mode = JSON;
+      legacy = 0;
+      /* obliterate any previous file name */
+      if (output_selection_spec) {
+	free(output_selection_spec);
+	output_selection_spec = NULL;
+      }
+      if (argv[optind] && ((unsigned char)argv[optind][0] != '-')) {
+	/* we assume that what follows is the name of a file with the
+	   list of desired output values. */
+	output_selection_spec = strdup(argv[optind]);
+	optind++;
+	/* special case - if the file name is "?" then we will emit a
+	   list of the available outputs */
+	if (strcmp(output_selection_spec,"?") == 0) {
+	  dump_netperf_output_choices(stdout,1);
+	  exit(1);
+	}
+      }
       break;
     case 'k':
       netperf_output_mode = KEYVAL;

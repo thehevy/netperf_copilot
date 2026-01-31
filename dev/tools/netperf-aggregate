@@ -1,0 +1,474 @@
+#!/usr/bin/env python3
+"""
+netperf-aggregate - Aggregate and analyze netperf test results
+
+This tool parses multiple netperf result files, calculates statistics,
+compares results, and generates reports in various formats.
+
+Usage:
+  netperf-aggregate results/*.json -o summary.json
+  netperf-aggregate baseline.json current.json --compare
+  netperf-aggregate results/*.json --stats --report html -o report.html
+
+Copyright 2026 Hewlett Packard Enterprise Development LP
+License: MIT
+"""
+
+import sys
+import os
+import json
+import re
+import statistics
+from pathlib import Path
+from typing import List, Dict, Any, Optional
+import argparse
+from datetime import datetime
+
+VERSION = "1.0.0"
+
+class NetperfResult:
+    """Represents a single netperf test result"""
+    
+    def __init__(self, data: Dict[str, Any], source_file: str = ""):
+        self.data = data
+        self.source_file = source_file
+        self.format_type = self._detect_format()
+        self._parse_result()
+    
+    def _detect_format(self) -> str:
+        """Detect the format of the result data"""
+        if isinstance(self.data, dict):
+            if 'metadata' in self.data and 'results' in self.data:
+                return 'json_enhanced'
+            else:
+                return 'json_flat'
+        return 'unknown'
+    
+    def _parse_result(self):
+        """Parse the result data into a normalized format"""
+        if self.format_type == 'json_enhanced':
+            self.metadata = self.data.get('metadata', {})
+            self.results = self.data.get('results', {})
+        elif self.format_type == 'json_flat':
+            self.metadata = {}
+            self.results = self.data
+        else:
+            self.metadata = {}
+            self.results = {}
+    
+    def get_throughput(self) -> Optional[float]:
+        """Extract throughput value"""
+        for key in ['THROUGHPUT', 'Throughput', 'throughput']:
+            if key in self.results:
+                val = self.results[key]
+                return float(val) if not isinstance(val, dict) else float(val.get('value', 0))
+        return None
+    
+    def get_latency(self) -> Optional[float]:
+        """Extract latency value (mean latency or RT_LATENCY)"""
+        for key in ['MEAN_LATENCY', 'RT_LATENCY', 'Mean_Latency', 'latency']:
+            if key in self.results:
+                return float(self.results[key])
+        return None
+    
+    def get_cpu_util(self, which='local') -> Optional[float]:
+        """Extract CPU utilization"""
+        if which == 'local':
+            keys = ['LOCAL_CPU_UTIL', 'Local_CPU_Util', 'local_cpu']
+        else:
+            keys = ['REMOTE_CPU_UTIL', 'Remote_CPU_Util', 'remote_cpu']
+        
+        for key in keys:
+            if key in self.results:
+                return float(self.results[key])
+        return None
+
+
+class ResultParser:
+    """Parse netperf results from various formats"""
+    
+    @staticmethod
+    def parse_json_file(filepath: Path) -> List[NetperfResult]:
+        """Parse JSON format results"""
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            
+            # Handle both single result and array of results
+            if isinstance(data, list):
+                return [NetperfResult(item, str(filepath)) for item in data]
+            else:
+                return [NetperfResult(data, str(filepath))]
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON file {filepath}: {e}", file=sys.stderr)
+            return []
+        except Exception as e:
+            print(f"Error reading file {filepath}: {e}", file=sys.stderr)
+            return []
+    
+    @staticmethod
+    def parse_keyval_file(filepath: Path) -> List[NetperfResult]:
+        """Parse key=value format results"""
+        try:
+            data = {}
+            with open(filepath, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        # Try to convert to number
+                        try:
+                            data[key] = float(value)
+                        except ValueError:
+                            data[key] = value
+            
+            return [NetperfResult(data, str(filepath))]
+        except Exception as e:
+            print(f"Error parsing key=value file {filepath}: {e}", file=sys.stderr)
+            return []
+    
+    @staticmethod
+    def parse_csv_file(filepath: Path) -> List[NetperfResult]:
+        """Parse CSV format results"""
+        try:
+            results = []
+            with open(filepath, 'r') as f:
+                lines = f.readlines()
+            
+            if len(lines) < 2:
+                return []
+            
+            # First line is header
+            headers = [h.strip().strip('"') for h in lines[0].strip().split(',')]
+            
+            # Subsequent lines are data
+            for line in lines[1:]:
+                if line.strip():
+                    values = [v.strip().strip('"') for v in line.strip().split(',')]
+                    data = {}
+                    for i, header in enumerate(headers):
+                        if i < len(values):
+                            try:
+                                data[header] = float(values[i])
+                            except ValueError:
+                                data[header] = values[i]
+                    results.append(NetperfResult(data, str(filepath)))
+            
+            return results
+        except Exception as e:
+            print(f"Error parsing CSV file {filepath}: {e}", file=sys.stderr)
+            return []
+    
+    @staticmethod
+    def parse_file(filepath: Path) -> List[NetperfResult]:
+        """Auto-detect format and parse file"""
+        suffix = filepath.suffix.lower()
+        
+        if suffix == '.json':
+            return ResultParser.parse_json_file(filepath)
+        elif suffix == '.csv':
+            return ResultParser.parse_csv_file(filepath)
+        elif suffix in ['.txt', '.dat', '']:
+            # Try key=value format first
+            results = ResultParser.parse_keyval_file(filepath)
+            if results:
+                return results
+            # Fall back to JSON if that fails
+            return ResultParser.parse_json_file(filepath)
+        else:
+            print(f"Unknown file format: {suffix}, trying JSON...", file=sys.stderr)
+            return ResultParser.parse_json_file(filepath)
+
+
+class StatisticsCalculator:
+    """Calculate aggregate statistics for results"""
+    
+    @staticmethod
+    def calculate_stats(values: List[float]) -> Dict[str, float]:
+        """Calculate comprehensive statistics"""
+        if not values:
+            return {}
+        
+        values_sorted = sorted(values)
+        n = len(values)
+        
+        stats = {
+            'count': n,
+            'mean': statistics.mean(values),
+            'median': statistics.median(values),
+            'min': min(values),
+            'max': max(values),
+            'range': max(values) - min(values),
+        }
+        
+        if n >= 2:
+            stats['stddev'] = statistics.stdev(values)
+            stats['variance'] = statistics.variance(values)
+            stats['coefficient_of_variation'] = (stats['stddev'] / stats['mean'] * 100) if stats['mean'] != 0 else 0
+        
+        # Percentiles
+        stats['p50'] = values_sorted[int(n * 0.50)]
+        stats['p90'] = values_sorted[int(n * 0.90)] if n > 1 else values_sorted[0]
+        stats['p95'] = values_sorted[int(n * 0.95)] if n > 1 else values_sorted[0]
+        stats['p99'] = values_sorted[int(n * 0.99)] if n > 1 else values_sorted[0]
+        
+        return stats
+    
+    @staticmethod
+    def aggregate_results(results: List[NetperfResult], metrics: List[str] = None) -> Dict[str, Dict[str, float]]:
+        """Aggregate statistics across multiple results"""
+        if not metrics:
+            metrics = ['throughput', 'latency', 'local_cpu', 'remote_cpu']
+        
+        aggregated = {}
+        
+        for metric in metrics:
+            values = []
+            for result in results:
+                if metric == 'throughput':
+                    val = result.get_throughput()
+                elif metric == 'latency':
+                    val = result.get_latency()
+                elif metric == 'local_cpu':
+                    val = result.get_cpu_util('local')
+                elif metric == 'remote_cpu':
+                    val = result.get_cpu_util('remote')
+                else:
+                    val = None
+                
+                if val is not None:
+                    values.append(val)
+            
+            if values:
+                aggregated[metric] = StatisticsCalculator.calculate_stats(values)
+        
+        return aggregated
+
+
+class ResultComparator:
+    """Compare two sets of results"""
+    
+    @staticmethod
+    def compare(baseline: List[NetperfResult], current: List[NetperfResult]) -> Dict[str, Any]:
+        """Compare baseline vs current results"""
+        baseline_stats = StatisticsCalculator.aggregate_results(baseline)
+        current_stats = StatisticsCalculator.aggregate_results(current)
+        
+        comparison = {
+            'baseline': baseline_stats,
+            'current': current_stats,
+            'differences': {}
+        }
+        
+        for metric in baseline_stats:
+            if metric in current_stats:
+                baseline_mean = baseline_stats[metric]['mean']
+                current_mean = current_stats[metric]['mean']
+                
+                if baseline_mean != 0:
+                    pct_change = ((current_mean - baseline_mean) / baseline_mean) * 100
+                else:
+                    pct_change = 0
+                
+                comparison['differences'][metric] = {
+                    'baseline_mean': baseline_mean,
+                    'current_mean': current_mean,
+                    'absolute_change': current_mean - baseline_mean,
+                    'percent_change': pct_change,
+                    'is_regression': pct_change < -5,  # >5% decrease is regression
+                    'is_improvement': pct_change > 5,   # >5% increase is improvement
+                }
+        
+        return comparison
+
+
+class ReportGenerator:
+    """Generate reports in various formats"""
+    
+    @staticmethod
+    def generate_text_stats(aggregated: Dict[str, Dict[str, float]]) -> str:
+        """Generate text format statistics report"""
+        output = []
+        output.append("=" * 60)
+        output.append("Netperf Aggregated Statistics")
+        output.append("=" * 60)
+        output.append("")
+        
+        for metric, stats in aggregated.items():
+            output.append(f"{metric.upper()}:")
+            output.append(f"  Count:   {stats.get('count', 0)}")
+            output.append(f"  Mean:    {stats.get('mean', 0):.2f}")
+            output.append(f"  Median:  {stats.get('median', 0):.2f}")
+            output.append(f"  StdDev:  {stats.get('stddev', 0):.2f}")
+            output.append(f"  Min:     {stats.get('min', 0):.2f}")
+            output.append(f"  Max:     {stats.get('max', 0):.2f}")
+            output.append(f"  P50:     {stats.get('p50', 0):.2f}")
+            output.append(f"  P90:     {stats.get('p90', 0):.2f}")
+            output.append(f"  P95:     {stats.get('p95', 0):.2f}")
+            output.append(f"  P99:     {stats.get('p99', 0):.2f}")
+            output.append("")
+        
+        return "\n".join(output)
+    
+    @staticmethod
+    def generate_text_comparison(comparison: Dict[str, Any]) -> str:
+        """Generate text format comparison report"""
+        output = []
+        output.append("=" * 60)
+        output.append("Netperf Results Comparison")
+        output.append("=" * 60)
+        output.append("")
+        
+        for metric, diff in comparison['differences'].items():
+            output.append(f"{metric.upper()}:")
+            output.append(f"  Baseline Mean: {diff['baseline_mean']:.2f}")
+            output.append(f"  Current Mean:  {diff['current_mean']:.2f}")
+            output.append(f"  Change:        {diff['absolute_change']:+.2f} ({diff['percent_change']:+.1f}%)")
+            
+            if diff['is_regression']:
+                output.append(f"  Status:        ⚠ REGRESSION")
+            elif diff['is_improvement']:
+                output.append(f"  Status:        ✓ IMPROVEMENT")
+            else:
+                output.append(f"  Status:        → STABLE")
+            output.append("")
+        
+        return "\n".join(output)
+    
+    @staticmethod
+    def generate_json(data: Dict[str, Any], output_file: Path):
+        """Generate JSON format report"""
+        with open(output_file, 'w') as f:
+            json.dump(data, f, indent=2)
+    
+    @staticmethod
+    def generate_markdown(aggregated: Dict[str, Dict[str, float]], output_file: Path):
+        """Generate Markdown format report"""
+        with open(output_file, 'w') as f:
+            f.write("# Netperf Aggregated Statistics\n\n")
+            f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            
+            for metric, stats in aggregated.items():
+                f.write(f"## {metric.upper()}\n\n")
+                f.write("| Statistic | Value |\n")
+                f.write("|-----------|-------|\n")
+                f.write(f"| Count | {stats.get('count', 0)} |\n")
+                f.write(f"| Mean | {stats.get('mean', 0):.2f} |\n")
+                f.write(f"| Median | {stats.get('median', 0):.2f} |\n")
+                f.write(f"| Std Dev | {stats.get('stddev', 0):.2f} |\n")
+                f.write(f"| Min | {stats.get('min', 0):.2f} |\n")
+                f.write(f"| Max | {stats.get('max', 0):.2f} |\n")
+                f.write(f"| P50 | {stats.get('p50', 0):.2f} |\n")
+                f.write(f"| P90 | {stats.get('p90', 0):.2f} |\n")
+                f.write(f"| P95 | {stats.get('p95', 0):.2f} |\n")
+                f.write(f"| P99 | {stats.get('p99', 0):.2f} |\n")
+                f.write("\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Aggregate and analyze netperf test results',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Aggregate multiple test runs
+  netperf-aggregate results/*.json -o summary.json
+
+  # Compare two test runs
+  netperf-aggregate baseline.json current.json --compare
+
+  # Generate statistics report
+  netperf-aggregate results/*.json --stats
+
+  # Generate report in different format
+  netperf-aggregate results/*.json --report markdown -o report.md
+        """
+    )
+    
+    parser.add_argument('files', nargs='+', help='Input result files')
+    parser.add_argument('-o', '--output', type=str, help='Output file')
+    parser.add_argument('--stats', action='store_true', help='Calculate and display statistics')
+    parser.add_argument('--compare', action='store_true', help='Compare first file (baseline) vs rest (current)')
+    parser.add_argument('--report', choices=['text', 'json', 'markdown', 'md'], help='Generate report in specified format')
+    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s {VERSION}')
+    
+    args = parser.parse_args()
+    
+    # Parse all input files
+    all_results = []
+    for file_pattern in args.files:
+        for filepath in Path('.').glob(file_pattern):
+            results = ResultParser.parse_file(filepath)
+            all_results.extend(results)
+    
+    if not all_results:
+        print("Error: No valid results found in input files", file=sys.stderr)
+        return 1
+    
+    print(f"Loaded {len(all_results)} result(s) from {len(args.files)} file pattern(s)")
+    
+    # Handle comparison mode
+    if args.compare:
+        if len(args.files) < 2:
+            print("Error: --compare requires at least 2 input files", file=sys.stderr)
+            return 1
+        
+        # First file is baseline, rest are current
+        baseline_results = ResultParser.parse_file(Path(args.files[0]))
+        current_results = []
+        for filepath in args.files[1:]:
+            current_results.extend(ResultParser.parse_file(Path(filepath)))
+        
+        comparison = ResultComparator.compare(baseline_results, current_results)
+        
+        report = ReportGenerator.generate_text_comparison(comparison)
+        
+        if args.output:
+            if args.output.endswith('.json'):
+                ReportGenerator.generate_json(comparison, Path(args.output))
+                print(f"Comparison written to {args.output}")
+            else:
+                with open(args.output, 'w') as f:
+                    f.write(report)
+                print(f"Comparison written to {args.output}")
+        else:
+            print(report)
+        
+        return 0
+    
+    # Handle statistics mode
+    if args.stats or args.report:
+        aggregated = StatisticsCalculator.aggregate_results(all_results)
+        
+        if args.report == 'json':
+            output_file = Path(args.output) if args.output else Path('stats.json')
+            ReportGenerator.generate_json(aggregated, output_file)
+            print(f"Statistics written to {output_file}")
+        elif args.report in ['markdown', 'md']:
+            output_file = Path(args.output) if args.output else Path('stats.md')
+            ReportGenerator.generate_markdown(aggregated, output_file)
+            print(f"Report written to {output_file}")
+        else:
+            # Text format (default)
+            report = ReportGenerator.generate_text_stats(aggregated)
+            
+            if args.output:
+                with open(args.output, 'w') as f:
+                    f.write(report)
+                print(f"Statistics written to {args.output}")
+            else:
+                print(report)
+        
+        return 0
+    
+    # Default: aggregate to JSON
+    aggregated = StatisticsCalculator.aggregate_results(all_results)
+    output_file = Path(args.output) if args.output else Path('aggregated.json')
+    ReportGenerator.generate_json({'aggregated_statistics': aggregated}, output_file)
+    print(f"Aggregated results written to {output_file}")
+    
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -43,7 +43,7 @@
                                         /* can tests send...            */
 #define         MAXTIMES        4       /* how many times may we loop   */
                                         /* to calibrate                 */
-#define         MAXCPUS         512     /* how many CPU's can we track */
+#define         MAXCPUS         2048    /* how many CPU's can we track */
 #define         MAXMESSAGESIZE  65536
 #define         MAXALIGNMENT    16384
 #define         MAXOFFSET        4096
@@ -271,6 +271,7 @@ enum netperf_output_modes {
   HUMAN = 0,
   CSV,
   KEYVAL,
+  JSON,
 };
 
 /* some defines for security types, perhaps these would be better

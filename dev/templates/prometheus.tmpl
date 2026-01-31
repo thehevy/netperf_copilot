@@ -1,0 +1,16 @@
+# TYPE netperf_throughput gauge
+# HELP netperf_throughput Network throughput in bits per second
+netperf_throughput{test="${TEST_NAME}",protocol="${PROTOCOL}",host="${REMOTE_HOST}"} ${THROUGHPUT}
+
+# TYPE netperf_latency_mean gauge  
+# HELP netperf_latency_mean Mean latency in microseconds
+netperf_latency_mean{test="${TEST_NAME}",protocol="${PROTOCOL}",host="${REMOTE_HOST}"} ${MEAN_LATENCY}
+
+# TYPE netperf_cpu_utilization gauge
+# HELP netperf_cpu_utilization CPU utilization percentage
+netperf_cpu_utilization{test="${TEST_NAME}",side="local",host="${LOCAL_HOST}"} ${LOCAL_CPU_UTIL}
+netperf_cpu_utilization{test="${TEST_NAME}",side="remote",host="${REMOTE_HOST}"} ${REMOTE_CPU_UTIL}
+
+# TYPE netperf_transaction_rate gauge
+# HELP netperf_transaction_rate Transactions per second
+netperf_transaction_rate{test="${TEST_NAME}",protocol="${PROTOCOL}",host="${REMOTE_HOST}"} ${TRANSACTION_RATE}

@@ -21,6 +21,9 @@
 # USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/* Define _GNU_SOURCE for sched_setaffinity and other GNU extensions */
+#define _GNU_SOURCE
+
 char    netlib_id[]="\
 @(#)netlib.c (c) Copyright 1993-2012 Hewlett-Packard Company, 2021 Hewlett Packard Enterprise Development LP. Version 2.6.0";
 
@@ -264,7 +267,7 @@ int remote_data_family=AF_UNSPEC;
 
 char *netperf_version;
 
-enum netperf_output_modes netperf_output_mode = HUMAN;
+enum netperf_output_modes netperf_output_mode = KEYVAL;
 
 /* in the past, I was overlaying a structure on an array of ints. now
    I am going to have a "real" structure, and point an array of ints

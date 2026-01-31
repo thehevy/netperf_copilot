@@ -126,7 +126,7 @@ char *command_line;     /* a copy of the entire command line */
 char
   host_name[HOSTNAMESIZE] = "",	      /* remote host name or ip addr */
   local_host_name[HOSTNAMESIZE] = "", /* local hostname or ip */
-  test_name[BUFSIZ] = "TCP_STREAM",   /* which test to run */
+  test_name[BUFSIZ] = "OMNI",         /* which test to run - changed to OMNI in v3.0 */
   test_port[PORTBUFSIZE] = "12865",   /* where is the test waiting */
   local_test_port[PORTBUFSIZE] = "0"; /* from whence we should start */
 
