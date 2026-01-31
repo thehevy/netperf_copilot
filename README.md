@@ -21,16 +21,30 @@ make build
 
 This fork modernizes netperf with several key improvements while maintaining full backward compatibility:
 
-### 1. Modern Default Test (OMNI)
+### Phase 1: Modern Defaults & Output
 - **OMNI is now the default test** instead of TCP_STREAM
-- More flexible output with customizable field selection
-- Unified framework supporting all protocol patterns
-
-### 2. Better Output Formats
 - **Key-value format is now default** (easier to parse than columnar)
 - **JSON output support** via `-- -J` for modern tooling integration
-- **CSV output** via `-- -o` for spreadsheet analysis  
-- Original columnar format still available via `-- -O`
+- **CSV output** via `-- -o` for spreadsheet analysis
+- **Interval reporting enabled by default** - see progress during long tests
+- **MAXCPUS increased to 2048** (was 512) for large systems
+
+### Phase 2: Output Enhancement
+- **Output presets catalog** in `dev/catalog/output-presets/`
+- **netperf-aggregate tool** for combining multiple test results
+- **Template system** for custom output formats
+- Enhanced build scripts with multiple build types
+
+### Phase 3: Advanced Tools (NEW!)
+- **netperf-multi** - Parallel test execution (2-16 instances)
+- **netperf_stats.py** - Statistical analysis with CI and outliers
+- **netperf-profile** - 10 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless, jitter, lossy, mixed-workload)
+- **netperf-orchestrate** - Multi-host test coordination with YAML inventory
+- **netperf-monitor** - Real-time monitoring with terminal UI
+- **netperf-template** - Report generation in 5 formats (markdown, HTML, JSON, CSV, text)
+- **100% integration tested** against live netperf infrastructure
+
+### Output Examples
 
 ```bash
 # Default keyval output
@@ -49,35 +63,30 @@ This fork modernizes netperf with several key improvements while maintaining ful
 # 54623.45,1.00,TCP
 ```
 
-### 3. Improved User Experience
-- **Interval reporting enabled by default** - see progress during long tests
-- **Pre-defined output presets** in `dev/catalog/output-presets/`
-- **Command line included in output** for reproducibility
-- Enhanced build scripts with multiple build types
-
-### 4. Better Defaults
-- OMNI test framework with sensible output fields
+### Improved User Experience
+- Command line included in output for reproducibility
+- Pre-defined output presets in `dev/catalog/output-presets/`
 - Burst mode enabled for realistic request-response tests
 - Demo/interval support enabled out of the box
 - CPU measurement auto-configured per platform
 
-### 5. Support for Large Systems
-- **MAXCPUS increased to 2048** (was 512)
-- Tested on systems with 288-512 CPU cores
-- Scales to modern high-core-count servers
-
-### 6. Modern Build System
-- Intelligent `configure-optimized.sh` with presets
-- Enhanced `build.sh` with debug/release/optimized modes
-- Convenience `Makefile` with common development tasks
-- Comprehensive build configuration documentation
-
 ## 📚 Documentation
 
+### Core Documentation
 - **[BUILD_CONFIGURATION.md](dev/docs/BUILD_CONFIGURATION.md)** - Complete guide to configure options
 - **[UPGRADING.md](UPGRADING.md)** - Migration guide from upstream netperf
-- **[Phase 1 Project Plan](dev/plans/phase-1-progress.md)** - Development roadmap and progress
 - **[Original Manual](doc/netperf.txt)** - Upstream documentation (still relevant)
+
+### Phase 3 Tools Documentation
+- **[OMNI_REFERENCE.md](dev/docs/OMNI_REFERENCE.md)** - Comprehensive OMNI test guide
+- **[MONITORING.md](dev/docs/MONITORING.md)** - Real-time monitoring and TUI
+- **[ORCHESTRATION.md](dev/docs/ORCHESTRATION.md)** - Multi-host test coordination
+- **[INTEGRATION_TESTING.md](dev/docs/INTEGRATION_TESTING.md)** - Integration test results
+
+### Development Plans
+- **[Phase 1 Progress](dev/plans/phase-1-progress.md)** - Initial modernization (complete)
+- **[Phase 2 Progress](dev/plans/phase-2-progress.md)** - Output enhancements (complete)
+- **[Phase 3 Progress](dev/plans/phase-3-progress.md)** - Advanced tools (complete)
 
 ## 🔧 Building
 
@@ -199,11 +208,15 @@ This fork is **fully backward compatible** with upstream netperf:
 netperf/
 ├── src/              # Source code
 ├── doc/              # Documentation
-├── dev/              # Development tools (NEW)
+├── dev/              # Development tools and advanced features
 │   ├── catalog/      # Output presets, config analysis
-│   ├── docs/         # Developer documentation
-│   ├── plans/        # Project roadmap
+│   ├── docs/         # Developer documentation (Phase 1-3 guides)
+│   ├── examples/     # Usage examples and sample configs
+│   ├── plans/        # Project roadmap and progress tracking
+│   ├── profiles/     # Built-in test profiles (10 profiles)
 │   ├── scripts/      # Build and utility scripts
+│   ├── tests/        # Integration test suites
+│   ├── tools/        # Advanced tools (6 production tools)
 │   └── Makefile      # Convenience wrapper
 └── build/            # Build output (generated)
 ```
@@ -229,8 +242,8 @@ This fork maintains the original MIT license from Hewlett Packard Enterprise Dev
 
 - **Original Author**: Rick Jones (Hewlett-Packard)
 - **Original License**: MIT (Hewlett Packard Enterprise Development LP)
-- **This Fork**: Modernization and usability improvements
-- **Version**: 2.7.1+ (fork development branch)
+- **This Fork**: Modernization, usability improvements, and advanced tooling
+- **Version**: 2.7.1+ / v3.0.0 (with Phase 3 complete)
 
 ## 📞 Contact & Contributing
 
@@ -239,6 +252,72 @@ This is a personal fork focused on modernization and improved defaults.
 For the original upstream netperf:
 - Mailing list: netperf-talk@netperf.org
 - Subscription: netperf-talk-request@netperf.org
+
+## �️ Advanced Tools (Phase 3)
+
+This fork includes powerful tools for advanced network testing:
+
+### netperf-multi
+Parallel test execution across multiple instances:
+```bash
+# Run 4 parallel tests
+netperf-multi -n 4 -H remotehost -- -d send -l 10
+
+# With custom netperf binary
+netperf-multi -n 8 --netperf ./build/src/netperf -H remotehost
+```
+
+### netperf_stats.py
+Statistical analysis with confidence intervals and outlier detection:
+```bash
+# Analyze multiple test runs
+for i in {1..20}; do netperf -H host; done | netperf_stats.py -
+
+# Generate histogram
+netperf_stats.py results.txt --histogram histogram.png
+```
+
+### netperf-profile
+Pre-configured test profiles for common scenarios:
+```bash
+# Run baseline profile (10 built-in profiles)
+netperf-profile -p baseline -H remotehost
+
+# Custom profile with YAML
+netperf-profile -p my-profile.yaml -H remotehost --dry-run
+```
+
+### netperf-orchestrate
+Multi-host test orchestration:
+```bash
+# Run tests across multiple hosts
+netperf-orchestrate -i hosts.yaml -p throughput --parallel
+
+# Generate inventory
+netperf-orchestrate --generate-inventory > hosts.yaml
+```
+
+### netperf-monitor
+Real-time monitoring with terminal UI:
+```bash
+# Monitor ongoing tests
+netperf-monitor --host remotehost --interval 1
+
+# Demo mode
+netperf-monitor --demo
+```
+
+### netperf-template
+Report generation in multiple formats:
+```bash
+# Generate markdown report
+netperf-template -t markdown-report results.json
+
+# Custom Jinja2 template
+netperf-template -t my-template.j2 results.json -o report.html
+```
+
+See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 
 ## 🗺️ Roadmap
 
@@ -249,12 +328,28 @@ For the original upstream netperf:
 - ✅ Improved build system
 - ✅ Comprehensive documentation
 
-**Phase 2 (Planned)**: Enhanced testing capabilities
-- Advanced output formats and templates
-- Test automation framework
-- Result comparison and regression detection
+**Phase 2 (COMPLETE)**: Enhanced testing capabilities
+- ✅ Advanced output formats and templates
+- ✅ Output preset catalog
+- ✅ Aggregation tools (netperf-aggregate)
+- ✅ Template system for custom formats
 
-See [Phase 1 Progress](dev/plans/phase-1-progress.md) for detailed development status.
+**Phase 3 (COMPLETE)**: Advanced Tools & Orchestration
+- ✅ Multi-instance parallel execution (netperf-multi)
+- ✅ Statistical analysis with CI (netperf_stats.py)
+- ✅ Test profiles system (10 built-in profiles)
+- ✅ Multi-host orchestration (netperf-orchestrate)
+- ✅ Real-time monitoring TUI (netperf-monitor)
+- ✅ Report generation engine (netperf-template)
+- ✅ 100% integration testing validated
+
+**Phase 4 (Future)**: Enterprise Features
+- Web-based dashboard
+- Historical result database
+- Automated regression detection
+- Cloud provider integration
+
+See development plans in [dev/plans/](dev/plans/) for detailed progress.
 
 ---
 
