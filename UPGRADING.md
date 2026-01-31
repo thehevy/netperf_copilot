@@ -8,13 +8,27 @@ This guide helps users migrate from upstream netperf to this modernized fork, co
 
 **Optional improvements**: You can opt into new features (JSON output, better defaults) when ready.
 
+### Command Path Conventions
+
+This guide uses two command formats:
+- **Build directory**: `./build/src/netperf` - Run from build directory without installation
+- **Installed**: `netperf` - Run after `make install` (typically in `/usr/local/bin`)
+
+All examples show complete commands with full paths when applicable.
+
 ## What's Changed
 
 ### Default Test Type
 
 **Upstream**: TCP_STREAM (classic BSD sockets test)
 ```bash
+# Using installed version
 netperf -H host
+
+# Using build directory
+./build/src/netperf -H host
+
+# Output (columnar format)
 # MIGRATED TCP STREAM TEST from...
 # Recv   Send    Send                          
 # Socket Socket  Message  Elapsed              
@@ -24,7 +38,13 @@ netperf -H host
 
 **This Fork**: TCP_STREAM (same as upstream - full backwards compatibility)
 ```bash
+# Using installed version
 netperf -H host
+
+# Using build directory
+./build/src/netperf -H host
+
+# Output (columnar format - same as upstream)
 # MIGRATED TCP STREAM TEST from...
 # Recv   Send    Send                          
 # Socket Socket  Message  Elapsed              
@@ -34,7 +54,13 @@ netperf -H host
 
 **Modern OMNI Test**: Use the `-M` flag
 ```bash
+# Using installed version
 netperf -H host -M
+
+# Using build directory
+./build/src/netperf -H host -M
+
+# Output (keyval format)
 # OMNI Send TEST from...
 # THROUGHPUT=54623.45
 # THROUGHPUT_UNITS=10^6bits/s
@@ -44,28 +70,49 @@ netperf -H host -M
 ### Default Output Format
 
 **Upstream**: Columnar/tabular format (HUMAN mode)
-```
-Local   Remote  Local   Elapsed Throughput
-Send    Recv    Send    Time    
-Socket  Socket  Size    (sec)   
-Size    Size    (bytes)         
-bytes   bytes                   10^6bits/s
-
-87380   87380   16384   10.00   9387.23
-```
-
-**This Fork**: Key-value format (easier to parse)
-```
-THROUGHPUT=9387.23
-THROUGHPUT_UNITS=10^6bits/s
-ELAPSED_TIME=10.00
-PROTOCOL=TCP
-DIRECTION=Send
-```
-
-**Migration**: To use columnar format:
 ```bash
-netperf -H host -- -O  # Force columnar output
+# Command
+netperf -H host -l 10
+
+# Output
+# Local   Remote  Local   Elapsed Throughput
+# Send    Recv    Send    Time    
+# Socket  Socket  Size    (sec)   
+# Size    Size    (bytes)         
+# bytes   bytes                   10^6bits/s
+# 87380   87380   16384   10.00   9387.23
+```
+
+**This Fork (Default)**: Same columnar format (backwards compatible)
+```bash
+# Using installed version
+netperf -H host -l 10
+
+# Using build directory
+./build/src/netperf -H host -l 10
+
+# Output (same as upstream)
+# MIGRATED TCP STREAM TEST from...
+# Recv   Send    Send                          
+# Socket Socket  Message  Elapsed              
+# Size   Size    Size     Time     Throughput  
+# bytes  bytes   bytes    secs.    10^6bits/sec
+```
+
+**This Fork (OMNI with -M)**: Key-value format (easier to parse)
+```bash
+# Using installed version
+netperf -H host -M -l 10
+
+# Using build directory
+./build/src/netperf -H host -M -l 10
+
+# Output (keyval format)
+# THROUGHPUT=9387.23
+# THROUGHPUT_UNITS=10^6bits/s
+# ELAPSED_TIME=10.00
+# PROTOCOL=TCP
+# DIRECTION=Send
 ```
 
 ### Interval/Demo Support
@@ -74,7 +121,13 @@ netperf -H host -- -O  # Force columnar output
 
 **This Fork**: Enabled by default (shows progress during long tests)
 ```bash
-netperf -H host -l 30
+# Using installed version
+netperf -H host -M -l 30
+
+# Using build directory
+./build/src/netperf -H host -M -l 30
+
+# Output with interim results
 # OMNI Send TEST... : demo
 # [progress shown every second]
 # THROUGHPUT=9234.56  # Final result
@@ -82,7 +135,11 @@ netperf -H host -l 30
 
 **Migration**: To disable interim results (for cleaner output in scripts):
 ```bash
-netperf -H host -D -1  # Negative interval disables demo
+# Using installed version
+netperf -H host -M -l 30 -D -1
+
+# Using build directory
+./build/src/netperf -H host -M -l 30 -D -1
 ```
 
 ### MAXCPUS Limit
@@ -99,11 +156,17 @@ netperf -H host -D -1  # Negative interval disables demo
 
 All upstream command-line options work identically:
 ```bash
-# These all work exactly as before
+# These all work exactly as before (installed)
 netperf -H host -l 10 -t TCP_RR
-netperf -H host -c -C
+netperf -H host -l 10 -c -C
 netperf -H host -P 1 -v 2
 netperf -H host -f g
+
+# Or from build directory
+./build/src/netperf -H host -l 10 -t TCP_RR
+./build/src/netperf -H host -l 10 -c -C
+./build/src/netperf -H host -P 1 -v 2
+./build/src/netperf -H host -f g
 ```
 
 ### Test Names
@@ -136,10 +199,14 @@ make install PREFIX=/opt/netperf  # Custom location
 
 ### JSON Output
 
-Perfect for modern tooling, APIs, and automation:
+Perfect for modern tooling, APIs, and automation (requires `-M` flag):
 
 ```bash
-netperf -H host -- -J
+# Using installed version
+netperf -H host -M -- -J
+
+# Using build directory
+./build/src/netperf -H host -M -- -J
 ```
 
 Output:
@@ -163,10 +230,14 @@ Output:
 
 ### CSV Output
 
-Great for spreadsheet analysis:
+Great for spreadsheet analysis (requires `-M` flag):
 
 ```bash
-netperf -H host -- -o
+# Using installed version
+netperf -H host -M -- -o
+
+# Using build directory
+./build/src/netperf -H host -M -- -o
 ```
 
 Output:
@@ -182,17 +253,20 @@ Throughput,Throughput Units,Elapsed Time,Protocol,Direction
 
 ### Output Presets
 
-Pre-configured field selections for common use cases:
+Pre-configured field selections for common use cases (requires `-M` flag):
 
 ```bash
-# Minimal output (just throughput)
-netperf -H host -- -k dev/catalog/output-presets/minimal.out
+# Minimal output (just throughput) - installed
+netperf -H host -M -- -k dev/catalog/output-presets/minimal.out
 
-# Verbose output (all available fields)
-netperf -H host -- -k dev/catalog/output-presets/verbose.out
+# Minimal output - from build directory
+./build/src/netperf -H host -M -- -k ../../dev/catalog/output-presets/minimal.out
 
-# Latency-focused (for RR tests)
-netperf -H host -t TCP_RR -- -k dev/catalog/output-presets/latency.out
+# Verbose output (all available fields) - installed
+netperf -H host -M -- -k dev/catalog/output-presets/verbose.out
+
+# Latency-focused (for RR tests with OMNI) - installed
+netperf -H host -M -- -P TCP_RR -k dev/catalog/output-presets/latency.out
 ```
 
 Available presets:
@@ -236,16 +310,27 @@ make clean         # Clean build
 
 **Migration options**:
 
-1. **No changes needed**: Use columnar output mode
+1. **No changes needed**: Default is TCP_STREAM columnar (backwards compatible)
 ```bash
-netperf -H host -t TCP_STREAM -- -O > results.txt
+# Using installed version
+netperf -H host -t TCP_STREAM > results.txt
+
+# Using build directory
+./build/src/netperf -H host -t TCP_STREAM > results.txt
+
 # Your existing parser works unchanged
 ```
 
-2. **Modernize gradually**: Switch to JSON for new scripts
+2. **Modernize gradually**: Switch to JSON for new scripts (requires -M)
 ```bash
-netperf -H host -- -J > results.json
+# Using installed version
+netperf -H host -M -- -J > results.json
+
+# Using build directory
+./build/src/netperf -H host -M -- -J > results.json
+
 # Parse JSON with jq, Python, etc.
+jq .THROUGHPUT results.json
 ```
 
 ### Scenario 2: Continuous Integration
@@ -265,12 +350,20 @@ netperf -H host -- -J > results.json
 
 2. Keep existing test commands (they work as-is):
 ```bash
-netperf -H $TARGET_HOST -l 10 -t TCP_STREAM -- -O
+# Using installed version
+netperf -H $TARGET_HOST -l 10 -t TCP_STREAM
+
+# Using build directory
+./build/src/netperf -H $TARGET_HOST -l 10 -t TCP_STREAM
 ```
 
-3. Or modernize output:
+3. Or modernize output (requires -M for JSON):
 ```bash
-netperf -H $TARGET_HOST -l 10 -- -J | jq .THROUGHPUT
+# Using installed version
+netperf -H $TARGET_HOST -M -l 10 -- -J | jq .THROUGHPUT
+
+# Using build directory
+./build/src/netperf -H $TARGET_HOST -M -l 10 -- -J | jq .THROUGHPUT
 ```
 
 ### Scenario 3: Performance Monitoring
@@ -282,29 +375,50 @@ netperf -H $TARGET_HOST -l 10 -- -J | jq .THROUGHPUT
 Keep existing commands, optionally add JSON for easier parsing:
 
 ```bash
-# Old
-netperf -H monitor-target | grep -oP 'THROUGHPUT=\K[0-9.]+'
+# Default columnar format (backwards compatible)
+# Using installed version
+netperf -H monitor-target | tail -1 | awk '{print $5}'
 
-# New (cleaner)
-netperf -H monitor-target -- -J | jq -r .THROUGHPUT
+# Using build directory
+./build/src/netperf -H monitor-target | tail -1 | awk '{print $5}'
+
+# Modern OMNI with keyval (requires -M)
+netperf -H monitor-target -M | grep -oP 'THROUGHPUT=\K[0-9.]+'
+
+# Modern JSON (requires -M, easiest to parse)
+# Using installed version
+netperf -H monitor-target -M -- -J | jq -r .THROUGHPUT
+
+# Using build directory
+./build/src/netperf -H monitor-target -M -- -J | jq -r .THROUGHPUT
 ```
 
 ### Scenario 4: Manual Testing
 
 **You have**: Interactive testing workflows
 
-**Benefits**: Interim results provide better feedback
+**Benefits**: Interim results provide better feedback (with -M flag)
 
 ```bash
-# Long tests now show progress
-netperf -H host -l 300
+# Long tests show progress with OMNI (requires -M)
+# Using installed version
+netperf -H host -M -l 300
+
+# Using build directory
+./build/src/netperf -H host -M -l 300
+
+# Output
 # OMNI Send TEST... : demo
 # [See progress every second instead of waiting 5 minutes]
 ```
 
 To disable for cleaner output:
 ```bash
-netperf -H host -l 300 -D -1
+# Using installed version
+netperf -H host -M -l 300 -D -1
+
+# Using build directory
+./build/src/netperf -H host -M -l 300 -D -1
 ```
 
 ## Compatibility Matrix
@@ -326,39 +440,57 @@ netperf -H host -l 300 -D -1
 
 ### Issue: Output looks different
 
-**Cause**: Default changed from columnar to key-value format
+**Note**: This shouldn't happen - default is TCP_STREAM columnar (same as upstream)
 
-**Solution**: Add `-- -O` flag for columnar output
+**Solution**: If you see keyval output, you may be using `-M` flag. Remove it for columnar:
 ```bash
-netperf -H host -- -O
+# Default TCP_STREAM columnar (backwards compatible)
+netperf -H host
+./build/src/netperf -H host
 ```
 
 ### Issue: Getting interim results I don't want
 
-**Cause**: Demo/interval support now enabled by default
+**Cause**: Demo/interval support enabled with `-M` flag and long tests
 
 **Solution**: Disable with `-D -1`
 ```bash
-netperf -H host -l 60 -D -1
+# Using installed version
+netperf -H host -M -l 60 -D -1
+
+# Using build directory
+./build/src/netperf -H host -M -l 60 -D -1
 ```
 
 ### Issue: Scripts expecting TCP_STREAM behavior
 
-**Cause**: Default test changed to OMNI
+**Note**: TCP_STREAM is the default - scripts should work unchanged
 
-**Solution**: Specify test type explicitly
+**Solution**: Ensure you're not using `-M` flag
 ```bash
-netperf -H host -t TCP_STREAM -- -O
+# Default TCP_STREAM (backwards compatible)
+netperf -H host
+./build/src/netperf -H host
+
+# Or specify explicitly
+netperf -H host -t TCP_STREAM
+./build/src/netperf -H host -t TCP_STREAM
 ```
 
-### Issue: Parsing errors with new output
+### Issue: Need JSON/keyval output but getting columnar
 
-**Cause**: Key-value format is different from columnar
+**Cause**: Need to use `-M` flag for OMNI features
 
-**Solution**: Either:
-1. Use columnar output: `-- -O`
-2. Update parser for key-value format (easier to parse)
-3. Use JSON output: `-- -J` (easiest for modern tools)
+**Solution**: Add `-M` flag:
+```bash
+# For keyval output
+netperf -H host -M
+./build/src/netperf -H host -M
+
+# For JSON output
+netperf -H host -M -- -J
+./build/src/netperf -H host -M -- -J
+```
 
 ### Issue: CPU measurement not working
 
@@ -366,12 +498,19 @@ netperf -H host -t TCP_STREAM -- -O
 
 **Solution**: Update both netperf and netserver to same version
 ```bash
-# On server
+# On server (using installed version)
 killall netserver
-/path/to/new/netserver
+netserver -4
 
-# On client
-/path/to/new/netperf -H server -c -C
+# On server (using build directory)
+killall netserver
+./build/src/netserver -4
+
+# On client (using installed version)
+netperf -H server -l 10 -c -C
+
+# On client (using build directory)
+./build/src/netperf -H server -l 10 -c -C
 ```
 
 ## Performance Considerations
@@ -396,20 +535,45 @@ Or use the provided script:
 
 ### Demo/Interval Overhead
 
-Interim results add minimal overhead (~0-2% throughput impact) but provide better UX. Disable for benchmarking:
+Interim results add minimal overhead (~0-2% throughput impact) but provide better UX with OMNI mode. Disable for benchmarking:
 
 ```bash
-netperf -H host -l 60 -D -1  # Disable demo
+# Using installed version
+netperf -H host -M -l 60 -D -1
+
+# Using build directory
+./build/src/netperf -H host -M -l 60 -D -1
 ```
 
 ## Best Practices
 
 ### For Production Use
 
-1. **Explicit test types**: Specify `-t TEST_NAME` to avoid confusion
-2. **Explicit output format**: Use `-- -O`, `-- -J`, or `-- -o` explicitly
-3. **Version consistency**: Use same version for netperf and netserver
-4. **Document scripts**: Note which fork/version you're using
+1. **Use full paths**: Be explicit about binary location
+   ```bash
+   # Installed
+   /usr/local/bin/netperf -H host -t TCP_STREAM
+   
+   # Build directory
+   /opt/netperf/build/src/netperf -H host -t TCP_STREAM
+   ```
+
+2. **Explicit test types**: Specify `-t TEST_NAME` for clarity
+   ```bash
+   netperf -H host -t TCP_STREAM
+   ```
+
+3. **Explicit output format**: Use `-M` flag when you need OMNI features
+   ```bash
+   # Columnar (default)
+   netperf -H host -t TCP_STREAM
+   
+   # JSON (requires -M)
+   netperf -H host -M -- -J
+   ```
+
+4. **Version consistency**: Use same version for netperf and netserver
+5. **Document scripts**: Note which fork/version you're using
 
 ### For Development
 
