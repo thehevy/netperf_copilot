@@ -115,13 +115,13 @@ netperf-multi -n 4 -H remotehost -- -d send -l 30
 # Average Throughput: 42567.89 Mbps
 ```
 
-**Note**: netperf-multi outputs a summary. To pipe to stats, extract values first:
+**Note**: For statistical analysis, use sequential netperf runs (netperf-multi shows only a summary):
 
 ```bash
-# Extract throughput values for statistical analysis
-./dev/tools/netperf-multi -n 4 -H remotehost -- -d send -l 30 2>&1 | \
-  grep "THROUGHPUT=" | cut -d= -f2 | \
-  ./dev/tools/netperf_stats.py -
+# Sequential tests for statistical analysis
+for i in {1..10}; do 
+  ./build/src/netperf -H remotehost -- -d send -l 30
+done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 | ./dev/tools/netperf_stats.py -
 ```
 
 ### Statistical Analysis
@@ -235,20 +235,22 @@ netperf_stats.py results.txt --histogram chart.png
 netperf-template -t markdown-report results.json > benchmark.md
 ```
 
-### Workflow 3: Parallel Aggregate Testing
+### Workflow 3: Statistical Analysis of Multiple Runs
 
 ```bash
-# 1. Run parallel tests and save output
-netperf-multi -n 8 -H remotehost -- -d send -l 60 2>&1 | tee multi-results.txt
+# 1. Run multiple sequential tests
+for i in {1..20}; do
+  netperf -H remotehost -l 30 -- -d send
+done 2>&1 | tee raw-results.txt
 
 # 2. Extract throughput values
-grep "THROUGHPUT=" multi-results.txt | cut -d= -f2 > throughputs.txt
+grep "THROUGHPUT=" raw-results.txt | cut -d= -f2 > throughputs.txt
 
-# 3. Get statistics
-netperf_stats.py throughputs.txt
+# 3. Get statistics with histogram
+netperf_stats.py throughputs.txt --histogram results.png
 
 # Or in one pipeline:
-netperf-multi -n 8 -H remotehost -- -d send -l 60 2>&1 | \
+for i in {1..20}; do netperf -H remotehost -l 30; done 2>&1 | \
   grep "THROUGHPUT=" | cut -d= -f2 | \
   netperf_stats.py -
 ```
@@ -370,20 +372,19 @@ netperf -H remotehost -l 300 -- -i 5
 
 # Output shows interim results during test
 ```
-netperf-multi -n 4 -H host -- -l 60 2>&1 | \
+### Tip 4: Combine Tools
+
+```bash
+# Sequential tests + Statistics (recommended)
+for i in {1..10}; do netperf -H host -l 30 -- -d send; done 2>&1 | \
   grep "THROUGHPUT=" | cut -d= -f2 | \
   netperf_stats.py - | \
   tee stats-report.txt
 
-# Or sequential tests + Statistics
-for i in {1..10}; do netperf -H host -l 30; done | \
+# With histogram
+for i in {1..20}; do netperf -H host -l 30; done 2>&1 | \
   grep "THROUGHPUT=" | cut -d= -f2 | \
-  netperf_stats.py -
-```bash
-# Parallel + Statistics + Report
-netperf-multi -n 4 -H host -- -l 60 | \
-  netperf_stats.py - | \
-  tee stats-report.txt
+  netperf_stats.py - --histogram chart.png
 ```
 
 ### Tip 5: Test Both Directions
