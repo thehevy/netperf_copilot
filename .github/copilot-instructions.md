@@ -12,9 +12,9 @@ Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP,
 
 ### Core Components
 
-- **netperf** ([src/netperf.c](src/netperf.c)): Client-side test initiator and results reporter
-- **netserver** ([src/netserver.c](src/netserver.c)): Server-side daemon handling test requests
-- **netlib** ([src/netlib.c](src/netlib.c), [src/netlib.h](src/netlib.h)): Shared library with common utilities (control protocol, CPU measurement, statistics)
+- **netperf** ([src/netperf.c](../src/netperf.c)): Client-side test initiator and results reporter
+- **netserver** ([src/netserver.c](../src/netserver.c)): Server-side daemon handling test requests
+- **netlib** ([src/netlib.c](../src/netlib.c), [src/netlib.h](../src/netlib.h)): Shared library with common utilities (control protocol, CPU measurement, statistics)
 - **netsh** ([src/netsh.c](src/netsh.h)): Command-line parsing and test dispatching
 
 ### Test Framework Architecture
@@ -24,7 +24,7 @@ Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP,
 The codebase contains two test architectures:
 
 - **Classic tests**: Original implementations in `nettest_bsd.c`, `nettest_unix.c`, `nettest_dlpi.c`, `nettest_xti.c`, `nettest_sctp.c`, `nettest_sdp.c`
-- **OMNI tests** ([src/nettest_omni.c](src/nettest_omni.c)): Modern unified framework that can emulate all classic tests with extensible output formatting. OMNI is the preferred test type (7699 lines, single file handling multiple protocols/patterns).
+- **OMNI tests** ([src/nettest_omni.c](../src/nettest_omni.c)): Modern unified framework that can emulate all classic tests with extensible output formatting. OMNI is the preferred test type (7699 lines, single file handling multiple protocols/patterns).
 
 When `WANT_MIGRATION` is defined, classic test names (TCP_STREAM, TCP_RR, etc.) automatically map to OMNI equivalents.
 
@@ -50,7 +50,7 @@ Netperf implements platform-specific CPU measurement via pluggable modules selec
 - **netcpu_looper.c**: Portable soaker processes (fallback for systems without native counters)
 - **netcpu_none.c**: Stub implementation (no CPU measurement)
 
-The Makefile uses `USE_CPU_SOURCE=netcpu_@NETCPU_SOURCE@.c` to select the appropriate implementation. All modules implement the same interface defined in [src/netcpu.h](src/netcpu.h).
+The Makefile uses `USE_CPU_SOURCE=netcpu_@NETCPU_SOURCE@.c` to select the appropriate implementation. All modules implement the same interface defined in [src/netcpu.h](../src/netcpu.h).
 
 #### Other Platform Modules
 
@@ -95,7 +95,7 @@ Configure selects CPU method automatically based on platform but can be overridd
 - **Test enablement**: `WANT_*` (e.g., `WANT_OMNI`, `WANT_UNIX`, `WANT_SCTP`, `WANT_HISTOGRAM`)
 - **Platform methods**: `USE_*` (e.g., `USE_PROC_STAT`, `USE_PSTAT`, `USE_LOOPER`)
 
-Example from [src/nettest_omni.c](src/nettest_omni.c):
+Example from [src/nettest_omni.c](../src/nettest_omni.c):
 
 ```c
 #ifdef WANT_OMNI
@@ -114,7 +114,7 @@ Example from [src/nettest_omni.c](src/nettest_omni.c):
 
 ### Control Protocol Pattern
 
-Client-server communication uses a request-response pattern with predefined message types in [src/netlib.h](src/netlib.h):
+Client-server communication uses a request-response pattern with predefined message types in [src/netlib.h](../src/netlib.h):
 
 ```c
 #define DO_TCP_STREAM           10
@@ -141,7 +141,7 @@ Functions: `send_request()`, `recv_response()`, `send_response()`, `recv_request
 
 ### Example Scripts
 
-Comprehensive test examples in [doc/examples/](doc/examples/):
+Comprehensive test examples in [doc/examples/](../doc/examples/):
 
 - `tcp_stream_script`, `tcp_rr_script`, `udp_stream_script`: Shell-based test harnesses
 - `*.py` scripts: Python post-processing utilities
@@ -149,27 +149,27 @@ Comprehensive test examples in [doc/examples/](doc/examples/):
 
 ### Debugging
 
-- Global `-d` option increases debug level (see `debug` variable in [src/netsh.h](src/netsh.h))
+- Global `-d` option increases debug level (see `debug` variable in [src/netsh.h](../src/netsh.h))
 - Check `lib_num_loc_cpus` initialization in CPU modules for CPU detection issues
-- OMNI output selectors documented in [doc/omni_output_list.txt](doc/omni_output_list.txt)
+- OMNI output selectors documented in [doc/omni_output_list.txt](../doc/omni_output_list.txt)
 
 ## Common Patterns
 
 ### Adding a New Test Type
 
 1. Choose OMNI or classic framework (prefer OMNI for new tests)
-2. Define message types in [src/netlib.h](src/netlib.h) (e.g., `DO_MY_TEST`, `MY_TEST_RESPONSE`)
+2. Define message types in [src/netlib.h](../src/netlib.h) (e.g., `DO_MY_TEST`, `MY_TEST_RESPONSE`)
 3. Implement test logic in appropriate `nettest_*.c` file
-4. Add test name mapping in [src/netsh.c](src/netsh.c) `scan_cmd_line()`
-5. Update [configure.ac](configure.ac) if new dependencies/options needed
+4. Add test name mapping in [src/netsh.c](../src/netsh.c) `scan_cmd_line()`
+5. Update [configure.ac](../configure.ac) if new dependencies/options needed
 
 ### Platform-Specific Code
 
 When adding platform support, follow the existing pattern:
 
 1. Create new `netcpu_<platform>.c` implementing the standard interface
-2. Add configure detection case in [configure.ac](configure.ac) around line 660
-3. Update `EXTRA_DIST` in [src/Makefile.am](src/Makefile.am)
+2. Add configure detection case in [configure.ac](../configure.ac) around line 660
+3. Update `EXTRA_DIST` in [src/Makefile.am](../src/Makefile.am)
 4. Test with `./configure --enable-cpuutil=<your-method>`
 
 ### CPU Affinity/Binding
@@ -187,12 +187,12 @@ Usage controlled by `cpu_binding_requested` global variable.
 
 | File | Purpose |
 |------|---------|
-| [src/nettest_omni.c](src/nettest_omni.c) | Modern unified test framework (7699 lines) |
-| [src/netlib.c](src/netlib.c) | Core networking utilities (5002 lines) |
-| [src/netserver.c](src/netserver.c) | Server daemon implementation (1561 lines) |
-| [configure.ac](configure.ac) | Autoconf configuration logic (750 lines) |
-| [doc/netperf.txt](doc/netperf.txt) | Primary documentation (outdated but useful) |
-| [doc/omni_output_list.txt](doc/omni_output_list.txt) | OMNI output selector reference |
+| [src/nettest_omni.c](../src/nettest_omni.c) | Modern unified test framework (7699 lines) |
+| [src/netlib.c](../src/netlib.c) | Core networking utilities (5002 lines) |
+| [src/netserver.c](../src/netserver.c) | Server daemon implementation (1561 lines) |
+| [configure.ac](../configure.ac) | Autoconf configuration logic (750 lines) |
+| [doc/netperf.txt](../doc/netperf.txt) | Primary documentation (outdated but useful) |
+| [doc/omni_output_list.txt](../doc/omni_output_list.txt) | OMNI output selector reference |
 
 ## Historical Context
 
@@ -206,5 +206,5 @@ Usage controlled by `cpu_binding_requested` global variable.
 - **Always check config.h conditionals** before suggesting platform-specific code
 - **OMNI tests are preferred** over adding new classic test types
 - **CPU measurement is compile-time selected** - cannot be changed at runtime
-- **Statistics and confidence intervals** are complex - see [src/netlib.c](src/netlib.c) around line 4700
+- **Statistics and confidence intervals** are complex - see [src/netlib.c](../src/netlib.c) around line 4700
 - **Windows support exists** but is secondary - primary development targets Unix-like systems
