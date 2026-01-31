@@ -34,14 +34,25 @@ cd netperf_copilot
 # Basic throughput test (10 seconds)
 ./build/src/netperf -H localhost -l 10
 
-# Output (keyval format):
+# Output (demo/columnar format):
+# OMNI Send TEST from 0.0.0.0...
+# Local   Remote  Local  Elapsed Throughput Throughput
+# Send    Recv    Send   Time               Units
+# Socket  Socket  Size   (sec)
+# Final   Final
+# 65536   87380   65536  10.00   45234.67   10^6bits/s
+
+# For easier parsing, use keyval format:
+./build/src/netperf -H localhost -l 10 -o keyval
 # THROUGHPUT=45234.67
+# THROUGHPUT_UNITS=10^6bits/s
 # ELAPSED_TIME=10.00
-# PROTOCOL=TCP
 # ...
 ```
 
 **Congratulations!** You've run your first netperf test. 🎉
+
+**⚠️ Important:** Default output is columnar (human-readable). For scripts, use `-o keyval` for easier parsing. See [Backwards Compatibility Guide](../dev/docs/BACKWARDS_COMPATIBILITY.html) for details.
 
 ---
 
@@ -79,18 +90,20 @@ netperf -H remotehost -t UDP_RR -l 30
 ### Different Output Formats
 
 ```bash
-# Key-value (default, easy to parse)
+# Columnar (default, human-readable)
 netperf -H remotehost
 
-# JSON output
+# Key-value (recommended for scripts - easy to parse)
+netperf -H remotehost -o keyval
+
+# JSON output (best for automation)
 netperf -H remotehost -- -J
 
-# CSV output
-netperf -H remotehost -- -o
-
-# Traditional columnar
-netperf -H remotehost -- -O
+# Legacy TCP_STREAM format (backwards compatible)
+netperf -H remotehost -t TCP_STREAM
 ```
+
+**⚠️ Script Compatibility:** If you have existing scripts that parse netperf output, see [Backwards Compatibility Guide](../dev/docs/BACKWARDS_COMPATIBILITY.html) to avoid breaking changes.
 
 ---
 
@@ -131,12 +144,12 @@ Analyze multiple test runs:
 ```bash
 # Run 20 tests and get statistics (stdin mode)
 for i in {1..20}; do 
-  netperf -H remotehost -l 10
+  netperf -H remotehost -l 10 -o keyval
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 | ./dev/tools/netperf_stats.py -
 
 # Or save to file first
 for i in {1..20}; do 
-  netperf -H remotehost -l 10
+  netperf -H remotehost -l 10 -o keyval
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 ./dev/tools/netperf_stats.py results.txt
@@ -229,9 +242,9 @@ netperf -H remotehost -- -T udp
 ### Workflow 2: Performance Benchmarking
 
 ```bash
-# 1. Run multiple iterations
+# 1. Run multiple iterations with keyval output
 for i in {1..10}; do
-  netperf -H remotehost -l 60
+  netperf -H remotehost -l 60 -o keyval
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 # 2. Analyze statistics
@@ -395,11 +408,11 @@ done | ./dev/tools/netperf_stats.py -
 
 # Sequential tests with statistics (simpler but slower)
 for i in {1..10}; do 
-  netperf -H host -l 30
+  netperf -H host -l 30 -o keyval
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 | ./dev/tools/netperf_stats.py -
 
 # Save results and generate custom analysis
-for i in {1..20}; do netperf -H host -l 30; done 2>&1 | \
+for i in {1..20}; do netperf -H host -l 30 -o keyval; done 2>&1 | \
   grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 ./dev/tools/netperf_stats.py results.txt --confidence 0.99 --bins 20
