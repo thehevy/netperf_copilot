@@ -22,18 +22,23 @@ netperf -H host
 # bytes  bytes   bytes    secs.    10^6bits/sec
 ```
 
-**This Fork**: OMNI (modern unified test framework)
+**This Fork**: TCP_STREAM (same as upstream - full backwards compatibility)
 ```bash
 netperf -H host
+# MIGRATED TCP STREAM TEST from...
+# Recv   Send    Send                          
+# Socket Socket  Message  Elapsed              
+# Size   Size    Size     Time     Throughput  
+# bytes  bytes   bytes    secs.    10^6bits/sec
+```
+
+**Modern OMNI Test**: Use the `-M` flag
+```bash
+netperf -H host -M
 # OMNI Send TEST from...
 # THROUGHPUT=54623.45
 # THROUGHPUT_UNITS=10^6bits/s
 # ELAPSED_TIME=1.00
-```
-
-**Migration**: To use classic TCP_STREAM explicitly:
-```bash
-netperf -H host -t TCP_STREAM -- -O  # Use classic test with columnar output
 ```
 
 ### Default Output Format

@@ -1,6 +1,7 @@
 #!/bin/bash
 # Phase 1 validation tests
-# Tests that Task 1.1 (OMNI default) works correctly
+# Tests that Task 1.1 (Backwards Compatibility) works correctly
+# Default is TCP_STREAM, -M enables OMNI
 
 set -e
 
@@ -8,6 +9,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BUILD_DIR="${PROJECT_ROOT}/build"
 
 echo "=== Phase 1 Task 1.1 Validation Tests ==="
+echo "Testing backwards compatibility (TCP_STREAM default, -M for OMNI)"
 echo ""
 
 # Check if build exists
@@ -40,27 +42,38 @@ cleanup() {
 trap cleanup EXIT
 
 echo ""
-echo "=== Test 1: Default test is OMNI ==="
+echo "=== Test 1: Default test is TCP_STREAM (backwards compatibility) ==="
 OUTPUT=$(./src/netperf -H localhost -l 1 2>&1)
-if echo "$OUTPUT" | grep -qi "OMNI"; then
-    echo "✅ PASS: Default test uses OMNI"
+if echo "$OUTPUT" | grep -qi "TCP STREAM"; then
+    echo "✅ PASS: Default test is TCP_STREAM"
 else
-    echo "❌ FAIL: Default test does not appear to use OMNI"
+    echo "❌ FAIL: Default test is not TCP_STREAM"
     echo "Output: $OUTPUT"
     exit 1
 fi
 
 echo ""
-echo "=== Test 2: Backward compatibility - TCP_STREAM ==="
+echo "=== Test 2: -M flag enables OMNI ==="
+OUTPUT=$(./src/netperf -H localhost -M -l 1 2>&1)
+if echo "$OUTPUT" | grep -qi "OMNI"; then
+    echo "✅ PASS: -M flag enables OMNI"
+else
+    echo "❌ FAIL: -M flag did not enable OMNI"
+    echo "Output: $OUTPUT"
+    exit 1
+fi
+
+echo ""
+echo "=== Test 3: Explicit TCP_STREAM still works ==="
 if ./src/netperf -H localhost -t TCP_STREAM -l 1 >/dev/null 2>&1; then
-    echo "✅ PASS: TCP_STREAM still works via -t option"
+    echo "✅ PASS: Explicit TCP_STREAM works"
 else
     echo "❌ FAIL: TCP_STREAM test failed"
     exit 1
 fi
 
 echo ""
-echo "=== Test 3: Backward compatibility - TCP_RR ==="
+echo "=== Test 4: Backward compatibility - TCP_RR ==="
 if ./src/netperf -H localhost -t TCP_RR -l 1 >/dev/null 2>&1; then
     echo "✅ PASS: TCP_RR still works via -t option"
 else
@@ -69,7 +82,7 @@ else
 fi
 
 echo ""
-echo "=== Test 4: Backward compatibility - UDP_STREAM ==="
+echo "=== Test 5: Backward compatibility - UDP_STREAM ==="
 if ./src/netperf -H localhost -t UDP_STREAM -l 1 >/dev/null 2>&1; then
     echo "✅ PASS: UDP_STREAM still works via -t option"
 else
@@ -78,7 +91,7 @@ else
 fi
 
 echo ""
-echo "=== Test 5: UDP_RR ==="
+echo "=== Test 6: UDP_RR ==="
 if ./src/netperf -H localhost -t UDP_RR -l 1 >/dev/null 2>&1; then
     echo "✅ PASS: UDP_RR still works"
 else
@@ -87,7 +100,7 @@ else
 fi
 
 echo ""
-echo "=== Test 6: OMNI explicit invocation ==="
+echo "=== Test 7: OMNI explicit invocation ==="
 if ./src/netperf -H localhost -t OMNI -l 1 >/dev/null 2>&1; then
     echo "✅ PASS: Explicit OMNI test works"
 else
@@ -101,6 +114,7 @@ echo "✅ All Phase 1 Task 1.1 tests PASSED!"
 echo "========================================="
 echo ""
 echo "Summary:"
-echo "  - Default test changed to OMNI"
-echo "  - All backward compatibility maintained"
+echo "  - Default test is TCP_STREAM (backwards compatible)"
+echo "  - -M flag enables modern OMNI test"
 echo "  - All classic test names still work"
+echo "  - Full backwards compatibility maintained"

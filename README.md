@@ -22,7 +22,7 @@ make build
 This fork modernizes netperf with several key improvements while maintaining full backward compatibility:
 
 ### Phase 1: Modern Defaults & Output
-- **OMNI is now the default test** instead of TCP_STREAM
+- **TCP_STREAM remains the default** for full backwards compatibility (use `-M` flag for modern OMNI test)
 - **Key-value format is now default** (easier to parse than columnar)
 - **JSON output support** via `-- -J` for modern tooling integration
 - **CSV output** via `-- -o` for spreadsheet analysis
@@ -151,8 +151,11 @@ make benchmark
 
 ### Basic Throughput Test
 ```bash
-# Default (OMNI with keyval output)
+# Default (TCP_STREAM with columnar output - backwards compatible)
 netperf -H remotehost
+
+# Modern OMNI (requires -M flag)
+netperf -H remotehost -M
 
 # 10-second test with CSV output
 netperf -H remotehost -l 10 -- -o
@@ -322,7 +325,7 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 ## 🗺️ Roadmap
 
 **Phase 1 (COMPLETE)**: Modernize defaults and output
-- ✅ OMNI as default test
+- ✅ Full backwards compatibility (TCP_STREAM default, -M flag for OMNI)
 - ✅ Better output formats (keyval, JSON, CSV)
 - ✅ Interval reporting by default
 - ✅ Improved build system

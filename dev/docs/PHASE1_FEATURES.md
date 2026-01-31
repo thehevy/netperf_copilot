@@ -19,48 +19,56 @@ Phase 1 focused on modernizing netperf's defaults and user experience while main
 | MAXCPUS Increase | ✅ Complete | High - Large systems | ✅ Yes |
 | Documentation | ✅ Complete | High - Adoption | N/A |
 
-## 1. OMNI as Default Test (Task 1.1)
+## 1. Full Backwards Compatibility (Task 1.1)
 
 ### Overview
-Changed the default test from TCP_STREAM to OMNI, providing a more flexible and modern testing framework.
+Preserved TCP_STREAM as the default test to maintain 100% backwards compatibility. Modern OMNI test available via `-M` flag.
 
 ### Technical Details
 
-**Before (Upstream)**:
+**Implementation**:
 ```c
-// src/netperf.c - default_test set to "TCP_STREAM"
-char *default_test = "TCP_STREAM";
-```
+// src/netsh.c - default_test remains "TCP_STREAM"
+char test_name[BUFSIZ] = "TCP_STREAM",  /* 100% backwards compatible */
 
-**After (This Fork)**:
-```c
-// src/netperf.c - default_test set to "OMNI"
-char *default_test = "OMNI";
+// Added -M flag to enable OMNI mode
+case 'M':
+  /* Enable modern OMNI test mode */
+  strncpy(test_name,"OMNI",sizeof(test_name));
+  break;
 ```
 
 ### User Impact
 
-**Old behavior**:
+**Default behavior (unchanged)**:
 ```bash
 $ netperf -H host
 MIGRATED TCP STREAM TEST from...
-# Columnar output only
+# Columnar output - fully backwards compatible
 ```
 
-**New behavior**:
+**Modern behavior (opt-in with -M)**:
 ```bash
-$ netperf -H host  
-OMNI Send TEST from...
-# Key-value output by default
+$ netperf -H host -M
+OMNI Send TEST from...  
+THROUGHPUT=54623.45
+# Key-value output
 # JSON/CSV available
 # Flexible field selection
 ```
 
 ### Compatibility
 
-**Restoring old behavior**:
+**No migration needed**: Existing scripts work unchanged!
 ```bash
-netperf -H host -t TCP_STREAM -- -O
+netperf -H host                # Works as-is (TCP_STREAM)
+netperf -H host -t TCP_STREAM  # Also works (explicit)
+```
+
+**New scripts can use modern features**:
+```bash
+netperf -H host -M             # OMNI with keyval
+netperf -H host -M -- -J       # OMNI with JSON
 ```
 
 ### Benefits

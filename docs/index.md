@@ -27,7 +27,7 @@ cd netperf_copilot
 ## ✨ What's New
 
 ### Phase 1: Modern Defaults ✅
-- OMNI test as default (flexible, unified framework)
+- Full backwards compatibility (TCP_STREAM default, use `-M` for modern OMNI)
 - Key-value output format (parseable)
 - JSON and CSV output support
 - Interval reporting enabled

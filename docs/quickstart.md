@@ -45,7 +45,7 @@ cd netperf_copilot
 
 **Congratulations!** You've run your first netperf test. 🎉
 
-**ℹ️ Default Format:** netperf defaults to OMNI test with keyval output (THROUGHPUT=value). This is easy to parse with grep/cut. For legacy columnar format, use `-t TCP_STREAM`.
+**ℹ️ Default Format:** netperf defaults to **TCP_STREAM** with columnar output for 100% backwards compatibility. For modern OMNI test with keyval output, use the `-M` flag.
 
 ---
 
@@ -136,14 +136,14 @@ netperf-multi --netperf ./build/src/netperf -n 4 -H host --aggregate
 Analyze multiple test runs:
 
 ```bash
-# Run 20 tests and get statistics (stdin mode)
+# Run 20 tests and get statistics (modern OMNI format)
 for i in {1..20}; do 
-  netperf -H remotehost -l 10
+  netperf -H remotehost -M -l 10
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 | ./dev/tools/netperf_stats.py -
 
 # Or save to file first
 for i in {1..20}; do 
-  netperf -H remotehost -l 10
+  netperf -H remotehost -M -l 10
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 ./dev/tools/netperf_stats.py results.txt
@@ -236,9 +236,9 @@ netperf -H remotehost -- -T udp
 ### Workflow 2: Performance Benchmarking
 
 ```bash
-# 1. Run multiple iterations (default keyval output)
+# 1. Run multiple iterations (modern OMNI with -M flag)
 for i in {1..10}; do
-  netperf -H remotehost -l 60
+  netperf -H remotehost -M -l 60
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 # 2. Analyze statistics
@@ -400,13 +400,13 @@ for i in {1..10}; do
     grep "^THROUGHPUT" | awk '{print $3}'
 done | ./dev/tools/netperf_stats.py -
 
-# Sequential tests with statistics (simpler but slower)
+# Sequential tests with statistics (modern OMNI)
 for i in {1..10}; do 
-  netperf -H host -l 30
+  netperf -H host -M -l 30
 done 2>&1 | grep "THROUGHPUT=" | cut -d= -f2 | ./dev/tools/netperf_stats.py -
 
 # Save results and generate custom analysis
-for i in {1..20}; do netperf -H host -l 30; done 2>&1 | \
+for i in {1..20}; do netperf -H host -M -l 30; done 2>&1 | \
   grep "THROUGHPUT=" | cut -d= -f2 > results.txt
 
 ./dev/tools/netperf_stats.py results.txt --confidence 0.99 --bins 20
