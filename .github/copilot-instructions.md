@@ -15,7 +15,7 @@ Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP,
 - **netperf** ([src/netperf.c](../src/netperf.c)): Client-side test initiator and results reporter
 - **netserver** ([src/netserver.c](../src/netserver.c)): Server-side daemon handling test requests
 - **netlib** ([src/netlib.c](../src/netlib.c), [src/netlib.h](../src/netlib.h)): Shared library with common utilities (control protocol, CPU measurement, statistics)
-- **netsh** ([src/netsh.c](src/netsh.h)): Command-line parsing and test dispatching
+- **netsh** ([src/netsh.c](../src/netsh.c)): Command-line parsing and test dispatching
 
 ### Test Framework Architecture
 
