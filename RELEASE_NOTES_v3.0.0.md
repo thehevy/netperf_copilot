@@ -1,13 +1,45 @@
 # Release Notes: v3.0.0 - Phase 3: Advanced Tools
 
 **Release Date**: January 31, 2026  
-**Milestone**: Phase 3 Complete - Advanced Features & Orchestration
+**Milestone**: Phase 3 Complete - Advanced Features & Full Backwards Compatibility
 
 ---
 
 ## 🎉 Major Release: Advanced Network Testing Tools
 
 Version 3.0.0 completes Phase 3 of the netperf modernization project, delivering six production-ready advanced tools for comprehensive network performance testing and analysis.
+
+## ⚠️ Breaking Change Resolution: Full Backwards Compatibility
+
+**IMPORTANT**: We have restored **100% backwards compatibility** with upstream netperf.
+
+### What Changed (January 31, 2026)
+
+**Default Behavior:**
+- Default test is **TCP_STREAM** (not OMNI) - fully backwards compatible
+- Use `-M` flag to enable modern OMNI test framework
+- All existing scripts work unchanged - **no migration needed!**
+
+**Examples:**
+```bash
+# Default (backwards compatible)
+netperf -H host                    # TCP_STREAM columnar output
+
+# Modern features (requires -M flag)
+netperf -H host -M                 # OMNI with keyval output
+netperf -H host -M -- -J           # JSON format
+netperf -H host -M -D 1            # Interim results
+```
+
+**Why This Matters:**
+- Existing production scripts continue to work unchanged
+- Easy adoption of modern features via explicit `-M` flag
+- Clear intent when using OMNI mode
+- Best of both worlds: compatibility + modern features
+
+See [BACKWARDS_COMPATIBILITY_SUMMARY.md](BACKWARDS_COMPATIBILITY_SUMMARY.md) for complete details.
+
+---
 
 ## ✨ New Features
 
@@ -50,8 +82,13 @@ Advanced statistical analysis with confidence intervals, outlier detection, and 
 
 **Usage:**
 ```bash
-# Analyze test results
-for i in {1..20}; do netperf -H host; done | netperf_stats.py -
+# Analyze test results (use -M for OMNI keyval output)
+for i in {1..20}; do netperf -H host -M; done | \
+  grep THROUGHPUT= | cut -d= -f2 | netperf_stats.py -
+
+# Or with traditional TCP_STREAM (parse columnar output)
+for i in {1..20}; do netperf -H host | tail -1 | awk '{print $5}'; done | \
+  netperf_stats.py -
 
 # Generate histogram
 netperf_stats.py results.txt --histogram hist.png
@@ -433,7 +470,29 @@ netperf-template -t html-dashboard results.json > dashboard.html
 
 ---
 
-## 🐛 Known Issues
+## � Important Update: Backwards Compatibility (January 31, 2026)
+
+### Commits
+- `e519a9a` - BREAKING: Restore full backwards compatibility - default is TCP_STREAM
+- `dc2061c` - Update all documentation for backwards compatible approach
+- `43928c0` - Add backwards compatibility implementation summary
+
+### Changes
+**Reverted to TCP_STREAM as default** for 100% backwards compatibility:
+- Default: `netperf -H host` → TCP_STREAM (columnar)
+- Modern: `netperf -H host -M` → OMNI (keyval/JSON)
+- Result: **Zero breaking changes** for existing users
+
+**All tools updated:**
+- netperf-multi default test type: TCP_STREAM
+- All documentation examples show `-M` for OMNI features
+- Test scripts validate backwards compatibility
+
+See [BACKWARDS_COMPATIBILITY_SUMMARY.md](BACKWARDS_COMPATIBILITY_SUMMARY.md) for complete details.
+
+---
+
+## �🐛 Known Issues
 
 ### Minor Issues
 1. **netperf-orchestrate SSH**: Full multi-host SSH testing pending (inventory and validation tested only)
@@ -484,9 +543,11 @@ Version 3.0.0 represents a major milestone in netperf modernization:
 - **5 report templates** for various output needs
 - **100% integration tested** with live infrastructure
 - **Comprehensive documentation** (2,023 lines across 4 guides)
-- **Full backward compatibility** maintained
+- **Full backwards compatibility** with upstream netperf (TCP_STREAM default, `-M` for OMNI)
 
 All Phase 1, 2, and 3 objectives achieved. Netperf is now a modern, comprehensive network performance testing suite suitable for production use in diverse environments from WiFi to datacenter to cloud.
+
+**Latest Update**: Backwards compatibility restored - existing scripts work unchanged!
 
 ---
 
