@@ -110,7 +110,7 @@ extern	int	getopt(int , char **, char *) ;
    getopt to parse the command line, we will tell getopt that they do
    not take parms, and then look for them ourselves */
 
-#define GLOBAL_CMD_LINE_ARGS "A:a:b:B:CcdD:f:F:H:hi:I:jk:K:l:L:n:NO:o:P:p:rSs:t:T:v:VW:w:y:Y:Z:46"
+#define GLOBAL_CMD_LINE_ARGS "A:a:b:B:CcdD:f:F:H:hi:I:jk:K:l:L:Mn:NO:o:P:p:rSs:t:T:v:VW:w:y:Y:Z:46"
 
 /************************************************************************/
 /*									*/
@@ -126,7 +126,7 @@ char *command_line;     /* a copy of the entire command line */
 char
   host_name[HOSTNAMESIZE] = "",	      /* remote host name or ip addr */
   local_host_name[HOSTNAMESIZE] = "", /* local hostname or ip */
-  test_name[BUFSIZ] = "OMNI",         /* which test to run - changed to OMNI in v3.0 */
+  test_name[BUFSIZ] = "TCP_STREAM",   /* which test to run - TCP_STREAM for backwards compat */
   test_port[PORTBUFSIZE] = "12865",   /* where is the test waiting */
   local_test_port[PORTBUFSIZE] = "0"; /* from whence we should start */
 
@@ -291,6 +291,7 @@ Global options:\n\
     -j                Keep additional timing statistics\n\
     -l testlen        Specify test duration (>0 secs) (<0 bytes|trans)\n\
     -L name|ip,fam *  Specify the local ip|name and address family\n\
+    -M                Enable modern OMNI test mode with keyval output\n\
     -o send,recv      Set the local send,recv buffer offsets\n\
     -O send,recv      Set the remote send,recv buffer offset\n\
     -n numcpu         Set the number of processors for CPU util\n\
@@ -987,6 +988,11 @@ scan_cmd_line(int argc, char *argv[])
 	strncpy(local_host_name,arg1,sizeof(local_host_name));
       if (arg2[0])
 	local_address_family = parse_address_family(arg2);
+      break;
+    case 'M':
+      /* Enable modern OMNI test mode (this overrides default TCP_STREAM) */
+      strncpy(test_name,"OMNI",sizeof(test_name));
+      test_name[sizeof(test_name) - 1] = '\0';
       break;
     case 'w':
       /* We want to send requests at a certain wate.  Remember that

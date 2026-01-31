@@ -80,6 +80,7 @@ char nettest_omni_id[]="\
 #ifndef WIN32
 #include <errno.h>
 #include <signal.h>
+#include <sys/utsname.h>
 #endif
 
 #if TIME_WITH_SYS_TIME
@@ -338,6 +339,7 @@ sigset_t signal_set;
 #define NETPERF_WAITALL 0x1
 
 extern void get_uuid_string(char *string, size_t size);
+extern char *netperf_version;
 
 /* a boatload of globals while I settle things out */
 char *output_selection_spec = NULL;
