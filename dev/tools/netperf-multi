@@ -88,8 +88,9 @@ class NetperfInstance:
         if self.cpu_affinity is not None:
             cmd.extend(['-T', str(self.cpu_affinity)])
         
-        # Additional netperf arguments
+        # Additional netperf arguments (pass after -- for test-specific options)
         if self.netperf_args:
+            cmd.append('--')
             cmd.extend(self.netperf_args)
         
         return cmd
@@ -337,25 +338,29 @@ class MultiNetperf:
             print("No successful results to aggregate", file=sys.stderr)
             return None
         
+        # Debug: Print first result
+        if self.verbose:
+            print(f"DEBUG: First result keys: {list(results[0].keys())}", file=sys.stderr)
+        
         # Determine test type and aggregate appropriately
         aggregated = {
             'num_instances': len(results),
             'test_type': self.test_type
         }
         
-        # For throughput tests (STREAM), sum the throughput
-        if 'STREAM' in self.test_type or 'THROUGHPUT' in self.test_type.upper():
-            throughput_key = self._find_throughput_key(results[0])
-            if throughput_key:
-                total_throughput = sum(r.get(throughput_key, 0) for r in results)
-                aggregated[throughput_key] = total_throughput
-                aggregated['avg_per_instance'] = total_throughput / len(results)
+        # Check if results contain throughput data
+        throughput_key = self._find_throughput_key(results[0])
+        if throughput_key:
+            # For throughput tests (STREAM), sum the throughput
+            total_throughput = sum(r.get(throughput_key, 0) for r in results)
+            aggregated[throughput_key] = total_throughput
+            aggregated['avg_per_instance'] = total_throughput / len(results)
         
-        # For latency tests (RR), average the latency and sum transaction rate
-        elif 'RR' in self.test_type or 'LATENCY' in self.test_type.upper():
-            latency_key = self._find_latency_key(results[0])
-            rate_key = self._find_rate_key(results[0])
-            
+        # Check if results contain latency data  
+        latency_key = self._find_latency_key(results[0])
+        rate_key = self._find_rate_key(results[0])
+        if latency_key or rate_key:
+            # For latency tests (RR), average the latency and sum transaction rate
             if latency_key:
                 avg_latency = sum(r.get(latency_key, 0) for r in results) / len(results)
                 aggregated[latency_key] = avg_latency
@@ -364,8 +369,6 @@ class MultiNetperf:
                 total_rate = sum(r.get(rate_key, 0) for r in results)
                 aggregated[rate_key] = total_rate
                 aggregated['avg_per_instance'] = total_rate / len(results)
-        
-        # Include all common metrics
         for key in results[0].keys():
             if key not in aggregated:
                 values = [r.get(key, 0) for r in results if isinstance(r.get(key), (int, float))]

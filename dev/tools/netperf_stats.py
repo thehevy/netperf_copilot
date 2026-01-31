@@ -865,35 +865,79 @@ class AdvancedStatistics:
         return "\n".join(lines)
 
 
-# Standalone test
+# CLI interface
 if __name__ == "__main__":
-    # Example usage
-    import random
+    import sys
+    import argparse
     
-    print("Advanced Statistics Module - Test\n")
+    parser = argparse.ArgumentParser(description='Netperf Statistics Analysis')
+    parser.add_argument('file', nargs='?', help='File containing values (one per line), or - for stdin')
+    parser.add_argument('--confidence', type=float, default=0.95, help='Confidence level (default: 0.95)')
+    parser.add_argument('--outlier-method', choices=['iqr', 'zscore'], default='iqr', help='Outlier detection method')
+    parser.add_argument('--no-outliers', action='store_true', help='Disable outlier detection')
+    parser.add_argument('--no-hist', action='store_true', help='Disable histogram')
+    parser.add_argument('--no-boxplot', action='store_true', help='Disable box plot')
+    parser.add_argument('--bins', type=int, default=10, help='Number of histogram bins')
+    args = parser.parse_args()
     
-    # Generate sample data
-    random.seed(42)
-    normal_data = [random.gauss(100, 15) for _ in range(50)]
-    normal_data.append(200)  # Add an outlier
+    # Read values
+    values = []
+    if args.file == '-' or args.file is None:
+        # Read from stdin
+        for line in sys.stdin:
+            line = line.strip()
+            if line:
+                try:
+                    values.append(float(line))
+                except ValueError:
+                    continue
+    else:
+        # Read from file
+        try:
+            with open(args.file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            values.append(float(line))
+                        except ValueError:
+                            continue
+        except FileNotFoundError:
+            print(f"Error: File '{args.file}' not found", file=sys.stderr)
+            sys.exit(1)
     
-    print("Sample Data (n=51, one outlier):")
-    print(f"Values: {min(normal_data):.2f} to {max(normal_data):.2f}\n")
+    if not values:
+        print("Error: No values provided", file=sys.stderr)
+        sys.exit(1)
+    
+    print(f"Netperf Statistics Analysis\n")
+    print(f"Sample Data:")
+    print(f"  Count: {len(values)}")
+    print(f"  Range: {min(values):.2f} to {max(values):.2f}\n")
     
     # Comprehensive statistics
-    stats = AdvancedStatistics.calculate_comprehensive_stats(normal_data)
+    stats = AdvancedStatistics.calculate_comprehensive_stats(
+        values,
+        confidence_level=args.confidence,
+        detect_outliers=not args.no_outliers,
+        outlier_method=args.outlier_method
+    )
     
     print("Statistics:")
-    print(f"  Mean: {stats['mean']:.2f} ± {stats['ci_margin']:.2f} (95% CI)")
+    print(f"  Mean: {stats['mean']:.2f} ± {stats['ci_margin']:.2f} ({int(args.confidence*100)}% CI)")
     print(f"  Median: {stats['median']:.2f}")
     print(f"  Std Dev: {stats['stddev']:.2f}")
     print(f"  CV: {stats['coefficient_of_variation']:.2f}%")
-    print(f"  Outliers: {stats['outlier_count']} ({stats['outlier_percentage']:.1f}%)")
-    if stats['outlier_count'] > 0:
-        print(f"  Mean (clean): {stats['mean_clean']:.2f}")
+    if not args.no_outliers:
+        print(f"  Outliers: {stats['outlier_count']} ({stats['outlier_percentage']:.1f}%)")
+        if stats['outlier_count'] > 0:
+            print(f"  Mean (clean): {stats['mean_clean']:.2f}")
     print(f"  Skewness: {stats['skewness']:.3f} ({stats['skewness_interpretation']})")
     print(f"  Kurtosis: {stats['kurtosis']:.3f} ({stats['kurtosis_interpretation']})")
     print(f"  Normal: {stats['is_normal']} (p={stats['normality_p_value']:.3f})")
     
-    print("\n" + AdvancedStatistics.generate_histogram(normal_data, bins=10))
-    print("\n" + AdvancedStatistics.generate_boxplot(normal_data))
+    if not args.no_hist:
+        print("\n" + AdvancedStatistics.generate_histogram(values, bins=args.bins))
+    
+    if not args.no_boxplot:
+        print("\n" + AdvancedStatistics.generate_boxplot(values))
