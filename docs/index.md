@@ -190,14 +190,14 @@ sudo cp -r dev/profiles /usr/local/share/netperf/
 
 ### Test Output Formats
 ```bash
-# Keyval (default)
+# Default TCP_STREAM (backwards compatible)
 netperf -H host
 
-# JSON output
-netperf -H host -- -J
+# JSON output (requires -M)
+netperf -H host -M -- -J
 
-# CSV output
-netperf -H host -- -o
+# CSV output (requires -M)
+netperf -H host -M -- -o
 ```
 
 ---
@@ -211,17 +211,23 @@ netperf -H remotehost -l 10
 
 ### Request-Response Latency
 ```bash
-netperf -H remotehost -t TCP_RR -- -J
+# Traditional TCP_RR (columnar output)
+netperf -H remotehost -t TCP_RR
+
+# OMNI request-response with JSON (requires -M)
+netperf -H remotehost -M -- -P TCP_RR -J
 ```
 
 ### Using Output Presets
 ```bash
-netperf -H remotehost -- -k dev/catalog/output-presets/verbose.out
+# OMNI output presets (requires -M)
+netperf -H remotehost -M -- -k dev/catalog/output-presets/verbose.out
 ```
 
 ### Parallel Testing with Statistics
 ```bash
-netperf-multi -n 4 -H host -- -d send -l 30 | netperf_stats.py -
+# netperf-multi passes -M automatically when using OMNI options
+netperf-multi -n 4 -H host -- -M -d send -l 30 | netperf_stats.py -
 ```
 
 ---

@@ -379,9 +379,9 @@ netperf-multi -n 4 -H 192.168.18.2 -- -d send -l 30
 
 ### Statistical Analysis
 ```bash
-# Run 20 tests and analyze
+# Run 20 tests and analyze (using OMNI with -M)
 for i in {1..20}; do 
-  netperf -H 192.168.18.2 -- -d send -l 10
+  netperf -H 192.168.18.2 -M -- -d send -l 10
 done | netperf_stats.py - --histogram results.png
 ```
 
@@ -429,8 +429,8 @@ netperf -H localhost -l 300
 
 ### Report Generation
 ```bash
-# Collect results
-netperf -H host -- -J > results.json
+# Collect results (using OMNI with -M for JSON)
+netperf -H host -M -- -J > results.json
 
 # Generate markdown report
 netperf-template -t markdown-report results.json > report.md
