@@ -1,0 +1,80 @@
+# Latency Profile - Low-Latency Optimization
+#
+# Optimized for measuring network latency and transaction rate.
+# Uses request/response patterns with minimal message sizes to
+# measure true round-trip latency.
+
+name: Low Latency Testing
+description: Optimized for latency and transaction rate measurement
+version: 1.0
+category: latency
+
+global:
+  duration: 60                    # Longer duration for stable latency measurement
+  output_format: json
+  warmup: 10                      # Longer warmup for thermal stability
+  
+tests:
+  - name: TCP Ping-Pong
+    description: Minimal latency with 1-byte messages
+    direction: rr                 # Request/response
+    protocol: tcp
+    instances: 1                  # Single stream for pure latency
+    request_size: 1               # 1 byte request
+    response_size: 1              # 1 byte response
+    burst: 1                      # No bursting for pure latency
+    
+  - name: TCP Small Transaction
+    description: Realistic small transaction (64B req, 64B resp)
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    
+  - name: TCP Transaction Burst
+    description: Burst of transactions to test queueing
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 10                     # 10 back-to-back transactions
+    
+  - name: UDP Ping-Pong
+    description: UDP latency baseline
+    direction: rr
+    protocol: udp
+    instances: 1
+    request_size: 1
+    response_size: 1
+    burst: 1
+    
+  - name: TCP Multi-Stream Latency
+    description: Latency under concurrent load
+    direction: rr
+    protocol: tcp
+    instances: 4                  # Multiple concurrent streams
+    request_size: 64
+    response_size: 64
+    burst: 1
+    cpu_affinity: true
+
+expectations:
+  mean_latency_max: 100           # Maximum acceptable latency (microseconds)
+  p99_latency_max: 500            # 99th percentile latency
+  transaction_rate_min: 10000     # Minimum transactions per second
+
+analysis:
+  aggregate: true
+  statistics: true
+  detect_outliers: true
+  confidence_level: 0.99          # 99% confidence for latency
+  histogram: true                 # Generate latency histogram
+
+tags:
+  - latency
+  - rtt
+  - transaction-rate
+  - low-latency

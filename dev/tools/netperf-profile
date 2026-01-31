@@ -1,0 +1,570 @@
+#!/usr/bin/env python3
+"""
+netperf-profile - Profile-based Netperf Test Runner
+
+Runs pre-configured test profiles for common networking scenarios.
+Profiles are defined in YAML format and specify test parameters,
+expectations, and analysis settings.
+
+Usage:
+    netperf-profile -H HOST -p throughput
+    netperf-profile -H HOST -p latency --validate
+    netperf-profile -H HOST --profile-file custom.yaml
+    netperf-profile --list
+
+Author: Netperf Modernization Project - Phase 3
+License: MIT
+Version: 1.0.0
+"""
+
+import sys
+import os
+import subprocess
+import argparse
+import json
+import time
+from pathlib import Path
+from typing import Dict, List, Any, Optional
+
+# Try YAML, fall back to JSON if unavailable
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+    print("Warning: PyYAML not available. Only JSON profiles supported.", file=sys.stderr)
+    print("Install with: pip install pyyaml", file=sys.stderr)
+
+
+class ProfileValidator:
+    """Validate profile definitions"""
+    
+    REQUIRED_FIELDS = ['name', 'description', 'version', 'tests']
+    REQUIRED_TEST_FIELDS = ['name', 'direction', 'protocol']
+    VALID_DIRECTIONS = ['send', 'recv', 'rr', 'stream', 'maerts']
+    VALID_PROTOCOLS = ['tcp', 'udp', 'sctp', 'sdp', 'dccp', 'udplite']
+    
+    @staticmethod
+    def validate(profile: Dict[str, Any]) -> tuple[bool, List[str]]:
+        """Validate profile structure and content
+        
+        Returns:
+            (is_valid, list_of_errors)
+        """
+        errors = []
+        
+        # Check required top-level fields
+        for field in ProfileValidator.REQUIRED_FIELDS:
+            if field not in profile:
+                errors.append(f"Missing required field: {field}")
+        
+        # Validate tests array
+        if 'tests' in profile:
+            if not isinstance(profile['tests'], list):
+                errors.append("'tests' must be a list")
+            elif len(profile['tests']) == 0:
+                errors.append("'tests' list is empty")
+            else:
+                # Validate each test
+                for i, test in enumerate(profile['tests']):
+                    test_errors = ProfileValidator._validate_test(test, i)
+                    errors.extend(test_errors)
+        
+        # Validate global settings if present
+        if 'global' in profile:
+            global_errors = ProfileValidator._validate_global(profile['global'])
+            errors.extend(global_errors)
+        
+        return (len(errors) == 0, errors)
+    
+    @staticmethod
+    def _validate_test(test: Dict[str, Any], index: int) -> List[str]:
+        """Validate individual test definition"""
+        errors = []
+        prefix = f"Test {index}"
+        
+        # Required fields
+        for field in ProfileValidator.REQUIRED_TEST_FIELDS:
+            if field not in test:
+                errors.append(f"{prefix}: Missing required field '{field}'")
+        
+        # Validate direction
+        if 'direction' in test:
+            if test['direction'].lower() not in ProfileValidator.VALID_DIRECTIONS:
+                errors.append(f"{prefix}: Invalid direction '{test['direction']}'. "
+                            f"Must be one of: {ProfileValidator.VALID_DIRECTIONS}")
+        
+        # Validate protocol
+        if 'protocol' in test:
+            if test['protocol'].lower() not in ProfileValidator.VALID_PROTOCOLS:
+                errors.append(f"{prefix}: Invalid protocol '{test['protocol']}'. "
+                            f"Must be one of: {ProfileValidator.VALID_PROTOCOLS}")
+        
+        # Validate numeric fields
+        numeric_fields = ['duration', 'instances', 'socket_size', 'message_size',
+                         'request_size', 'response_size', 'burst']
+        for field in numeric_fields:
+            if field in test:
+                if not isinstance(test[field], (int, float)) or test[field] <= 0:
+                    errors.append(f"{prefix}: '{field}' must be a positive number")
+        
+        return errors
+    
+    @staticmethod
+    def _validate_global(global_settings: Dict[str, Any]) -> List[str]:
+        """Validate global settings"""
+        errors = []
+        
+        # Validate duration
+        if 'duration' in global_settings:
+            if not isinstance(global_settings['duration'], (int, float)) or global_settings['duration'] <= 0:
+                errors.append("Global: 'duration' must be a positive number")
+        
+        # Validate output format
+        if 'output_format' in global_settings:
+            valid_formats = ['json', 'csv', 'keyval', 'human']
+            if global_settings['output_format'] not in valid_formats:
+                errors.append(f"Global: Invalid output_format. Must be one of: {valid_formats}")
+        
+        return errors
+
+
+class ProfileLoader:
+    """Load and parse profile files"""
+    
+    @staticmethod
+    def load_file(filepath: Path) -> Dict[str, Any]:
+        """Load profile from file (YAML or JSON)"""
+        if not filepath.exists():
+            raise FileNotFoundError(f"Profile file not found: {filepath}")
+        
+        with open(filepath, 'r') as f:
+            content = f.read()
+        
+        # Try YAML first if available
+        if HAS_YAML and filepath.suffix in ['.yaml', '.yml']:
+            return yaml.safe_load(content)
+        elif filepath.suffix == '.json':
+            return json.loads(content)
+        elif HAS_YAML:
+            # Try YAML for unknown extensions
+            return yaml.safe_load(content)
+        else:
+            # Try JSON as fallback
+            return json.loads(content)
+    
+    @staticmethod
+    def find_builtin_profile(name: str) -> Optional[Path]:
+        """Find built-in profile by name"""
+        # Check in dev/profiles directory
+        script_dir = Path(__file__).parent
+        profiles_dir = script_dir.parent / 'profiles'
+        
+        # Try with .yaml extension
+        profile_path = profiles_dir / f"{name}.yaml"
+        if profile_path.exists():
+            return profile_path
+        
+        # Try with .yml extension
+        profile_path = profiles_dir / f"{name}.yml"
+        if profile_path.exists():
+            return profile_path
+        
+        # Try with .json extension
+        profile_path = profiles_dir / f"{name}.json"
+        if profile_path.exists():
+            return profile_path
+        
+        return None
+    
+    @staticmethod
+    def list_builtin_profiles() -> List[tuple[str, Path]]:
+        """List all built-in profiles"""
+        script_dir = Path(__file__).parent
+        profiles_dir = script_dir.parent / 'profiles'
+        
+        if not profiles_dir.exists():
+            return []
+        
+        profiles = []
+        for filepath in profiles_dir.glob('*.yaml'):
+            profiles.append((filepath.stem, filepath))
+        for filepath in profiles_dir.glob('*.yml'):
+            if filepath.stem not in [p[0] for p in profiles]:
+                profiles.append((filepath.stem, filepath))
+        for filepath in profiles_dir.glob('*.json'):
+            if filepath.stem not in [p[0] for p in profiles]:
+                profiles.append((filepath.stem, filepath))
+        
+        return sorted(profiles)
+
+
+class ProfileRunner:
+    """Execute profile tests"""
+    
+    def __init__(self, profile: Dict[str, Any], host: str, netperf_path: str = 'netperf',
+                 dry_run: bool = False, verbose: bool = False):
+        self.profile = profile
+        self.host = host
+        self.netperf_path = netperf_path
+        self.dry_run = dry_run
+        self.verbose = verbose
+        self.results = []
+        self.global_settings = profile.get('global', {})
+    
+    def run(self) -> bool:
+        """Run all tests in the profile"""
+        print(f"\n{'='*70}")
+        print(f"Profile: {self.profile['name']}")
+        print(f"Description: {self.profile['description']}")
+        print(f"Version: {self.profile['version']}")
+        print(f"Target Host: {self.host}")
+        print(f"{'='*70}\n")
+        
+        tests = self.profile.get('tests', [])
+        total_tests = len(tests)
+        
+        for i, test in enumerate(tests, 1):
+            print(f"\n[{i}/{total_tests}] Running: {test['name']}")
+            print(f"  Description: {test.get('description', 'N/A')}")
+            
+            success = self._run_test(test)
+            
+            if not success and not self.global_settings.get('continue_on_error', True):
+                print("\nStopping profile execution due to test failure", file=sys.stderr)
+                return False
+        
+        # Summary
+        self._print_summary()
+        
+        return True
+    
+    def _run_test(self, test: Dict[str, Any]) -> bool:
+        """Run a single test"""
+        # Merge global and test settings
+        duration = test.get('duration', self.global_settings.get('duration', 10))
+        output_format = test.get('output_format', self.global_settings.get('output_format', 'keyval'))
+        warmup = test.get('warmup', self.global_settings.get('warmup', 0))
+        
+        # Build command
+        instances = test.get('instances', 1)
+        
+        if instances > 1:
+            # Use netperf-multi for parallel instances
+            cmd = self._build_multi_command(test, duration, output_format)
+        else:
+            # Use standard netperf
+            cmd = self._build_netperf_command(test, duration, output_format)
+        
+        if self.verbose or self.dry_run:
+            print(f"  Command: {' '.join(cmd)}")
+        
+        if self.dry_run:
+            print("  [DRY RUN] Skipping execution")
+            return True
+        
+        # Warmup if specified
+        if warmup > 0:
+            print(f"  Warming up ({warmup}s)...")
+            time.sleep(warmup)
+        
+        # Execute
+        try:
+            start_time = time.time()
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=duration + 60)
+            elapsed = time.time() - start_time
+            
+            if result.returncode == 0:
+                print(f"  ✓ Completed in {elapsed:.1f}s")
+                self.results.append({
+                    'test': test['name'],
+                    'success': True,
+                    'duration': elapsed,
+                    'output': result.stdout
+                })
+                return True
+            else:
+                print(f"  ✗ Failed (exit code {result.returncode})")
+                if self.verbose:
+                    print(f"  Error: {result.stderr}")
+                self.results.append({
+                    'test': test['name'],
+                    'success': False,
+                    'error': result.stderr
+                })
+                return False
+        
+        except subprocess.TimeoutExpired:
+            print(f"  ✗ Timeout after {duration + 60}s")
+            return False
+        except Exception as e:
+            print(f"  ✗ Error: {e}")
+            return False
+    
+    def _build_netperf_command(self, test: Dict[str, Any], duration: int, 
+                               output_format: str) -> List[str]:
+        """Build netperf command for single instance"""
+        cmd = [self.netperf_path]
+        cmd.extend(['-H', self.host])
+        cmd.extend(['-l', str(duration)])
+        
+        # Output format
+        if output_format == 'json':
+            cmd.append('-J')
+        elif output_format != 'keyval':
+            cmd.extend(['-o', output_format])
+        
+        # Test-specific options (after --)
+        cmd.append('--')
+        
+        # Direction
+        direction = test['direction'].lower()
+        cmd.extend(['-d', direction])
+        
+        # Protocol
+        protocol = test['protocol'].upper()
+        cmd.extend(['-T', protocol])
+        
+        # Connection mode
+        if test.get('connection', False):
+            cmd.append('-c')
+        
+        # Socket sizes
+        if 'socket_size' in test:
+            cmd.extend(['-s', str(test['socket_size'])])
+            cmd.extend(['-S', str(test['socket_size'])])
+        
+        # Message size
+        if 'message_size' in test:
+            cmd.extend(['-m', str(test['message_size'])])
+        
+        # Request/response sizes
+        if 'request_size' in test and 'response_size' in test:
+            cmd.extend(['-r', f"{test['request_size']},{test['response_size']}"])
+        
+        # Burst
+        if 'burst' in test:
+            cmd.extend(['-b', str(test['burst'])])
+        
+        # CPU affinity
+        if test.get('cpu_affinity', False):
+            # Will be handled by system-level affinity
+            pass
+        
+        return cmd
+    
+    def _build_multi_command(self, test: Dict[str, Any], duration: int,
+                            output_format: str) -> List[str]:
+        """Build netperf-multi command for parallel instances"""
+        script_dir = Path(__file__).parent
+        multi_tool = script_dir / 'netperf-multi'
+        
+        cmd = [str(multi_tool)]
+        cmd.extend(['-H', self.host])
+        cmd.extend(['-n', str(test['instances'])])
+        cmd.extend(['-l', str(duration)])
+        cmd.extend(['-o', output_format])
+        
+        if test.get('cpu_affinity', False):
+            cmd.append('--affinity')
+        
+        if test.get('stagger_start'):
+            cmd.extend(['--stagger', str(test['stagger_start'])])
+        
+        if self.verbose:
+            cmd.append('-v')
+        
+        # Test-specific options (after --)
+        cmd.append('--')
+        cmd.extend(['-d', test['direction'].lower()])
+        cmd.extend(['-T', test['protocol'].upper()])
+        
+        if test.get('connection', False):
+            cmd.append('-c')
+        
+        if 'socket_size' in test:
+            cmd.extend(['-s', str(test['socket_size'])])
+            cmd.extend(['-S', str(test['socket_size'])])
+        
+        if 'message_size' in test:
+            cmd.extend(['-m', str(test['message_size'])])
+        
+        if 'request_size' in test and 'response_size' in test:
+            cmd.extend(['-r', f"{test['request_size']},{test['response_size']}"])
+        
+        if 'burst' in test:
+            cmd.extend(['-b', str(test['burst'])])
+        
+        return cmd
+    
+    def _print_summary(self):
+        """Print execution summary"""
+        print(f"\n{'='*70}")
+        print("Profile Execution Summary")
+        print(f"{'='*70}")
+        
+        total = len(self.results)
+        successful = sum(1 for r in self.results if r.get('success', False))
+        failed = total - successful
+        
+        print(f"Total Tests:     {total}")
+        print(f"Successful:      {successful}")
+        print(f"Failed:          {failed}")
+        print(f"Success Rate:    {(successful/total*100):.1f}%" if total > 0 else "N/A")
+        print(f"{'='*70}\n")
+        
+        if failed > 0:
+            print("Failed Tests:")
+            for result in self.results:
+                if not result.get('success', False):
+                    print(f"  - {result['test']}")
+            print()
+
+
+def list_profiles():
+    """List all available profiles"""
+    profiles = ProfileLoader.list_builtin_profiles()
+    
+    if not profiles:
+        print("No built-in profiles found")
+        return
+    
+    print("\n  Available Profiles:\n")
+    print(f"{'='*70}")
+    
+    for name, filepath in profiles:
+        try:
+            profile = ProfileLoader.load_file(filepath)
+            desc = profile.get('description', 'No description')
+            category = profile.get('category', 'unknown')
+            num_tests = len(profile.get('tests', []))
+            
+            print(f"  {name:20s} [{category}]")
+            print(f"    {desc}")
+            print(f"    Tests: {num_tests}")
+            print()
+        except Exception as e:
+            print(f"  {name:20s} [ERROR: {e}]")
+            print()
+    
+    print(f"{'='*70}\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Profile-based netperf test runner',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --list
+  %(prog)s -H 192.168.1.100 -p throughput
+  %(prog)s -H server1 -p latency --validate
+  %(prog)s -H server1 --profile-file custom.yaml
+  %(prog)s -H server1 -p cloud --dry-run
+
+Built-in Profiles:
+  throughput    - Maximum bandwidth testing
+  latency       - Low-latency optimization
+  stress        - Maximum load testing
+  cloud         - Cloud network testing
+  datacenter    - Enterprise datacenter
+  wireless      - WiFi/wireless networks
+  baseline      - Quick performance baseline
+  mixed-workload - Realistic mixed traffic
+  jitter        - Network consistency testing
+  lossy         - Degraded network conditions
+
+For more information, see dev/docs/PROFILES.md
+        """
+    )
+    
+    # Profile selection
+    profile_group = parser.add_mutually_exclusive_group(required=False)
+    profile_group.add_argument('-p', '--profile', metavar='NAME',
+                              help='Built-in profile name')
+    profile_group.add_argument('--profile-file', metavar='FILE',
+                              help='Path to custom profile file')
+    profile_group.add_argument('--list', action='store_true',
+                              help='List available built-in profiles')
+    
+    # Target configuration
+    parser.add_argument('-H', '--host',
+                       help='Target netserver host (required unless --list)')
+    
+    # Execution options
+    parser.add_argument('--validate', action='store_true',
+                       help='Validate profile without execution')
+    parser.add_argument('--dry-run', action='store_true',
+                       help='Show commands without execution')
+    parser.add_argument('--netperf', dest='netperf_path', default='netperf',
+                       help='Path to netperf binary')
+    
+    # Output options
+    parser.add_argument('-v', '--verbose', action='store_true',
+                       help='Verbose output')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+    
+    args = parser.parse_args()
+    
+    # List profiles
+    if args.list:
+        list_profiles()
+        return 0
+    
+    # Require host unless listing or validating
+    if not args.host and not args.validate:
+        parser.error("--host is required (unless --list or --validate)")
+    
+    # Require profile selection
+    if not args.profile and not args.profile_file:
+        parser.error("either --profile or --profile-file is required")
+    
+    # Load profile
+    try:
+        if args.profile:
+            profile_path = ProfileLoader.find_builtin_profile(args.profile)
+            if not profile_path:
+                print(f"Error: Profile '{args.profile}' not found", file=sys.stderr)
+                print("Run with --list to see available profiles", file=sys.stderr)
+                return 1
+        else:
+            profile_path = Path(args.profile_file)
+        
+        if args.verbose:
+            print(f"Loading profile: {profile_path}")
+        
+        profile = ProfileLoader.load_file(profile_path)
+    
+    except Exception as e:
+        print(f"Error loading profile: {e}", file=sys.stderr)
+        return 1
+    
+    # Validate profile
+    is_valid, errors = ProfileValidator.validate(profile)
+    
+    if not is_valid:
+        print("Profile validation failed:", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+    
+    if args.validate:
+        print(f"✓ Profile '{profile['name']}' is valid")
+        print(f"  Tests: {len(profile['tests'])}")
+        return 0
+    
+    # Run profile
+    runner = ProfileRunner(
+        profile=profile,
+        host=args.host,
+        netperf_path=args.netperf_path,
+        dry_run=args.dry_run,
+        verbose=args.verbose
+    )
+    
+    success = runner.run()
+    return 0 if success else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

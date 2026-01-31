@@ -1,0 +1,4 @@
+usage: netperf-profile [-h] [-p NAME | --profile-file FILE | --list] [-H HOST]
+                       [--validate] [--dry-run] [--netperf NETPERF_PATH] [-v]
+                       [--version]
+netperf-profile: error: --host is required (unless --list or --validate)

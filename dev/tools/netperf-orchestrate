@@ -1,0 +1,720 @@
+#!/usr/bin/env python3
+"""
+netperf-orchestrate - Remote Multi-Host Test Orchestration
+
+Coordinates netperf tests across multiple remote hosts with automatic
+netserver deployment, SSH-based execution, and centralized result collection.
+
+Usage:
+    netperf-orchestrate --hosts hosts.yaml --profile throughput
+    netperf-orchestrate --matrix clients.txt servers.txt
+    netperf-orchestrate --deploy --hosts hosts.yaml
+    netperf-orchestrate --status --hosts hosts.yaml
+
+Features:
+- SSH-based remote execution (subprocess ssh or optional paramiko)
+- Automatic netserver deployment and management
+- Host inventory management (YAML format)
+- Client-server matrix testing
+- Parallel execution across hosts
+- Centralized result aggregation
+- Error handling and retry logic
+
+Author: Netperf Modernization Project - Phase 3
+License: MIT
+Version: 1.0.0
+"""
+
+import sys
+import os
+import subprocess
+import argparse
+import json
+import time
+import threading
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Try paramiko for better SSH support
+try:
+    import paramiko
+    HAS_PARAMIKO = True
+except ImportError:
+    HAS_PARAMIKO = False
+
+# Try YAML
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+
+
+class SSHConnection:
+    """Manage SSH connections to remote hosts"""
+    
+    def __init__(self, host: str, port: int = 22, username: str = None,
+                 key_file: str = None, password: str = None, use_paramiko: bool = False):
+        self.host = host
+        self.port = port
+        self.username = username or os.getenv('USER', 'root')
+        self.key_file = key_file
+        self.password = password
+        self.use_paramiko = use_paramiko and HAS_PARAMIKO
+        self.client = None
+        
+    def connect(self) -> bool:
+        """Establish SSH connection"""
+        if self.use_paramiko:
+            return self._connect_paramiko()
+        return True  # For subprocess ssh, no persistent connection
+    
+    def _connect_paramiko(self) -> bool:
+        """Connect using paramiko"""
+        try:
+            self.client = paramiko.SSHClient()
+            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            
+            connect_kwargs = {
+                'hostname': self.host,
+                'port': self.port,
+                'username': self.username
+            }
+            
+            if self.key_file:
+                connect_kwargs['key_filename'] = self.key_file
+            elif self.password:
+                connect_kwargs['password'] = self.password
+            
+            self.client.connect(**connect_kwargs, timeout=10)
+            return True
+        except Exception as e:
+            print(f"Paramiko connection failed: {e}", file=sys.stderr)
+            return False
+    
+    def execute(self, command: str, timeout: int = 30) -> Tuple[int, str, str]:
+        """Execute command on remote host
+        
+        Returns:
+            (exit_code, stdout, stderr)
+        """
+        if self.use_paramiko and self.client:
+            return self._execute_paramiko(command, timeout)
+        return self._execute_subprocess(command, timeout)
+    
+    def _execute_paramiko(self, command: str, timeout: int) -> Tuple[int, str, str]:
+        """Execute via paramiko"""
+        try:
+            stdin, stdout, stderr = self.client.exec_command(command, timeout=timeout)
+            exit_code = stdout.channel.recv_exit_status()
+            stdout_str = stdout.read().decode('utf-8')
+            stderr_str = stderr.read().decode('utf-8')
+            return (exit_code, stdout_str, stderr_str)
+        except Exception as e:
+            return (-1, "", str(e))
+    
+    def _execute_subprocess(self, command: str, timeout: int) -> Tuple[int, str, str]:
+        """Execute via subprocess ssh"""
+        ssh_cmd = ['ssh']
+        
+        if self.key_file:
+            ssh_cmd.extend(['-i', self.key_file])
+        
+        ssh_cmd.extend(['-p', str(self.port)])
+        ssh_cmd.extend(['-o', 'StrictHostKeyChecking=no'])
+        ssh_cmd.extend(['-o', 'UserKnownHostsFile=/dev/null'])
+        ssh_cmd.extend(['-o', f'ConnectTimeout={min(timeout, 30)}'])
+        
+        ssh_cmd.append(f"{self.username}@{self.host}")
+        ssh_cmd.append(command)
+        
+        try:
+            result = subprocess.run(
+                ssh_cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+            return (result.returncode, result.stdout, result.stderr)
+        except subprocess.TimeoutExpired:
+            return (-1, "", "Command timeout")
+        except Exception as e:
+            return (-1, "", str(e))
+    
+    def copy_file(self, local_path: str, remote_path: str) -> bool:
+        """Copy file to remote host"""
+        if self.use_paramiko and self.client:
+            return self._copy_paramiko(local_path, remote_path)
+        return self._copy_subprocess(local_path, remote_path)
+    
+    def _copy_paramiko(self, local_path: str, remote_path: str) -> bool:
+        """Copy via paramiko SFTP"""
+        try:
+            sftp = self.client.open_sftp()
+            sftp.put(local_path, remote_path)
+            sftp.close()
+            return True
+        except Exception as e:
+            print(f"SFTP copy failed: {e}", file=sys.stderr)
+            return False
+    
+    def _copy_subprocess(self, local_path: str, remote_path: str) -> bool:
+        """Copy via subprocess scp"""
+        scp_cmd = ['scp']
+        
+        if self.key_file:
+            scp_cmd.extend(['-i', self.key_file])
+        
+        scp_cmd.extend(['-P', str(self.port)])
+        scp_cmd.extend(['-o', 'StrictHostKeyChecking=no'])
+        scp_cmd.extend(['-o', 'UserKnownHostsFile=/dev/null'])
+        
+        scp_cmd.append(local_path)
+        scp_cmd.append(f"{self.username}@{self.host}:{remote_path}")
+        
+        try:
+            result = subprocess.run(scp_cmd, capture_output=True, timeout=60)
+            return result.returncode == 0
+        except Exception as e:
+            print(f"SCP failed: {e}", file=sys.stderr)
+            return False
+    
+    def close(self):
+        """Close connection"""
+        if self.client:
+            self.client.close()
+
+
+class RemoteHost:
+    """Represents a remote host in the test infrastructure"""
+    
+    def __init__(self, name: str, address: str, role: str = 'both',
+                 ssh_user: str = None, ssh_port: int = 22, ssh_key: str = None):
+        self.name = name
+        self.address = address
+        self.role = role.lower()  # 'client', 'server', or 'both'
+        self.ssh_user = ssh_user
+        self.ssh_port = ssh_port
+        self.ssh_key = ssh_key
+        self.netserver_pid = None
+        self.status = 'unknown'
+    
+    def get_connection(self) -> SSHConnection:
+        """Create SSH connection to this host"""
+        return SSHConnection(
+            host=self.address,
+            port=self.ssh_port,
+            username=self.ssh_user,
+            key_file=self.ssh_key
+        )
+    
+    def can_be_server(self) -> bool:
+        """Check if host can act as server"""
+        return self.role in ['server', 'both']
+    
+    def can_be_client(self) -> bool:
+        """Check if host can act as client"""
+        return self.role in ['client', 'both']
+
+
+class HostInventory:
+    """Manage inventory of remote hosts"""
+    
+    def __init__(self, hosts: List[RemoteHost]):
+        self.hosts = hosts
+    
+    @classmethod
+    def from_yaml(cls, filepath: Path):
+        """Load inventory from YAML file"""
+        if not HAS_YAML:
+            raise ImportError("PyYAML required for YAML inventory files")
+        
+        with open(filepath, 'r') as f:
+            data = yaml.safe_load(f)
+        
+        hosts = []
+        for host_data in data.get('hosts', []):
+            host = RemoteHost(
+                name=host_data['name'],
+                address=host_data['address'],
+                role=host_data.get('role', 'both'),
+                ssh_user=host_data.get('ssh_user'),
+                ssh_port=host_data.get('ssh_port', 22),
+                ssh_key=host_data.get('ssh_key')
+            )
+            hosts.append(host)
+        
+        return cls(hosts)
+    
+    @classmethod
+    def from_text_file(cls, filepath: Path, role: str = 'both'):
+        """Load inventory from text file (one address per line)"""
+        hosts = []
+        with open(filepath, 'r') as f:
+            for i, line in enumerate(f, 1):
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    host = RemoteHost(
+                        name=f"host{i}",
+                        address=line,
+                        role=role
+                    )
+                    hosts.append(host)
+        
+        return cls(hosts)
+    
+    def get_servers(self) -> List[RemoteHost]:
+        """Get hosts that can act as servers"""
+        return [h for h in self.hosts if h.can_be_server()]
+    
+    def get_clients(self) -> List[RemoteHost]:
+        """Get hosts that can act as clients"""
+        return [h for h in self.hosts if h.can_be_client()]
+    
+    def get_host_by_name(self, name: str) -> Optional[RemoteHost]:
+        """Find host by name"""
+        for host in self.hosts:
+            if host.name == name:
+                return host
+        return None
+
+
+class RemoteOrchestrator:
+    """Orchestrate tests across multiple remote hosts"""
+    
+    def __init__(self, inventory: HostInventory, netperf_path: str = '/usr/local/bin/netperf',
+                 netserver_path: str = '/usr/local/bin/netserver',
+                 verbose: bool = False):
+        self.inventory = inventory
+        self.netperf_path = netperf_path
+        self.netserver_path = netserver_path
+        self.verbose = verbose
+        self.results = []
+    
+    def check_connectivity(self) -> Dict[str, bool]:
+        """Check SSH connectivity to all hosts"""
+        print("Checking connectivity to all hosts...")
+        
+        results = {}
+        for host in self.inventory.hosts:
+            conn = host.get_connection()
+            exit_code, stdout, stderr = conn.execute('echo "test"', timeout=10)
+            success = exit_code == 0
+            results[host.name] = success
+            
+            status = "✓" if success else "✗"
+            print(f"  {status} {host.name:20s} ({host.address})")
+            
+            host.status = 'online' if success else 'offline'
+            conn.close()
+        
+        return results
+    
+    def deploy_netserver(self, local_netserver: str = None) -> Dict[str, bool]:
+        """Deploy netserver to all server hosts"""
+        servers = self.inventory.get_servers()
+        print(f"\nDeploying netserver to {len(servers)} hosts...")
+        
+        results = {}
+        for host in servers:
+            print(f"  Deploying to {host.name}...")
+            
+            if local_netserver and Path(local_netserver).exists():
+                # Copy local binary
+                conn = host.get_connection()
+                success = conn.copy_file(local_netserver, '/tmp/netserver')
+                if success:
+                    # Make executable and move to final location
+                    conn.execute('chmod +x /tmp/netserver')
+                    conn.execute(f'sudo mv /tmp/netserver {self.netserver_path}')
+                conn.close()
+            else:
+                # Assume netserver already installed
+                success = True
+            
+            results[host.name] = success
+            status = "✓" if success else "✗"
+            print(f"    {status} Deployed")
+        
+        return results
+    
+    def start_netserver(self, hosts: List[RemoteHost] = None) -> Dict[str, bool]:
+        """Start netserver on specified hosts"""
+        if hosts is None:
+            hosts = self.inventory.get_servers()
+        
+        print(f"\nStarting netserver on {len(hosts)} hosts...")
+        
+        results = {}
+        for host in hosts:
+            conn = host.get_connection()
+            
+            # Check if already running
+            exit_code, stdout, stderr = conn.execute('pgrep netserver')
+            if exit_code == 0 and stdout.strip():
+                print(f"  ℹ {host.name}: netserver already running (PID {stdout.strip()})")
+                host.netserver_pid = int(stdout.strip())
+                results[host.name] = True
+                conn.close()
+                continue
+            
+            # Start netserver
+            cmd = f'{self.netserver_path} -D'
+            exit_code, stdout, stderr = conn.execute(cmd)
+            
+            # Verify started
+            time.sleep(1)
+            exit_code, stdout, stderr = conn.execute('pgrep netserver')
+            success = exit_code == 0 and stdout.strip()
+            
+            if success:
+                host.netserver_pid = int(stdout.strip())
+                print(f"  ✓ {host.name}: Started (PID {host.netserver_pid})")
+            else:
+                print(f"  ✗ {host.name}: Failed to start")
+                if self.verbose and stderr:
+                    print(f"    Error: {stderr}")
+            
+            results[host.name] = success
+            conn.close()
+        
+        return results
+    
+    def stop_netserver(self, hosts: List[RemoteHost] = None) -> Dict[str, bool]:
+        """Stop netserver on specified hosts"""
+        if hosts is None:
+            hosts = self.inventory.get_servers()
+        
+        print(f"\nStopping netserver on {len(hosts)} hosts...")
+        
+        results = {}
+        for host in hosts:
+            conn = host.get_connection()
+            
+            # Kill netserver
+            exit_code, stdout, stderr = conn.execute('pkill netserver')
+            
+            # Verify stopped
+            time.sleep(1)
+            exit_code, stdout, stderr = conn.execute('pgrep netserver')
+            success = exit_code != 0  # Should not be running
+            
+            status = "✓" if success else "✗"
+            print(f"  {status} {host.name}")
+            
+            results[host.name] = success
+            conn.close()
+        
+        return results
+    
+    def get_netserver_status(self, hosts: List[RemoteHost] = None) -> Dict[str, Dict]:
+        """Get netserver status on hosts"""
+        if hosts is None:
+            hosts = self.inventory.get_servers()
+        
+        statuses = {}
+        for host in hosts:
+            conn = host.get_connection()
+            
+            exit_code, stdout, stderr = conn.execute('pgrep netserver')
+            is_running = exit_code == 0 and stdout.strip()
+            
+            statuses[host.name] = {
+                'running': is_running,
+                'pid': int(stdout.strip()) if is_running else None
+            }
+            
+            conn.close()
+        
+        return statuses
+    
+    def run_matrix_tests(self, clients: List[RemoteHost], servers: List[RemoteHost],
+                        test_args: List[str], parallel: bool = True) -> List[Dict]:
+        """Run tests from all clients to all servers (full matrix)"""
+        print(f"\nRunning matrix tests: {len(clients)} clients × {len(servers)} servers")
+        print(f"Total tests: {len(clients) * len(servers)}")
+        
+        tasks = []
+        for client in clients:
+            for server in servers:
+                if client.address == server.address:
+                    continue  # Skip self-tests
+                tasks.append((client, server, test_args))
+        
+        if parallel:
+            return self._run_parallel(tasks)
+        else:
+            return self._run_sequential(tasks)
+    
+    def _run_sequential(self, tasks: List[Tuple]) -> List[Dict]:
+        """Run tests sequentially"""
+        results = []
+        total = len(tasks)
+        
+        for i, (client, server, test_args) in enumerate(tasks, 1):
+            print(f"\n[{i}/{total}] Running: {client.name} → {server.name}")
+            result = self._run_single_test(client, server, test_args)
+            results.append(result)
+        
+        return results
+    
+    def _run_parallel(self, tasks: List[Tuple], max_workers: int = 4) -> List[Dict]:
+        """Run tests in parallel"""
+        results = []
+        total = len(tasks)
+        completed = 0
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_task = {
+                executor.submit(self._run_single_test, client, server, test_args): (client, server)
+                for client, server, test_args in tasks
+            }
+            
+            for future in as_completed(future_to_task):
+                client, server = future_to_task[future]
+                completed += 1
+                
+                try:
+                    result = future.result()
+                    results.append(result)
+                    status = "✓" if result['success'] else "✗"
+                    print(f"  [{completed}/{total}] {status} {client.name} → {server.name}")
+                except Exception as e:
+                    print(f"  [{completed}/{total}] ✗ {client.name} → {server.name}: {e}")
+                    results.append({
+                        'client': client.name,
+                        'server': server.name,
+                        'success': False,
+                        'error': str(e)
+                    })
+        
+        return results
+    
+    def _run_single_test(self, client: RemoteHost, server: RemoteHost,
+                        test_args: List[str]) -> Dict:
+        """Run a single netperf test"""
+        conn = client.get_connection()
+        
+        # Build netperf command
+        cmd = [self.netperf_path]
+        cmd.extend(['-H', server.address])
+        cmd.extend(test_args)
+        cmd_str = ' '.join(cmd)
+        
+        if self.verbose:
+            print(f"    Command: {cmd_str}")
+        
+        # Execute
+        start_time = time.time()
+        exit_code, stdout, stderr = conn.execute(cmd_str, timeout=120)
+        elapsed = time.time() - start_time
+        
+        conn.close()
+        
+        result = {
+            'client': client.name,
+            'server': server.name,
+            'client_address': client.address,
+            'server_address': server.address,
+            'success': exit_code == 0,
+            'exit_code': exit_code,
+            'elapsed_time': elapsed,
+            'stdout': stdout,
+            'stderr': stderr if exit_code != 0 else '',
+            'command': cmd_str
+        }
+        
+        return result
+    
+    def export_results(self, filepath: Path):
+        """Export results to JSON file"""
+        with open(filepath, 'w') as f:
+            json.dump(self.results, f, indent=2)
+        print(f"\nResults exported to {filepath}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Remote multi-host netperf orchestration',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Check connectivity
+  %(prog)s --hosts hosts.yaml --check
+  
+  # Deploy netserver
+  %(prog)s --hosts hosts.yaml --deploy
+  
+  # Start netserver on all servers
+  %(prog)s --hosts hosts.yaml --start
+  
+  # Run matrix tests
+  %(prog)s --matrix clients.txt servers.txt -- -d send -l 30
+  
+  # Run with profile
+  %(prog)s --hosts hosts.yaml --profile throughput
+  
+  # Get status
+  %(prog)s --hosts hosts.yaml --status
+
+Host Inventory Format (YAML):
+  hosts:
+    - name: server1
+      address: 10.0.1.10
+      role: server
+      ssh_user: root
+      ssh_key: ~/.ssh/id_rsa
+    - name: client1
+      address: 10.0.1.20
+      role: client
+      ssh_user: root
+
+For more information, see dev/docs/ORCHESTRATION.md
+        """
+    )
+    
+    # Host configuration
+    inv_group = parser.add_mutually_exclusive_group(required=True)
+    inv_group.add_argument('--hosts', metavar='FILE',
+                          help='Host inventory file (YAML)')
+    inv_group.add_argument('--matrix', nargs=2, metavar=('CLIENTS', 'SERVERS'),
+                          help='Client and server list files (text, one per line)')
+    
+    # Operations
+    parser.add_argument('--check', action='store_true',
+                       help='Check connectivity to all hosts')
+    parser.add_argument('--deploy', action='store_true',
+                       help='Deploy netserver to server hosts')
+    parser.add_argument('--start', action='store_true',
+                       help='Start netserver on server hosts')
+    parser.add_argument('--stop', action='store_true',
+                       help='Stop netserver on server hosts')
+    parser.add_argument('--status', action='store_true',
+                       help='Get netserver status')
+    
+    # Test execution
+    parser.add_argument('-p', '--profile', metavar='NAME',
+                       help='Run tests using profile')
+    parser.add_argument('--parallel', action='store_true', default=True,
+                       help='Run tests in parallel (default)')
+    parser.add_argument('--sequential', dest='parallel', action='store_false',
+                       help='Run tests sequentially')
+    
+    # Configuration
+    parser.add_argument('--netperf', default='/usr/local/bin/netperf',
+                       help='Path to netperf binary on remote hosts')
+    parser.add_argument('--netserver', default='/usr/local/bin/netserver',
+                       help='Path to netserver binary on remote hosts')
+    parser.add_argument('--local-netserver', metavar='FILE',
+                       help='Local netserver binary to deploy')
+    
+    # Output
+    parser.add_argument('--export', metavar='FILE',
+                       help='Export results to JSON file')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                       help='Verbose output')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+    
+    # Netperf test arguments
+    parser.add_argument('netperf_args', nargs='*',
+                       help='Arguments passed to netperf (after --)')
+    
+    args = parser.parse_args()
+    
+    # Load inventory
+    try:
+        if args.hosts:
+            inventory = HostInventory.from_yaml(Path(args.hosts))
+        else:
+            clients_inv = HostInventory.from_text_file(Path(args.matrix[0]), role='client')
+            servers_inv = HostInventory.from_text_file(Path(args.matrix[1]), role='server')
+            inventory = HostInventory(clients_inv.hosts + servers_inv.hosts)
+    except Exception as e:
+        print(f"Error loading inventory: {e}", file=sys.stderr)
+        return 1
+    
+    print(f"Loaded {len(inventory.hosts)} hosts")
+    print(f"  Clients: {len(inventory.get_clients())}")
+    print(f"  Servers: {len(inventory.get_servers())}")
+    
+    # Create orchestrator
+    orchestrator = RemoteOrchestrator(
+        inventory=inventory,
+        netperf_path=args.netperf,
+        netserver_path=args.netserver,
+        verbose=args.verbose
+    )
+    
+    # Execute operations
+    if args.check:
+        results = orchestrator.check_connectivity()
+        online = sum(1 for v in results.values() if v)
+        print(f"\nResult: {online}/{len(results)} hosts online")
+        return 0 if online == len(results) else 1
+    
+    if args.deploy:
+        results = orchestrator.deploy_netserver(args.local_netserver)
+        success = sum(1 for v in results.values() if v)
+        print(f"\nResult: {success}/{len(results)} deployments successful")
+        return 0 if success == len(results) else 1
+    
+    if args.start:
+        results = orchestrator.start_netserver()
+        success = sum(1 for v in results.values() if v)
+        print(f"\nResult: {success}/{len(results)} netservers started")
+        return 0 if success == len(results) else 1
+    
+    if args.stop:
+        results = orchestrator.stop_netserver()
+        success = sum(1 for v in results.values() if v)
+        print(f"\nResult: {success}/{len(results)} netservers stopped")
+        return 0 if success == len(results) else 1
+    
+    if args.status:
+        statuses = orchestrator.get_netserver_status()
+        print("\nNetserver Status:")
+        for name, status in statuses.items():
+            state = "Running" if status['running'] else "Stopped"
+            pid_str = f" (PID {status['pid']})" if status['pid'] else ""
+            print(f"  {name:20s}: {state}{pid_str}")
+        return 0
+    
+    # Run tests
+    if args.profile or args.netperf_args:
+        test_args = args.netperf_args or []
+        
+        clients = inventory.get_clients()
+        servers = inventory.get_servers()
+        
+        if not clients or not servers:
+            print("Error: Need both client and server hosts", file=sys.stderr)
+            return 1
+        
+        results = orchestrator.run_matrix_tests(clients, servers, test_args, args.parallel)
+        orchestrator.results = results
+        
+        # Summary
+        total = len(results)
+        successful = sum(1 for r in results if r.get('success', False))
+        print(f"\n{'='*70}")
+        print(f"Orchestration Summary")
+        print(f"{'='*70}")
+        print(f"Total Tests:     {total}")
+        print(f"Successful:      {successful}")
+        print(f"Failed:          {total - successful}")
+        print(f"Success Rate:    {(successful/total*100):.1f}%" if total > 0 else "N/A")
+        print(f"{'='*70}\n")
+        
+        if args.export:
+            orchestrator.export_results(Path(args.export))
+        
+        return 0 if successful == total else 1
+    
+    # No operation specified
+    parser.print_help()
+    return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

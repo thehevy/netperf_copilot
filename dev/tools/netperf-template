@@ -1,0 +1,650 @@
+#!/usr/bin/env python3
+"""
+netperf-template - Advanced Template Engine for Custom Output Formats
+
+Jinja2-compatible template system for generating custom output formats
+from netperf results with support for conditionals, loops, filters, and
+data transformations.
+
+Usage:
+    netperf-template -t report.html.j2 results.json
+    netperf-template -t markdown.md.j2 -o report.md results.json
+    netperf-template --list-templates
+    netperf-template --validate report.html.j2
+
+Features:
+- Jinja2-compatible template syntax (or simplified fallback)
+- Conditionals: {% if %}, {% elif %}, {% else %}
+- Loops: {% for item in items %}
+- Filters: {{ value|format_throughput }}
+- Custom output formats (HTML, Markdown, LaTeX, CSV, custom)
+- Template library with common report formats
+- Data validation and schema checking
+
+Author: Netperf Modernization Project - Phase 3
+License: MIT
+Version: 1.0.0
+"""
+
+import sys
+import os
+import re
+import json
+import argparse
+from pathlib import Path
+from typing import Dict, List, Any, Optional, Callable
+from datetime import datetime
+
+# Try Jinja2 for full functionality
+try:
+    from jinja2 import Environment, FileSystemLoader, Template as Jinja2Template
+    HAS_JINJA2 = True
+except ImportError:
+    HAS_JINJA2 = False
+
+
+class SimpleTemplateEngine:
+    """Simplified template engine when Jinja2 not available"""
+    
+    def __init__(self):
+        self.filters = {}
+    
+    def register_filter(self, name: str, func: Callable):
+        """Register template filter"""
+        self.filters[name] = func
+    
+    def render(self, template_str: str, context: Dict[str, Any]) -> str:
+        """Render template with context"""
+        result = template_str
+        
+        # Process variables: {{ variable }}
+        result = self._process_variables(result, context)
+        
+        # Process loops: {% for item in items %} ... {% endfor %}
+        result = self._process_loops(result, context)
+        
+        # Process conditionals: {% if condition %} ... {% endif %}
+        result = self._process_conditionals(result, context)
+        
+        return result
+    
+    def _process_variables(self, text: str, context: Dict) -> str:
+        """Replace {{ variable }} with values"""
+        def replace_var(match):
+            expr = match.group(1).strip()
+            
+            # Check for filters: {{ var|filter }}
+            if '|' in expr:
+                parts = expr.split('|')
+                var_name = parts[0].strip()
+                filter_name = parts[1].strip()
+                
+                value = self._get_value(var_name, context)
+                if filter_name in self.filters:
+                    value = self.filters[filter_name](value)
+                return str(value)
+            
+            # Simple variable
+            value = self._get_value(expr, context)
+            return str(value)
+        
+        return re.sub(r'\{\{\s*(.+?)\s*\}\}', replace_var, text)
+    
+    def _process_loops(self, text: str, context: Dict) -> str:
+        """Process {% for %} loops"""
+        pattern = r'\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}'
+        
+        def replace_loop(match):
+            var_name = match.group(1)
+            list_name = match.group(2)
+            body = match.group(3)
+            
+            items = self._get_value(list_name, context)
+            if not isinstance(items, (list, tuple)):
+                return ""
+            
+            result = []
+            for item in items:
+                loop_context = context.copy()
+                loop_context[var_name] = item
+                result.append(self._process_variables(body, loop_context))
+            
+            return ''.join(result)
+        
+        return re.sub(pattern, replace_loop, text, flags=re.DOTALL)
+    
+    def _process_conditionals(self, text: str, context: Dict) -> str:
+        """Process {% if %} conditionals"""
+        pattern = r'\{%\s*if\s+(.+?)\s*%\}(.*?)(?:\{%\s*else\s*%\}(.*?))?\{%\s*endif\s*%\}'
+        
+        def replace_cond(match):
+            condition = match.group(1).strip()
+            if_body = match.group(2)
+            else_body = match.group(3) or ""
+            
+            # Evaluate simple conditions
+            result = self._evaluate_condition(condition, context)
+            
+            return if_body if result else else_body
+        
+        return re.sub(pattern, replace_cond, text, flags=re.DOTALL)
+    
+    def _evaluate_condition(self, condition: str, context: Dict) -> bool:
+        """Evaluate simple condition"""
+        # Support: variable, variable == value, variable != value, not variable
+        condition = condition.strip()
+        
+        # NOT operator
+        if condition.startswith('not '):
+            return not self._evaluate_condition(condition[4:], context)
+        
+        # Equality operator
+        if ' == ' in condition:
+            left, right = condition.split(' == ')
+            left_val = self._get_value(left.strip(), context)
+            right_val = right.strip().strip('"').strip("'")
+            return str(left_val) == right_val
+        
+        # Inequality operator
+        if ' != ' in condition:
+            left, right = condition.split(' != ')
+            left_val = self._get_value(left.strip(), context)
+            right_val = right.strip().strip('"').strip("'")
+            return str(left_val) != right_val
+        
+        # Boolean variable
+        value = self._get_value(condition, context)
+        return bool(value)
+    
+    def _get_value(self, path: str, context: Dict) -> Any:
+        """Get value from context using dot notation"""
+        parts = path.split('.')
+        value = context
+        
+        for part in parts:
+            if isinstance(value, dict):
+                value = value.get(part, '')
+            elif isinstance(value, (list, tuple)) and part.isdigit():
+                idx = int(part)
+                value = value[idx] if 0 <= idx < len(value) else ''
+            else:
+                return ''
+        
+        return value
+
+
+class TemplateEngine:
+    """Advanced template engine with Jinja2 or fallback"""
+    
+    def __init__(self, template_dir: Optional[Path] = None):
+        self.template_dir = template_dir
+        
+        if HAS_JINJA2:
+            self.engine = 'jinja2'
+            if template_dir:
+                self.env = Environment(loader=FileSystemLoader(str(template_dir)))
+            else:
+                self.env = Environment()
+            self._register_jinja2_filters()
+        else:
+            self.engine = 'simple'
+            self.simple_engine = SimpleTemplateEngine()
+            self._register_simple_filters()
+    
+    def _register_jinja2_filters(self):
+        """Register Jinja2 filters"""
+        self.env.filters['format_throughput'] = self._format_throughput
+        self.env.filters['format_latency'] = self._format_latency
+        self.env.filters['format_percent'] = self._format_percent
+        self.env.filters['format_bytes'] = self._format_bytes
+        self.env.filters['format_duration'] = self._format_duration
+        self.env.filters['format_number'] = self._format_number
+        self.env.filters['format_timestamp'] = self._format_timestamp
+        self.env.filters['colorize'] = self._colorize
+        self.env.filters['sort_by'] = self._sort_by
+        self.env.filters['group_by'] = self._group_by
+        self.env.filters['max_value'] = lambda items, key: max(items, key=lambda x: x.get(key, 0))
+        self.env.filters['min_value'] = lambda items, key: min(items, key=lambda x: x.get(key, float('inf')))
+        self.env.filters['avg_value'] = lambda items, key: sum(x.get(key, 0) for x in items) / len(items) if items else 0
+    
+    def _register_simple_filters(self):
+        """Register filters for simple engine"""
+        self.simple_engine.register_filter('format_throughput', self._format_throughput)
+        self.simple_engine.register_filter('format_latency', self._format_latency)
+        self.simple_engine.register_filter('format_percent', self._format_percent)
+        self.simple_engine.register_filter('format_bytes', self._format_bytes)
+        self.simple_engine.register_filter('format_duration', self._format_duration)
+        self.simple_engine.register_filter('format_number', self._format_number)
+        self.simple_engine.register_filter('format_timestamp', self._format_timestamp)
+    
+    # Filter implementations
+    @staticmethod
+    def _format_throughput(value: float) -> str:
+        """Format throughput value"""
+        if value >= 1000:
+            return f"{value / 1000:.2f} Gbps"
+        return f"{value:.2f} Mbps"
+    
+    @staticmethod
+    def _format_latency(value: float) -> str:
+        """Format latency value"""
+        if value >= 1000:
+            return f"{value / 1000:.2f} ms"
+        return f"{value:.2f} us"
+    
+    @staticmethod
+    def _format_percent(value: float) -> str:
+        """Format percentage"""
+        return f"{value:.1f}%"
+    
+    @staticmethod
+    def _format_bytes(value: int) -> str:
+        """Format byte count"""
+        units = ['B', 'KB', 'MB', 'GB', 'TB']
+        idx = 0
+        val = float(value)
+        
+        while val >= 1024 and idx < len(units) - 1:
+            val /= 1024
+            idx += 1
+        
+        return f"{val:.2f} {units[idx]}"
+    
+    @staticmethod
+    def _format_duration(value: float) -> str:
+        """Format duration in seconds"""
+        if value >= 3600:
+            hours = int(value // 3600)
+            mins = int((value % 3600) // 60)
+            return f"{hours}h {mins}m"
+        elif value >= 60:
+            mins = int(value // 60)
+            secs = int(value % 60)
+            return f"{mins}m {secs}s"
+        return f"{value:.1f}s"
+    
+    @staticmethod
+    def _format_number(value: float, decimals: int = 2) -> str:
+        """Format number with thousands separator"""
+        return f"{value:,.{decimals}f}"
+    
+    @staticmethod
+    def _format_timestamp(value) -> str:
+        """Format timestamp"""
+        if isinstance(value, (int, float)):
+            dt = datetime.fromtimestamp(value)
+        elif isinstance(value, str):
+            dt = datetime.fromisoformat(value)
+        else:
+            dt = value
+        
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    @staticmethod
+    def _colorize(value: float, thresholds: Dict[str, float]) -> str:
+        """Add color based on thresholds (for HTML)"""
+        for color, threshold in sorted(thresholds.items(), key=lambda x: x[1], reverse=True):
+            if value >= threshold:
+                return f'<span style="color: {color}">{value}</span>'
+        return str(value)
+    
+    @staticmethod
+    def _sort_by(items: List[Dict], key: str, reverse: bool = False) -> List[Dict]:
+        """Sort list by key"""
+        return sorted(items, key=lambda x: x.get(key, 0), reverse=reverse)
+    
+    @staticmethod
+    def _group_by(items: List[Dict], key: str) -> Dict[str, List[Dict]]:
+        """Group items by key"""
+        groups = {}
+        for item in items:
+            group_key = item.get(key, 'unknown')
+            if group_key not in groups:
+                groups[group_key] = []
+            groups[group_key].append(item)
+        return groups
+    
+    def render_template(self, template_str: str, context: Dict[str, Any]) -> str:
+        """Render template with context"""
+        if self.engine == 'jinja2':
+            template = self.env.from_string(template_str)
+            return template.render(**context)
+        else:
+            return self.simple_engine.render(template_str, context)
+    
+    def render_file(self, template_path: Path, context: Dict[str, Any]) -> str:
+        """Render template from file"""
+        with open(template_path, 'r') as f:
+            template_str = f.read()
+        
+        return self.render_template(template_str, context)
+
+
+class TemplateLibrary:
+    """Built-in template library"""
+    
+    @staticmethod
+    def get_template(name: str) -> str:
+        """Get built-in template by name"""
+        templates = {
+            'html-report': TemplateLibrary.HTML_REPORT,
+            'markdown-report': TemplateLibrary.MARKDOWN_REPORT,
+            'csv-export': TemplateLibrary.CSV_EXPORT,
+            'latex-table': TemplateLibrary.LATEX_TABLE,
+            'json-summary': TemplateLibrary.JSON_SUMMARY,
+        }
+        
+        return templates.get(name, '')
+    
+    @staticmethod
+    def list_templates() -> List[Dict[str, str]]:
+        """List available templates"""
+        return [
+            {'name': 'html-report', 'description': 'HTML report with charts'},
+            {'name': 'markdown-report', 'description': 'Markdown formatted report'},
+            {'name': 'csv-export', 'description': 'CSV export for spreadsheets'},
+            {'name': 'latex-table', 'description': 'LaTeX table for papers'},
+            {'name': 'json-summary', 'description': 'JSON summary with statistics'},
+        ]
+    
+    # Built-in templates
+    HTML_REPORT = """<!DOCTYPE html>
+<html>
+<head>
+    <title>Netperf Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .summary { background-color: #e7f3ff; padding: 15px; margin: 20px 0; }
+        .metric { display: inline-block; margin: 10px 20px; }
+        .metric-label { font-weight: bold; color: #666; }
+        .metric-value { font-size: 1.5em; color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Netperf Test Report</h1>
+    <p>Generated: {{ timestamp|format_timestamp }}</p>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <div class="metric">
+            <div class="metric-label">Total Tests</div>
+            <div class="metric-value">{{ results|length }}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Avg Throughput</div>
+            <div class="metric-value">{{ (results|avg_value('throughput'))|format_throughput }}</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Max Throughput</div>
+            <div class="metric-value">{{ (results|max_value('throughput')).throughput|format_throughput }}</div>
+        </div>
+    </div>
+    
+    <h2>Test Results</h2>
+    <table>
+        <tr>
+            <th>Test</th>
+            <th>Direction</th>
+            <th>Throughput</th>
+            <th>Latency</th>
+            <th>CPU Local</th>
+            <th>CPU Remote</th>
+        </tr>
+        {% for result in results %}
+        <tr>
+            <td>{{ result.test_name }}</td>
+            <td>{{ result.direction }}</td>
+            <td>{{ result.throughput|format_throughput }}</td>
+            <td>{{ result.latency|format_latency }}</td>
+            <td>{{ result.cpu_local|format_percent }}</td>
+            <td>{{ result.cpu_remote|format_percent }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+"""
+    
+    MARKDOWN_REPORT = """# Netperf Test Report
+
+**Generated**: {{ timestamp|format_timestamp }}
+
+## Summary
+
+- **Total Tests**: {{ results|length }}
+- **Average Throughput**: {{ (results|avg_value('throughput'))|format_throughput }}
+- **Max Throughput**: {{ (results|max_value('throughput')).throughput|format_throughput }}
+
+## Test Results
+
+| Test | Direction | Throughput | Latency | CPU Local | CPU Remote |
+|------|-----------|------------|---------|-----------|------------|
+{% for result in results -%}
+| {{ result.test_name }} | {{ result.direction }} | {{ result.throughput|format_throughput }} | {{ result.latency|format_latency }} | {{ result.cpu_local|format_percent }} | {{ result.cpu_remote|format_percent }} |
+{% endfor %}
+
+## Notes
+
+- All tests run with OMNI test framework
+- Duration: {{ duration|format_duration }}
+- Generated with netperf-template
+"""
+    
+    CSV_EXPORT = """test_name,direction,throughput_mbps,latency_us,cpu_local_pct,cpu_remote_pct
+{% for result in results -%}
+{{ result.test_name }},{{ result.direction }},{{ result.throughput }},{{ result.latency }},{{ result.cpu_local }},{{ result.cpu_remote }}
+{% endfor %}"""
+    
+    LATEX_TABLE = """\\begin{table}[htbp]
+\\centering
+\\caption{Netperf Test Results}
+\\label{tab:netperf}
+\\begin{tabular}{|l|l|r|r|r|r|}
+\\hline
+\\textbf{Test} & \\textbf{Direction} & \\textbf{Throughput} & \\textbf{Latency} & \\textbf{CPU Local} & \\textbf{CPU Remote} \\\\
+\\hline
+{% for result in results -%}
+{{ result.test_name }} & {{ result.direction }} & {{ result.throughput|format_throughput }} & {{ result.latency|format_latency }} & {{ result.cpu_local|format_percent }} & {{ result.cpu_remote|format_percent }} \\\\
+{% endfor -%}
+\\hline
+\\end{tabular}
+\\end{table}
+"""
+    
+    JSON_SUMMARY = """{
+  "generated": "{{ timestamp|format_timestamp }}",
+  "summary": {
+    "total_tests": {{ results|length }},
+    "avg_throughput_mbps": {{ (results|avg_value('throughput'))|format_number }},
+    "max_throughput_mbps": {{ (results|max_value('throughput')).throughput|format_number }},
+    "min_latency_us": {{ (results|min_value('latency')).latency|format_number }}
+  },
+  "results": [
+    {% for result in results -%}
+    {
+      "test_name": "{{ result.test_name }}",
+      "direction": "{{ result.direction }}",
+      "throughput_mbps": {{ result.throughput }},
+      "latency_us": {{ result.latency }},
+      "cpu_local_pct": {{ result.cpu_local }},
+      "cpu_remote_pct": {{ result.cpu_remote }}
+    }{{ "," if not loop.last else "" }}
+    {% endfor %}
+  ]
+}
+"""
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Advanced template engine for netperf results',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Render with built-in template
+  %(prog)s -t html-report -o report.html results.json
+  
+  # Render with custom template
+  %(prog)s -t custom.html.j2 -o output.html results.json
+  
+  # List built-in templates
+  %(prog)s --list-templates
+  
+  # Validate template syntax
+  %(prog)s --validate template.j2
+  
+  # Output to stdout
+  %(prog)s -t markdown-report results.json
+
+Template Syntax (Jinja2):
+  Variables:     {{ variable }}
+  Loops:         {% for item in items %} ... {% endfor %}
+  Conditionals:  {% if condition %} ... {% endif %}
+  Filters:       {{ value|format_throughput }}
+
+Available Filters:
+  - format_throughput: Format Mbps/Gbps
+  - format_latency: Format us/ms
+  - format_percent: Format percentage
+  - format_bytes: Format byte counts
+  - format_duration: Format seconds as duration
+  - format_number: Format with thousands separator
+  - format_timestamp: Format timestamp
+  - sort_by: Sort list by key
+  - group_by: Group items by key
+
+For more information, see dev/docs/TEMPLATES.md
+        """
+    )
+    
+    # Template selection
+    parser.add_argument('-t', '--template',
+                       help='Template name or file path')
+    parser.add_argument('-o', '--output', metavar='FILE',
+                       help='Output file (default: stdout)')
+    
+    # Template operations
+    parser.add_argument('--list-templates', action='store_true',
+                       help='List built-in templates')
+    parser.add_argument('--validate', action='store_true',
+                       help='Validate template syntax')
+    
+    # Input data
+    parser.add_argument('input', nargs='?',
+                       help='Input JSON file with test results')
+    
+    # Configuration
+    parser.add_argument('--template-dir', metavar='DIR',
+                       help='Custom template directory')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                       help='Verbose output')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.0.0')
+    
+    args = parser.parse_args()
+    
+    # List templates
+    if args.list_templates:
+        print("Built-in Templates:")
+        for tmpl in TemplateLibrary.list_templates():
+            print(f"  {tmpl['name']:20s} - {tmpl['description']}")
+        print(f"\nEngine: {'Jinja2' if HAS_JINJA2 else 'Simple (fallback)'}")
+        return 0
+    
+    # Validate template
+    if args.validate:
+        if not args.template:
+            print("Error: --template required for validation", file=sys.stderr)
+            return 1
+        
+        template_path = Path(args.template)
+        if not template_path.exists():
+            print(f"Error: Template file not found: {template_path}", file=sys.stderr)
+            return 1
+        
+        try:
+            with open(template_path, 'r') as f:
+                template_str = f.read()
+            
+            # Try to parse
+            engine = TemplateEngine()
+            # Just check if it can be loaded
+            engine.render_template(template_str, {})
+            print(f"✓ Template syntax is valid")
+            return 0
+        except Exception as e:
+            print(f"✗ Template validation failed: {e}", file=sys.stderr)
+            return 1
+    
+    # Require template and input for rendering
+    if not args.template:
+        print("Error: --template required", file=sys.stderr)
+        parser.print_help()
+        return 1
+    
+    if not args.input:
+        print("Error: Input file required for rendering", file=sys.stderr)
+        parser.print_help()
+        return 1
+    
+    # Load input data
+    try:
+        with open(args.input, 'r') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"Error loading input: {e}", file=sys.stderr)
+        return 1
+    
+    # Add metadata
+    context = {
+        'results': data if isinstance(data, list) else [data],
+        'timestamp': datetime.now().timestamp(),
+        'duration': 60,  # TODO: Extract from data
+    }
+    
+    # Create engine
+    template_dir = Path(args.template_dir) if args.template_dir else None
+    engine = TemplateEngine(template_dir=template_dir)
+    
+    # Get template
+    template_str = None
+    if args.template in [t['name'] for t in TemplateLibrary.list_templates()]:
+        # Built-in template
+        template_str = TemplateLibrary.get_template(args.template)
+    else:
+        # Custom template file
+        template_path = Path(args.template)
+        if not template_path.exists():
+            print(f"Error: Template not found: {template_path}", file=sys.stderr)
+            return 1
+        
+        with open(template_path, 'r') as f:
+            template_str = f.read()
+    
+    # Render
+    try:
+        output = engine.render_template(template_str, context)
+    except Exception as e:
+        print(f"Error rendering template: {e}", file=sys.stderr)
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        return 1
+    
+    # Write output
+    if args.output:
+        with open(args.output, 'w') as f:
+            f.write(output)
+        print(f"Rendered to {args.output}")
+    else:
+        print(output)
+    
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

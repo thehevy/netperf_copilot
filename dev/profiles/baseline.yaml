@@ -1,0 +1,61 @@
+# Baseline Profile - Quick Performance Baseline
+#
+# Quick baseline test to establish current network performance.
+# Runs a minimal set of tests to get basic throughput and latency
+# measurements for comparison purposes.
+
+name: Quick Baseline
+description: Quick performance baseline for comparison
+version: 1.0
+category: baseline
+
+global:
+  duration: 30
+  output_format: json
+  warmup: 5
+  
+tests:
+  - name: TCP Throughput Upload
+    description: Basic TCP send throughput
+    direction: send
+    protocol: tcp
+    instances: 1
+    socket_size: 131072
+    message_size: 65536
+    
+  - name: TCP Throughput Download
+    description: Basic TCP receive throughput
+    direction: recv
+    protocol: tcp
+    instances: 1
+    socket_size: 131072
+    message_size: 65536
+    
+  - name: TCP Latency
+    description: Basic TCP latency
+    direction: rr
+    protocol: tcp
+    instances: 1
+    request_size: 64
+    response_size: 64
+    burst: 1
+    
+  - name: UDP Throughput
+    description: Basic UDP throughput
+    direction: send
+    protocol: udp
+    instances: 1
+    message_size: 1472
+
+expectations:
+  tcp_throughput_min: 100         # Minimal expectations
+  mean_latency_max: 10000         # 10ms
+
+analysis:
+  aggregate: true
+  statistics: true
+
+tags:
+  - baseline
+  - quick
+  - comparison

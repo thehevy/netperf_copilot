@@ -1,0 +1,14 @@
+Starting 4 parallel OMNI tests to 192.168.18.2...
+
+======================================================================
+Multi-Instance Test Summary
+======================================================================
+Test Type:          OMNI
+Target Host:        192.168.18.2
+Total Instances:    4
+Successful:         4
+Failed:             0
+Duration:           10s
+CPU Affinity:       Disabled
+======================================================================
+
