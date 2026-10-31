@@ -1,0 +1,77 @@
+name: e835-200g-cwf-ecore
+description: Intel E835 200GbE Qualification Suite for Xeon 6 Clearwater Forest / Sierra Forest E-Core (6980E+)
+version: "2.0.0"
+category: 200g-qualification
+
+global:
+  duration: 30
+  output_format: json
+  mtu: 9000
+  layout: spread_l2
+  per_core_netserver: true
+  base_port: 18600
+  lp_start_cpu: 0
+
+platform_bkm:
+  arch_type: ecore
+  tx_ring: 512
+  rx_ring: 4096
+  rx_usecs: 10
+  tx_usecs: 20
+  tx_scheduling_layers: 5
+  msix_vec_per_pf_max: 65
+
+tests:
+  - name: cwf_200g_tx_1flow
+    description: Single-stream E-Core TCP TX baseline (~34-36 Gbps per E-core)
+    direction: tx
+    protocol: tcp
+    instances: 1
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2
+
+  - name: cwf_200g_tx_8flows
+    description: 8-stream E-Core TCP TX across L2 4-core modules
+    direction: tx
+    protocol: tcp
+    instances: 8
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2
+
+  - name: cwf_200g_tx_16flows
+    description: 16-stream E-Core TCP TX (~189 Gbps line-rate sweet spot)
+    direction: tx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2
+
+  - name: cwf_200g_tx_32flows
+    description: 32-stream E-Core TCP TX scale-out validation
+    direction: tx
+    protocol: tcp
+    instances: 32
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2
+
+  - name: cwf_200g_rx_16flows
+    description: 16-stream E-Core TCP RX (MAERTS) line-rate validation
+    direction: rx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2
+
+  - name: cwf_200g_bx_16flows
+    description: Simultaneous bidirectional (16 TX + 16 RX across disjoint L2 modules)
+    direction: bx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    layout: spread_l2

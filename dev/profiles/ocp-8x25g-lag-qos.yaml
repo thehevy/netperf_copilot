@@ -1,0 +1,42 @@
+name: ocp-8x25g-lag-qos
+description: OCP 2026 8x25GbE Breakout & Active-Active LACP LAG + 4-Traffic-Class DSCP QoS Coexistence Suite
+version: "2.0.0"
+category: ocp-lag-qos
+
+global:
+  duration: 30
+  output_format: json
+  mtu: 9000
+  dscp: "EF,CS3,AF21,CS0"
+  layout: spread_step2
+  per_core_netserver: true
+  base_port: 18600
+
+tests:
+  - name: ocp_8x25g_multi_subnet_tx
+    description: 8x25GbE breakout multi-subnet TX across 4 DSCP traffic classes (EF, CS3, AF21, CS0)
+    direction: tx
+    protocol: tcp
+    instances: 16
+    dscp: "EF,CS3,AF21,CS0"
+    message_size: 65536
+    cpu_affinity: true
+
+  - name: ocp_8x25g_multi_subnet_bx
+    description: 8x25GbE breakout simultaneous bidirectional BX with 4 DSCP traffic classes
+    direction: bx
+    protocol: tcp
+    instances: 8
+    dscp: "EF,CS3,AF21,CS0"
+    message_size: 65536
+    cpu_affinity: true
+
+  - name: ocp_lag_priority_ef_rr
+    description: High-priority EF (DSCP 46) low-latency TCP_RR under LAG load
+    direction: rr
+    protocol: tcp
+    dscp: "EF"
+    request_size: 64
+    response_size: 64
+    cpu: "2,2"
+    nodelay: true

@@ -26,11 +26,11 @@
 #endif
 
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
-#include <string.h>
 #include <errno.h>
 #include <net/if.h>
 #include <asm/types.h>
@@ -122,6 +122,93 @@ find_driver_info(char *ifname, char *driver, char *version, char *firmware, char
   return;
 }
 
+/* Query 100G/200G/400G/800G link speed (Mbps), RX/TX ring sizes, and combined channels */
+void
+find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_ring, int *combined_channels) {
+  int s;
+  struct ifreq ifr;
+  char sysfile[160];
+  FILE *f;
+
+  if (link_speed_mbps) *link_speed_mbps = -1;
+  if (rx_ring) *rx_ring = -1;
+  if (tx_ring) *tx_ring = -1;
+  if (combined_channels) *combined_channels = -1;
+
+  if (ifname == NULL || ifname[0] == '\0' || strcmp(ifname, "lo") == 0) {
+    return;
+  }
+
+  /* Read link speed from /sys/class/net/<if>/speed (supports 100000, 200000, 400000, 800000 Mbps) */
+  if (link_speed_mbps) {
+    snprintf(sysfile, sizeof(sysfile), "/sys/class/net/%s/speed", ifname);
+    f = fopen(sysfile, "r");
+    if (f != NULL) {
+      char buf[32];
+      if (fgets(buf, sizeof(buf), f) != NULL) {
+        *link_speed_mbps = atoi(buf);
+      }
+      fclose(f);
+    }
+  }
+
+  s = socket(AF_INET, SOCK_DGRAM, 0);
+  if (s < 0) {
+    return;
+  }
+
+#ifdef ETHTOOL_GLINKSETTINGS
+  if (link_speed_mbps && *link_speed_mbps <= 0) {
+    struct {
+      struct ethtool_link_settings req;
+      __u32 link_mode_data[3 * 127];
+    } ecmd;
+    memset(&ecmd, 0, sizeof(ecmd));
+    memset(&ifr, 0, sizeof(ifr));
+    ecmd.req.cmd = ETHTOOL_GLINKSETTINGS;
+    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+    ifr.ifr_data = (caddr_t)&ecmd;
+    if (ioctl(s, SIOCETHTOOL, &ifr) == 0 && ecmd.req.link_mode_masks_nwords < 0) {
+      ecmd.req.link_mode_masks_nwords = -ecmd.req.link_mode_masks_nwords;
+      if (ioctl(s, SIOCETHTOOL, &ifr) == 0 && ecmd.req.speed != 0 && ecmd.req.speed != (__u32)-1) {
+        *link_speed_mbps = (int)ecmd.req.speed;
+      }
+    }
+  }
+#endif
+
+#ifdef ETHTOOL_GRINGPARAM
+  if (rx_ring || tx_ring) {
+    struct ethtool_ringparam ep;
+    memset(&ep, 0, sizeof(ep));
+    memset(&ifr, 0, sizeof(ifr));
+    ep.cmd = ETHTOOL_GRINGPARAM;
+    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+    ifr.ifr_data = (caddr_t)&ep;
+    if (ioctl(s, SIOCETHTOOL, &ifr) == 0) {
+      if (rx_ring) *rx_ring = (int)ep.rx_pending;
+      if (tx_ring) *tx_ring = (int)ep.tx_pending;
+    }
+  }
+#endif
+
+#ifdef ETHTOOL_GCHANNELS
+  if (combined_channels) {
+    struct ethtool_channels ech;
+    memset(&ech, 0, sizeof(ech));
+    memset(&ifr, 0, sizeof(ifr));
+    ech.cmd = ETHTOOL_GCHANNELS;
+    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
+    ifr.ifr_data = (caddr_t)&ech;
+    if (ioctl(s, SIOCETHTOOL, &ifr) == 0) {
+      *combined_channels = (int)ech.combined_count;
+    }
+  }
+#endif
+
+  close(s);
+}
+
 #if defined(NETPERF_STANDALONE_DEBUG)
 int
 main(int argc, char *argv[]) {
@@ -135,7 +222,7 @@ main(int argc, char *argv[]) {
     fprintf(stderr,"%s <interface>\n",argv[0]);
     return -1;
   }
-p
+
   find_driver_info(argv[1],driver, version, firmware, businfo, 32);
 
   printf("For %s driver %s version %s firmware %s businfo %s\n",

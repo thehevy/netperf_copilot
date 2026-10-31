@@ -1,0 +1,42 @@
+name: e835-3x200g-multiport
+description: Multi-NIC Aggregate 3x200GbE (600GbE Total) Multi-NUMA Qualification Suite
+version: "2.0.0"
+category: multiport-600g
+
+global:
+  duration: 30
+  output_format: json
+  mtu: 9000
+  interfaces: "ens7np0,ens23np0,ens27np0"
+  layout: spread_l2
+  per_core_netserver: true
+  base_port: 18600
+  lp_start_cpu: 0
+
+tests:
+  - name: multi_3x200g_tx_48flows
+    description: Aggregate 3x200GbE TX (16 streams per NIC = 48 streams across local NUMA nodes)
+    direction: tx
+    protocol: tcp
+    instances: 48
+    interfaces: "ens7np0,ens23np0,ens27np0"
+    message_size: 65536
+    cpu_affinity: true
+
+  - name: multi_3x200g_rx_48flows
+    description: Aggregate 3x200GbE RX (16 streams per NIC = 48 streams across local NUMA nodes)
+    direction: rx
+    protocol: tcp
+    instances: 48
+    interfaces: "ens7np0,ens23np0,ens27np0"
+    message_size: 65536
+    cpu_affinity: true
+
+  - name: multi_3x200g_bx_24flows
+    description: Aggregate 3x200GbE simultaneous bidirectional (24 TX + 24 RX streams)
+    direction: bx
+    protocol: tcp
+    instances: 24
+    interfaces: "ens7np0,ens23np0,ens27np0"
+    message_size: 65536
+    cpu_affinity: true

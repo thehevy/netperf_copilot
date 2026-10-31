@@ -387,7 +387,13 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 - ✅ Report generation engine (netperf-template)
 - ✅ 100% integration testing validated
 
-**Phase 4 (Future)**: Enterprise Features
+**Phase 4-7 (COMPLETE)**: 100G–800G High-Speed & Intel Xeon 6 Platform Modernization
+
+- ✅ **Directional & Multi-Port Engine (`netperf-multi` v2.0)**: TX, RX, simultaneous bidirectional (`--direction bx`), sequential BX (`bx-seq`), multi-NIC (`-i ens7np0,ens23np0,ens27np0`), multi-subnet (`-H 192.168.10..17.74`), DSCP/ToS QoS (`--dscp EF,CS3,AF21,CS0`), and up to 512 streams
+- ✅ **Core C Engine Modernization (`src/`)**: `MAXMESSAGESIZE` raised to 4 MB, `-Z` (`SO_ZEROCOPY`/`MSG_ZEROCOPY`), 512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id`, sysfs PCIe Gen5/Gen6 link & DMI detection, and `ETHTOOL_GLINKSETTINGS` (100G–800G)
+- ✅ **Xeon 6 Topology & Per-Core `netserver-manager`**: Automatic P-core (Granite Rapids SMT filtering) vs E-core (Clearwater Forest / Sierra Forest 4-core L2 module `spread_l2`) core allocation and per-core `netserver` pool (`18600..18663`)
+- ✅ **Pre-Flight & Automated BKM Tuner (`netperf-preflight`, `netperf-tuner`)**: 24 E835 feature anti-affinity rules (`AA-001`..`AA-024`), background process isolation, 5-run warmup sanity gate (`CV < 5%`), `ice` BKM profiles (`cwf-ecore`, `gnr-pcore`, `mtu1500`), and A/B parameter sweep runner
+- ✅ **High-Speed Profiles, Qualification Catalog & AI Validation Reporting (`netperf-catalog`, `netperf_report.py`)**: 5 new 200G–600G/OCP YAML profiles, 4 qualification suites (`flow-scaling`, `core-locality`, `ring-coalesce-matrix`, `lag-failover-qos`), and `U1`–`U13` kmsg/ethtool counter delta reporting
 
 - Web-based dashboard
 - Historical result database

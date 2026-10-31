@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""
+netserver-manager - CLI wrapper for Topology-Aware Per-Core Netserver Pool Manager
+"""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent))
+from netserver_manager import main
+
+if __name__ == "__main__":
+    sys.exit(main())

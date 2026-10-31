@@ -1,0 +1,49 @@
+name: e835-mtu1500-smallpkt
+description: Standard MTU 1500 Small-Packet PPS & Tail-Latency RR Suite for E835 200GbE
+version: "2.0.0"
+category: latency-pps
+
+global:
+  duration: 30
+  output_format: json
+  mtu: 1500
+  layout: spread_step2
+  per_core_netserver: true
+  base_port: 18600
+
+tests:
+  - name: mtu1500_tcp_rr_1b
+    description: Single-flow 1-byte TCP_RR p50/p90/p99 tail latency
+    direction: rr
+    protocol: tcp
+    request_size: 1
+    response_size: 1
+    cpu: "4,4"
+    nodelay: true
+
+  - name: mtu1500_tcp_rr_64b_16flows
+    description: 16-flow 64-byte TCP_RR multi-core transaction rate (TPS)
+    direction: rr
+    protocol: tcp
+    instances: 16
+    request_size: 64
+    response_size: 64
+    cpu_affinity: true
+    nodelay: true
+
+  - name: mtu1500_tcp_tx_16flows
+    description: 16-flow MTU 1500 TCP_STREAM throughput
+    direction: tx
+    protocol: tcp
+    instances: 16
+    message_size: 16384
+    cpu_affinity: true
+    nodelay: true
+
+  - name: mtu1500_udp_pps_8flows
+    description: 8-flow 64-byte UDP_STREAM packet-rate stress test
+    direction: tx
+    protocol: udp
+    instances: 8
+    message_size: 64
+    cpu_affinity: true

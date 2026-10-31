@@ -85,8 +85,10 @@ static cpu_states_t  lib_start_count[MAXCPUS];
 static cpu_states_t  lib_end_count[MAXCPUS];
 
 
-/* The max. length of one line of /proc/stat cpu output */
-#define CPU_LINE_LENGTH (int)((CPU_STATES * sizeof (long) / 3 + 1) * 4 + 8)
+/* The max. length of one line of /proc/stat cpu output.
+   Sized generously (256 bytes/line) to safely handle 512-2048 core systems
+   (e.g. Xeon 6 Clearwater Forest / Granite Rapids) with 64-bit tick counters. */
+#define CPU_LINE_LENGTH 256
 #define PROC_STAT_FILE_NAME "/proc/stat"
 #define N_CPU_LINES(nr) (nr == 1 ? 1 : 1 + nr)
 
@@ -124,7 +126,7 @@ cpu_util_init(void)
 	      proc_stat_buflen);
       fflush(where);
     }
-    proc_stat_buf = (char *)malloc (proc_stat_buflen);
+    proc_stat_buf = (char *)malloc (proc_stat_buflen + 1);
     if (!proc_stat_buf) {
       fprintf (stderr, "Cannot allocate buffer memory!\n");
       exit (1);
@@ -171,7 +173,7 @@ calibrate_idle_rate (int iterations, int interval)
 	      proc_stat_buflen);
       fflush(where);
     }
-    proc_stat_buf = (char *)malloc (proc_stat_buflen);
+    proc_stat_buf = (char *)malloc (proc_stat_buflen + 1);
     if (!proc_stat_buf) {
       fprintf (stderr, "Cannot allocate buffer memory!\n");
       exit (1);
@@ -187,20 +189,46 @@ get_cpu (cpu_states_t *res)
   int i;
   int n = lib_num_loc_cpus;
   char *p = proc_stat_buf;
+  ssize_t bytes_read = 0;
+  ssize_t r;
+
+  if (n > MAXCPUS) {
+    n = MAXCPUS;
+  }
 
   lseek (proc_stat_fd, 0, SEEK_SET);
-  read (proc_stat_fd, p, proc_stat_buflen);
+  while (bytes_read < proc_stat_buflen) {
+    r = read (proc_stat_fd, p + bytes_read, proc_stat_buflen - bytes_read);
+    if (r <= 0) {
+      break;
+    }
+    bytes_read += r;
+  }
+  p[bytes_read] = '\0';
 
   if (debug) {
-    fprintf(where,"proc_stat_buf '%.*s'\n",proc_stat_buflen,p);
+    fprintf(where,"proc_stat_buf '%.*s'\n", (int)bytes_read, p);
     fflush(where);
   }
   /* Skip first line (total) on SMP */
-  if (n > 1) p = strchr (p, '\n');
+  if (n > 1 && p != NULL) {
+    p = strchr (p, '\n');
+    if (p != NULL) p++;
+  }
 
   for (i = 0; i < n; i++) {
     memset(&res[i], 0, sizeof (res[i]));
+    if (p == NULL || *p == '\0') {
+      break;
+    }
+    /* Ensure we are reading a per-CPU line ("cpuN ...") */
+    if (strncmp(p, "cpu", 3) != 0) {
+      break;
+    }
     p = strchr (p, ' ');
+    if (p == NULL) {
+      break;
+    }
     sscanf(p, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu",
 	   (unsigned long long *)&res[i].user,
 	   (unsigned long long *)&res[i].nice,
@@ -229,6 +257,7 @@ get_cpu (cpu_states_t *res)
       fflush(where);
     }
     p = strchr (p, '\n');
+    if (p != NULL) p++;
   };
 
 }
@@ -270,12 +299,15 @@ float
 calc_cpu_util_internal(float elapsed_time)
 {
   int i;
+  int active_cpus = 0;
+  float active_util_sum = 0.0f;
 
   float correction_factor;
   cpu_states_t diff;
   uint64_t total_ticks;
 
   memset(&lib_local_cpu_stats, 0, sizeof(lib_local_cpu_stats));
+  lib_local_cpu_stats.peak_cpu_id = -1;
 
   /* It is possible that the library measured a time other than the
      one that the user want for the cpu utilization calculations - for
@@ -295,7 +327,7 @@ calc_cpu_util_internal(float elapsed_time)
     fprintf(where,
 	    "lib_local_maxrate = %f\n", lib_local_maxrate);
   }
-  for (i = 0; i < lib_num_loc_cpus; i++) {
+  for (i = 0; i < lib_num_loc_cpus && i < MAXCPUS; i++) {
 
     /* Find the difference in all CPU stat fields */
     diff.user =
@@ -341,6 +373,17 @@ calc_cpu_util_internal(float elapsed_time)
     }
     /* apply correction factor */
     lib_local_per_cpu_util[i] *= correction_factor;
+
+    /* Track peak CPU utilization and active CPU count/utilization (>= 1.0%) */
+    if (lib_local_per_cpu_util[i] >= lib_local_cpu_stats.peak_cpu_util) {
+      lib_local_cpu_stats.peak_cpu_util = lib_local_per_cpu_util[i];
+      lib_local_cpu_stats.peak_cpu_id = i;
+    }
+    if (lib_local_per_cpu_util[i] >= 1.0f) {
+      active_util_sum += lib_local_per_cpu_util[i];
+      active_cpus++;
+    }
+
     if (debug) {
       fprintf(where,
               "calc_cpu_util: util on processor %d, diff = %llu %llu %llu "
@@ -372,6 +415,10 @@ calc_cpu_util_internal(float elapsed_time)
   CPU_STAT_FIXUP(cpu_iowait);
   CPU_STAT_FIXUP(cpu_irq);
   CPU_STAT_FIXUP(cpu_swintr);
+
+  lib_local_cpu_stats.active_cpu_count = active_cpus;
+  lib_local_cpu_stats.active_cpu_util =
+    (active_cpus > 0) ? (active_util_sum / (float)active_cpus) : 0.0f;
 
   return lib_local_cpu_stats.cpu_util;
 }

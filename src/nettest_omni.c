@@ -383,6 +383,7 @@ int legacy = 0;
 int implicit_direction = 0;
 int explicit_data_address = 0;
 int want_defer_accept = 0;
+static int use_zerocopy = 0;
 
 uint64_t      trans_completed = 0;
 int64_t       units_remaining;
@@ -2870,7 +2871,12 @@ print_omni_json()
   fprintf(where, "  \"metadata\": {\n");
   fprintf(where, "    \"netperf_version\": \"%s\",\n", netperf_version);
   fprintf(where, "    \"timestamp\": \"%s\",\n", timestamp);
-  fprintf(where, "    \"hostname\": \"%s\"", hostname);
+  fprintf(where, "    \"hostname\": \"%s\",\n", hostname);
+  fprintf(where, "    \"zerocopy_enabled\": %s,\n", use_zerocopy ? "true" : "false");
+  fprintf(where, "    \"local_active_cpu_util\": %.2f,\n", lib_local_cpu_stats.active_cpu_util);
+  fprintf(where, "    \"local_active_cpu_count\": %d,\n", lib_local_cpu_stats.active_cpu_count);
+  fprintf(where, "    \"local_softirq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_swintr);
+  fprintf(where, "    \"local_irq_pct\": %.2f", lib_local_cpu_stats.cpu_irq);
   
 #ifndef WIN32
   if (uname(&uname_info) == 0) {
@@ -3242,7 +3248,11 @@ send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send
       len = send(data_socket,
 		 send_ring->buffer_ptr,
 		 bytes_to_send,
+#if defined(MSG_ZEROCOPY)
+		 (use_zerocopy ? MSG_ZEROCOPY : 0));
+#else
 		 0);
+#endif
     }
     else {
 #ifndef WIN32
@@ -3913,6 +3923,13 @@ omni_create_data_socket(struct addrinfo *res)
   SOCKET temp_socket;
 
   temp_socket = create_data_socket(res);
+
+#ifdef SO_ZEROCOPY
+  if (temp_socket != SOCKET_ERROR && use_zerocopy) {
+    int one = 1;
+    setsockopt(temp_socket, SOL_SOCKET, SO_ZEROCOPY, (char *)&one, sizeof(one));
+  }
+#endif
 
   if (temp_socket != SOCKET_ERROR) {
     if (local_cong_control_req[0] != '\0') {
@@ -7371,7 +7388,7 @@ scan_omni_args(int argc, char *argv[])
 
 {
 
-#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
+#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:Z46"
 
   extern char	*optarg;	  /* pointer to option string	*/
 
@@ -7791,6 +7808,13 @@ scan_omni_args(int argc, char *argv[])
       /* both send and receive "widths" but for now */
       /* it is just the sending *_STREAM. */
       send_width = convert(optarg);
+      break;
+    case 'Z' :
+#if defined(SO_ZEROCOPY) && defined(MSG_ZEROCOPY)
+      use_zerocopy = 1;
+#else
+      printf("WARNING: SO_ZEROCOPY / MSG_ZEROCOPY not available on this platform!\n");
+#endif
       break;
     case 'V' :
       /* we want to do copy avoidance and will set */
