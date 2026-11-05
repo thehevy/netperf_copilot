@@ -1,6 +1,11 @@
 ### 📖 Netperf Wiki
 
 * **[🏠 Home](Home)**
+* **[📊 Executive Summary](Executive-Summary)**
+* **[📄 Technical White Paper](Technical-White-Paper)**
+  * [Why Modernize Netperf?](Technical-White-Paper#1-introduction-the-100g800g-benchmarking-crisis)
+  * [Legacy Bottlenecks](Technical-White-Paper#2-anatomy-of-legacy-bottlenecks-in-netperf-270)
+  * [200G–600G Case Studies](Technical-White-Paper#7-empirical-results-case-studies--end-to-end-workflows)
 * **[🚀 Getting Started & Installation](Getting-Started-and-Installation)**
   * [Build Profiles](Getting-Started-and-Installation#2-build-profiles)
   * [Verification Suite](Getting-Started-and-Installation#4-running-the-verification-suite)

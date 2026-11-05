@@ -253,6 +253,8 @@ netperf/
 Comprehensive documentation is maintained in the [`wiki/`](wiki/Home.md) directory:
 
 - **[Wiki Home & Architecture Overview](wiki/Home.md)**
+- **[Executive Summary](wiki/Executive-Summary.md)** ([dev/docs/EXECUTIVE_SUMMARY.md](dev/docs/EXECUTIVE_SUMMARY.md))
+- **[Technical White Paper (100G–800G & Multi-Core Modernization)](wiki/Technical-White-Paper.md)** ([dev/docs/TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md))
 - **[Getting Started & Installation](wiki/Getting-Started-and-Installation.md)**
 - **[Core Engine & OMNI Guide](wiki/Core-Engine-and-OMNI-Guide.md)**
 - **[High-Speed 200G–800G & Intel Xeon 6 Guide](wiki/High-Speed-200G-800G-and-Xeon6-Guide.md)**
