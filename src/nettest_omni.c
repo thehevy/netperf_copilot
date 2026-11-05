@@ -1619,6 +1619,25 @@ parse_output_selection_file(char *selection_file) {
   int line,column;
 
   selections = fopen(selection_file,"r");
+  if (!selections && strchr(selection_file, '/') == NULL) {
+    const char *preset_dirs[] = {
+      "./dev/catalog/output-presets",
+      "../dev/catalog/output-presets",
+      "/usr/share/netperf/output-presets",
+      "/usr/local/share/netperf/output-presets",
+      NULL
+    };
+    char candidate[256];
+    int d;
+    for (d = 0; preset_dirs[d] != NULL && !selections; d++) {
+      snprintf(candidate, sizeof(candidate), "%s/%s", preset_dirs[d], selection_file);
+      selections = fopen(candidate, "r");
+      if (!selections && strstr(selection_file, ".out") == NULL) {
+        snprintf(candidate, sizeof(candidate), "%s/%s.out", preset_dirs[d], selection_file);
+        selections = fopen(candidate, "r");
+      }
+    }
+  }
   if (!selections) {
     fprintf(where,
 	    "Could not open output selection file '%s' errno %d\n",
@@ -2541,6 +2560,7 @@ print_omni_init() {
          legacy set_output_list_by_test() if not found */
       const char *default_preset_paths[] = {
         "./dev/catalog/output-presets/default.out",
+        "../dev/catalog/output-presets/default.out",
         "/usr/share/netperf/output-presets/default.out",
         "/usr/local/share/netperf/output-presets/default.out",
         NULL
@@ -2837,6 +2857,50 @@ print_omni_keyword()
   fflush(where);
 }
 
+/* Escape string for RFC 8259 JSON, stripping outer quotes if already added by format "\"%s\"" */
+static void
+json_escape_string(char *dest, size_t dest_size, const char *src)
+{
+  size_t i = 0, j = 0, len;
+  if (!dest || dest_size == 0) return;
+  if (!src) {
+    dest[0] = '\0';
+    return;
+  }
+  len = strlen(src);
+  if (len >= 2 && src[0] == '"' && src[len - 1] == '"') {
+    src++;
+    len -= 2;
+  }
+  while (j < len && i < dest_size - 1) {
+    unsigned char ch = (unsigned char)src[j++];
+    if (ch == '"' || ch == '\\') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = (char)ch;
+    } else if (ch == '\n') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 'n';
+    } else if (ch == '\r') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 'r';
+    } else if (ch == '\t') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 't';
+    } else if (ch >= 0x20) {
+      dest[i++] = (char)ch;
+    }
+  }
+  dest[i] = '\0';
+}
+
+#if defined(__linux)
+extern void find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_ring, int *combined_channels);
+#endif
+
 void
 print_omni_json()
 {
@@ -2844,6 +2908,7 @@ print_omni_json()
 
   int i,j;
   char tmpval[1024];
+  char escaped[2048];
   char hostname[256];
   int vallen;
   int first_item;
@@ -2877,6 +2942,20 @@ print_omni_json()
   fprintf(where, "    \"local_active_cpu_count\": %d,\n", lib_local_cpu_stats.active_cpu_count);
   fprintf(where, "    \"local_softirq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_swintr);
   fprintf(where, "    \"local_irq_pct\": %.2f", lib_local_cpu_stats.cpu_irq);
+
+#if defined(__linux)
+  {
+    char *env_if = getenv("NETPERF_INTERFACE");
+    if (env_if && env_if[0] != '\0') {
+      int link_mbps = -1, rx_r = -1, tx_r = -1, comb_ch = -1;
+      find_driver_ext_info(env_if, &link_mbps, &rx_r, &tx_r, &comb_ch);
+      if (link_mbps > 0) fprintf(where, ",\n    \"nic_link_speed_mbps\": %d", link_mbps);
+      if (rx_r > 0) fprintf(where, ",\n    \"nic_rx_ring\": %d", rx_r);
+      if (tx_r > 0) fprintf(where, ",\n    \"nic_tx_ring\": %d", tx_r);
+      if (comb_ch > 0) fprintf(where, ",\n    \"nic_combined_channels\": %d", comb_ch);
+    }
+  }
+#endif
   
 #ifndef WIN32
   if (uname(&uname_info) == 0) {
@@ -2920,15 +2999,24 @@ print_omni_json()
 
 	/* Determine if value should be quoted based on type */
 	if (netperf_output_source[output_list[i][j]].output_type == NETPERF_TYPE_CHAR) {
+	  json_escape_string(escaped, sizeof(escaped), tmpval);
 	  fprintf(where,
 		  "    \"%s\": \"%s\"",
 		  netperf_output_enum_to_str(output_list[i][j]),
-		  tmpval);
+		  escaped);
 	} else {
-	  fprintf(where,
-		  "    \"%s\": %s",
-		  netperf_output_enum_to_str(output_list[i][j]),
-		  tmpval);
+	  if (strcasecmp(tmpval, "nan") == 0 || strcasecmp(tmpval, "-nan") == 0 ||
+	      strcasecmp(tmpval, "inf") == 0 || strcasecmp(tmpval, "-inf") == 0 ||
+	      tmpval[0] == '\0') {
+	    fprintf(where,
+		    "    \"%s\": null",
+		    netperf_output_enum_to_str(output_list[i][j]));
+	  } else {
+	    fprintf(where,
+		    "    \"%s\": %s",
+		    netperf_output_enum_to_str(output_list[i][j]),
+		    tmpval);
+	  }
 	}
       }
     }
@@ -3201,10 +3289,39 @@ int send_pktinfo(SOCKET data_socket, char *buffer, int len, struct sockaddr *des
 }
 
 
+static void
+drain_zerocopy_completions(SOCKET s)
+{
+#if defined(__linux) && defined(MSG_ERRQUEUE)
+  char cbuf[128];
+  struct msghdr msg;
+  if (!use_zerocopy || s == INVALID_SOCKET) return;
+  memset(&msg, 0, sizeof(msg));
+  msg.msg_control = cbuf;
+  msg.msg_controllen = sizeof(cbuf);
+  while (recvmsg(s, &msg, MSG_ERRQUEUE | MSG_DONTWAIT) >= 0) {
+    msg.msg_controllen = sizeof(cbuf);
+  }
+#else
+  (void)s;
+#endif
+}
+
 int
 send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send, struct sockaddr *destination, int destlen, int protocol) {
 
   int len;
+  int send_flags = 0;
+  static unsigned int zc_send_counter = 0;
+
+#if defined(MSG_ZEROCOPY)
+  if (use_zerocopy) {
+    send_flags |= MSG_ZEROCOPY;
+    if ((++zc_send_counter & 0x1F) == 0) {
+      drain_zerocopy_completions(data_socket);
+    }
+  }
+#endif
 
   /* if the user has supplied a destination, we use sendto, otherwise
      we use send.  we ass-u-me blocking operations always, so no need
@@ -3235,9 +3352,9 @@ send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send
 		   send_ring->buffer_ptr,
 		   bytes_to_send,
 #if defined(MSG_FASTOPEN)
-		   (use_fastopen && protocol == IPPROTO_TCP) ? MSG_FASTOPEN : 0,
+		   send_flags | ((use_fastopen && protocol == IPPROTO_TCP) ? MSG_FASTOPEN : 0),
 #else
-		   0,
+		   send_flags,
 #endif
 		   destination,
 		   destlen);
@@ -3253,6 +3370,9 @@ send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send
 #else
 		 0);
 #endif
+      if (len < 0 && use_zerocopy && (errno == ENOBUFS || errno == ENOMEM)) {
+	drain_zerocopy_completions(data_socket);
+      }
     }
     else {
 #ifndef WIN32
@@ -7363,6 +7483,7 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -T protocol       Explicitly set data connection protocol. Default is\n\
                       implicit based on other settings\n\
     -u uuid           Use the supplied string as the UUID for this test.\n\
+    -Z                Enable SO_ZEROCOPY / MSG_ZEROCOPY on data socket\n\
     -4                Use AF_INET (eg IPv4) on both ends of the data conn\n\
     -6                Use AF_INET6 (eg IPv6) on both ends of the data conn\n\
 \n\

@@ -20,6 +20,7 @@ Version: 2.0.0
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -29,12 +30,180 @@ from typing import Dict, List, Any, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).parent))
 from netperf_topology import TopologyAnalyzer
 
-# Try YAML, fall back to JSON if unavailable
+# Try YAML, fall back to stdlib YAML subset parser if unavailable
 try:
     import yaml
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
+
+
+DSCP_SYMBOLIC_MAP: Dict[str, str] = {
+    'CS0': '0x00', 'BE': '0x00', 'DEFAULT': '0x00',
+    'CS1': '0x20', 'AF11': '0x28', 'AF12': '0x30', 'AF13': '0x38',
+    'CS2': '0x40', 'AF21': '0x48', 'AF22': '0x50', 'AF23': '0x58',
+    'CS3': '0x60', 'AF31': '0x68', 'AF32': '0x70', 'AF33': '0x78',
+    'CS4': '0x80', 'AF41': '0x88', 'AF42': '0x90', 'AF43': '0x98',
+    'CS5': '0xa0', 'EF': '0xb8',
+    'CS6': '0xc0', 'CS7': '0xe0',
+}
+
+
+def resolve_tos_value(tos_spec: str) -> str:
+    """Convert symbolic DSCP name ('EF', 'AF21', 'CS3'), 'dscp:46', or integer to IP_TOS hex."""
+    if not tos_spec:
+        return ""
+    spec = str(tos_spec).strip()
+    if ',' in spec:
+        parts = [resolve_tos_value(p) for p in spec.split(',', 1)]
+        return f"{parts[0]},{parts[1]}"
+    upper = spec.upper()
+    if upper in DSCP_SYMBOLIC_MAP:
+        return DSCP_SYMBOLIC_MAP[upper]
+    if upper.startswith('DSCP:') or upper.startswith('DSCP'):
+        num_str = re.sub(r'^DSCP:?', '', upper).strip()
+        if num_str.isdigit():
+            dscp = int(num_str)
+            return f"0x{(dscp & 0x3f) << 2:02x}"
+    if upper.startswith('0X'):
+        return spec.lower()
+    if spec.isdigit():
+        val = int(spec)
+        if val in (10, 12, 14, 18, 20, 22, 24, 26, 28, 30, 34, 36, 38, 46, 48, 56):
+            return f"0x{(val & 0x3f) << 2:02x}"
+        return f"0x{val & 0xff:02x}"
+    return spec
+
+
+def _parse_yaml_scalar(val_str: str) -> Any:
+    """Parse a scalar YAML value into bool, int, float, list, or str."""
+    v = val_str.strip()
+    if not v:
+        return ""
+    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+        return v[1:-1]
+    if v.startswith('[') and v.endswith(']'):
+        inner = v[1:-1].strip()
+        if not inner:
+            return []
+        return [_parse_yaml_scalar(x) for x in inner.split(',')]
+    lower = v.lower()
+    if lower in ('true', 'yes'):
+        return True
+    if lower in ('false', 'no'):
+        return False
+    if lower in ('null', 'none', '~'):
+        return None
+    try:
+        if '.' in v or 'e' in lower:
+            return float(v)
+        return int(v)
+    except ValueError:
+        return v
+
+
+def _strip_yaml_comment(line: str) -> str:
+    """Strip inline YAML comment (# ...) while preserving quoted strings."""
+    in_single = False
+    in_double = False
+    for idx, ch in enumerate(line):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == '#' and not in_single and not in_double:
+            if idx == 0 or line[idx - 1].isspace():
+                return line[:idx].rstrip()
+    return line.rstrip()
+
+
+def _parse_simple_yaml(content: str) -> Dict[str, Any]:
+    """Minimal stdlib YAML parser supporting nested dicts and lists of dicts/scalars."""
+    cleaned_lines: List[Tuple[int, str]] = []
+    for raw_line in content.splitlines():
+        stripped_comment = _strip_yaml_comment(raw_line)
+        if not stripped_comment.strip():
+            continue
+        indent = len(stripped_comment) - len(stripped_comment.lstrip(' '))
+        cleaned_lines.append((indent, stripped_comment.strip()))
+
+    def parse_block(idx: int, min_indent: int) -> Tuple[Any, int]:
+        if idx >= len(cleaned_lines):
+            return {}, idx
+        first_indent, first_text = cleaned_lines[idx]
+        if first_indent < min_indent:
+            return {}, idx
+
+        if first_text.startswith('- ') or first_text == '-':
+            items: List[Any] = []
+            list_indent = first_indent
+            while idx < len(cleaned_lines):
+                cur_indent, cur_text = cleaned_lines[idx]
+                if cur_indent < list_indent:
+                    break
+                if cur_indent != list_indent or not (cur_text.startswith('- ') or cur_text == '-'):
+                    break
+                after_dash = cur_text[1:].strip()
+                idx += 1
+                if not after_dash:
+                    sub_val, idx = parse_block(idx, list_indent + 1)
+                    items.append(sub_val)
+                elif ':' in after_dash and not (after_dash.startswith('"') or after_dash.startswith("'")):
+                    k, v_raw = after_dash.split(':', 1)
+                    item_dict: Dict[str, Any] = {}
+                    v_str = v_raw.strip()
+                    if v_str:
+                        item_dict[k.strip()] = _parse_yaml_scalar(v_str)
+                    else:
+                        sub_val, idx = parse_block(idx, list_indent + 1)
+                        item_dict[k.strip()] = sub_val
+                    # Read additional keys belonging to this list item dict
+                    while idx < len(cleaned_lines):
+                        next_indent, next_text = cleaned_lines[idx]
+                        if next_indent <= list_indent:
+                            break
+                        if next_text.startswith('- '):
+                            break
+                        if ':' in next_text:
+                            nk, nv_raw = next_text.split(':', 1)
+                            nv_str = nv_raw.strip()
+                            idx += 1
+                            if nv_str:
+                                item_dict[nk.strip()] = _parse_yaml_scalar(nv_str)
+                            else:
+                                sub_val, idx = parse_block(idx, next_indent + 1)
+                                item_dict[nk.strip()] = sub_val
+                        else:
+                            idx += 1
+                    items.append(item_dict)
+                else:
+                    items.append(_parse_yaml_scalar(after_dash))
+            return items, idx
+
+        mapping: Dict[str, Any] = {}
+        map_indent = first_indent
+        while idx < len(cleaned_lines):
+            cur_indent, cur_text = cleaned_lines[idx]
+            if cur_indent < map_indent:
+                break
+            if cur_text.startswith('- '):
+                break
+            if ':' in cur_text:
+                k, v_raw = cur_text.split(':', 1)
+                key = k.strip()
+                v_str = v_raw.strip()
+                idx += 1
+                if v_str:
+                    mapping[key] = _parse_yaml_scalar(v_str)
+                else:
+                    sub_val, idx = parse_block(idx, cur_indent + 1)
+                    mapping[key] = sub_val
+            else:
+                idx += 1
+        return mapping, idx
+
+    parsed, _ = parse_block(0, 0)
+    return parsed if isinstance(parsed, dict) else {}
 
 
 class ProfileValidator:
@@ -131,14 +300,19 @@ class ProfileLoader:
 
         content = filepath.read_text(encoding='utf-8')
 
-        if HAS_YAML and filepath.suffix in ['.yaml', '.yml']:
-            return yaml.safe_load(content)
-        elif filepath.suffix == '.json':
+        if filepath.suffix == '.json':
             return json.loads(content)
+        elif HAS_YAML and filepath.suffix in ['.yaml', '.yml']:
+            return yaml.safe_load(content)
+        elif filepath.suffix in ['.yaml', '.yml']:
+            return _parse_simple_yaml(content)
         elif HAS_YAML:
             return yaml.safe_load(content)
         else:
-            return json.loads(content)
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError:
+                return _parse_simple_yaml(content)
 
     @staticmethod
     def find_builtin_profile(name: str) -> Optional[Path]:
@@ -237,7 +411,14 @@ class ProfileRunner:
         raw_dir = str(test.get('direction', 'stream')).lower()
 
         # Use netperf-multi whenever instances > 1 OR when running bidirectional (bx / bx-seq) or multi-port
-        if instances > 1 or raw_dir in ('bx', 'bx-seq', 'bidirectional') or test.get('interfaces') or ',' in self.host or '..' in self.host:
+        if (
+            instances > 1
+            or raw_dir in ('bx', 'bx-seq', 'bidirectional')
+            or test.get('interfaces')
+            or self.global_settings.get('interfaces')
+            or ',' in self.host
+            or '..' in self.host
+        ):
             cmd = self._build_multi_command(test, duration, output_format)
         else:
             cmd = self._build_netperf_command(test, duration, output_format)
@@ -294,22 +475,38 @@ class ProfileRunner:
         cmd.append('-M')  # Enable OMNI mode globally
         cmd.extend(['-l', str(duration)])
 
+        selected_cpu: Optional[str] = None
+        if 'cpu' in test:
+            selected_cpu = str(test['cpu'])
+        elif test.get('cpu_affinity', self.global_settings.get('cpu_affinity', False)):
+            topo = TopologyAnalyzer.discover_local()
+            cores = TopologyAnalyzer.allocate_flow_cores(topo, num_flows=1)
+            if cores:
+                selected_cpu = str(cores[0])
+
         if 'control_port' in test:
             cmd.extend(['-p', str(test['control_port'])])
+        elif test.get('per_core_netserver', self.global_settings.get('per_core_netserver', False)):
+            base_port = int(test.get('base_port', self.global_settings.get('base_port', 18600)))
+            lp_cpu = 0
+            if selected_cpu:
+                parts = selected_cpu.split(',')
+                try:
+                    lp_cpu = int(parts[-1].strip())
+                except ValueError:
+                    lp_cpu = 0
+            cmd.extend(['-p', str(base_port + lp_cpu)])
 
         # DSCP / ToS marking (-Y before --)
         dscp = test.get('dscp') or test.get('tos') or self.global_settings.get('dscp')
         if dscp:
-            cmd.extend(['-Y', f"{dscp},{dscp}" if ',' not in str(dscp) else str(dscp)])
+            first_dscp = str(dscp[0] if isinstance(dscp, list) else str(dscp).split(',')[0]).strip()
+            resolved_dscp = resolve_tos_value(first_dscp)
+            cmd.extend(['-Y', f"{resolved_dscp},{resolved_dscp}" if ',' not in resolved_dscp else resolved_dscp])
 
         # Explicit CPU core binding (-T before --)
-        if 'cpu' in test:
-            cmd.extend(['-T', str(test['cpu'])])
-        elif test.get('cpu_affinity', False):
-            topo = TopologyAnalyzer.discover_local()
-            cores = TopologyAnalyzer.allocate_flow_cores(topo, num_flows=1)
-            if cores:
-                cmd.extend(['-T', str(cores[0])])
+        if selected_cpu is not None:
+            cmd.extend(['-T', selected_cpu])
 
         # Test-specific OMNI options (MUST be after --)
         cmd.append('--')
@@ -333,6 +530,9 @@ class ProfileRunner:
 
         if test.get('connection', False):
             cmd.append('-c')
+
+        if test.get('nodelay', self.global_settings.get('nodelay', False)):
+            cmd.append('-D')
 
         if 'socket_size' in test:
             cmd.extend(['-s', str(test['socket_size'])])
@@ -387,8 +587,8 @@ class ProfileRunner:
                 dscp = ','.join(str(x) for x in dscp)
             cmd.extend(['--dscp', str(dscp)])
 
-        mtu = test.get('mtu') or self.global_settings.get('mtu')
-        if mtu:
+        mtu = test.get('mtu') if test.get('mtu') is not None else self.global_settings.get('mtu')
+        if mtu is not None:
             cmd.extend(['--mtu', str(mtu)])
 
         if test.get('cpu_affinity', self.global_settings.get('cpu_affinity', False)):
@@ -401,7 +601,11 @@ class ProfileRunner:
         if test.get('per_core_netserver', self.global_settings.get('per_core_netserver', False)):
             cmd.append('--per-core-netserver')
 
-        lp_start_cpu = test.get('lp_start_cpu') or self.global_settings.get('lp_start_cpu')
+        base_port = test.get('base_port') if test.get('base_port') is not None else self.global_settings.get('base_port')
+        if base_port is not None:
+            cmd.extend(['--base-port', str(base_port)])
+
+        lp_start_cpu = test.get('lp_start_cpu') if test.get('lp_start_cpu') is not None else self.global_settings.get('lp_start_cpu')
         if lp_start_cpu is not None:
             cmd.extend(['--lp-start-cpu', str(lp_start_cpu)])
 
@@ -419,6 +623,9 @@ class ProfileRunner:
 
         if test.get('connection', False):
             cmd.append('-c')
+
+        if test.get('nodelay', self.global_settings.get('nodelay', False)):
+            cmd.append('-D')
 
         if 'socket_size' in test:
             cmd.extend(['-s', str(test['socket_size'])])

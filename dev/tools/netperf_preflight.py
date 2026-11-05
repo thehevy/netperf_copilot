@@ -454,6 +454,76 @@ class PreflightChecker:
                 )
             )
 
+        # 13. GRO off on >= 100G (AA-019)
+        if state.get("gro_off", False) and link_mbps >= 100000:
+            findings.append(
+                CheckFinding(
+                    "AA-019", "hardware_config", "WARN",
+                    ANTI_AFFINITY_RULES[18].description,
+                    remediation=ANTI_AFFINITY_RULES[18].remediation,
+                )
+            )
+
+        # 14. TSO off on >= 100G (AA-020)
+        if state.get("tso_off", False) and link_mbps >= 100000:
+            findings.append(
+                CheckFinding(
+                    "AA-020", "hardware_config", "WARN",
+                    ANTI_AFFINITY_RULES[19].description,
+                    remediation=ANTI_AFFINITY_RULES[19].remediation,
+                )
+            )
+
+        # 15. E-core SMT assumption (AA-021)
+        if state.get("arch_type") == "ecore" and (
+            state.get("ecore_smt_assumption", False) or state.get("core_layout") == "sequential"
+        ):
+            findings.append(
+                CheckFinding(
+                    "AA-021", "topology", "WARN",
+                    ANTI_AFFINITY_RULES[20].description,
+                    remediation=ANTI_AFFINITY_RULES[20].remediation,
+                )
+            )
+
+        # 16. Shared single netserver daemon for >= 16 streams (AA-022)
+        if state.get("shared_netserver_lock", False) or (
+            int(state.get("planned_streams", 0) or 0) >= 16
+            and int(state.get("netserver_count", 16) or 0) == 1
+        ):
+            findings.append(
+                CheckFinding(
+                    "AA-022", "anti_affinity", "WARN",
+                    ANTI_AFFINITY_RULES[21].description,
+                    remediation=ANTI_AFFINITY_RULES[21].remediation,
+                )
+            )
+
+        # 17. Small rmem_max / wmem_max (AA-023)
+        rmem_max = state.get("rmem_max")
+        wmem_max = state.get("wmem_max")
+        if state.get("small_rmem_wmem", False) or (
+            (rmem_max is not None and int(rmem_max) < 16777216)
+            or (wmem_max is not None and int(wmem_max) < 16777216)
+        ):
+            findings.append(
+                CheckFinding(
+                    "AA-023", "hardware_config", "WARN",
+                    ANTI_AFFINITY_RULES[22].description,
+                    remediation=ANTI_AFFINITY_RULES[22].remediation,
+                )
+            )
+
+        # 18. Default 9-layer ice TX scheduler (AA-024)
+        if state.get("tx_sched_9layer", False) or int(state.get("tx_scheduling_layers", 5) or 5) == 9:
+            findings.append(
+                CheckFinding(
+                    "AA-024", "hardware_config", "INFO",
+                    ANTI_AFFINITY_RULES[23].description,
+                    remediation=ANTI_AFFINITY_RULES[23].remediation,
+                )
+            )
+
         if not findings:
             findings.append(
                 CheckFinding(
@@ -547,6 +617,8 @@ class PreflightChecker:
             ("numa_balancing", "/proc/sys/kernel/numa_balancing"),
             ("busy_poll", "/proc/sys/net/core/busy_poll"),
             ("busy_read", "/proc/sys/net/core/busy_read"),
+            ("rmem_max", "/proc/sys/net/core/rmem_max"),
+            ("wmem_max", "/proc/sys/net/core/wmem_max"),
         ]:
             p = Path(sysctl_path)
             if p.exists():
@@ -554,6 +626,46 @@ class PreflightChecker:
                     state[key] = int(p.read_text(encoding="utf-8").strip())
                 except ValueError:
                     pass
+
+        # Check SR-IOV VFs, LAG master, XDP, and XPS sysfs state
+        net_sysfs = Path(f"/sys/class/net/{self.interface}")
+        numvfs_path = net_sysfs / "device" / "sriov_numvfs"
+        if numvfs_path.exists():
+            try:
+                state["sriov_numvfs"] = int(numvfs_path.read_text(encoding="utf-8").strip())
+            except ValueError:
+                pass
+        if (net_sysfs / "master").exists() or (net_sysfs / "bonding").exists():
+            state["lag_active"] = True
+
+        xps_cpus_nz = False
+        xps_rxqs_nz = False
+        queues_dir = net_sysfs / "queues"
+        if queues_dir.exists():
+            for txq in queues_dir.glob("tx-*"):
+                for fn, flag_name in [("xps_cpus", "xps_cpus"), ("xps_rxqs", "xps_rxqs")]:
+                    fpath = txq / fn
+                    if fpath.exists():
+                        raw_mask = fpath.read_text(encoding="utf-8", errors="ignore").strip().replace(",", "")
+                        if raw_mask and any(c not in "0" for c in raw_mask):
+                            if flag_name == "xps_cpus":
+                                xps_cpus_nz = True
+                            else:
+                                xps_rxqs_nz = True
+        state["xps_cpus_nonzero"] = xps_cpus_nz
+        state["xps_rxqs_nonzero"] = xps_rxqs_nz
+
+        # Check ethtool -k (GRO / TSO offloads)
+        rc, out, _ = self._runner(["ethtool", "-k", self.interface])
+        if rc == 0:
+            state["gro_off"] = bool(re.search(r"generic-receive-offload:\s+off", out, re.IGNORECASE))
+            state["tso_off"] = bool(re.search(r"tcp-segmentation-offload:\s+off", out, re.IGNORECASE))
+
+        # Check ethtool -a (Link Pause)
+        rc, out, _ = self._runner(["ethtool", "-a", self.interface])
+        if rc == 0:
+            state["rx_pause"] = bool(re.search(r"RX:\s+on", out, re.IGNORECASE))
+            state["tx_pause"] = bool(re.search(r"TX:\s+on", out, re.IGNORECASE))
 
         # Check ethtool -g (rings)
         rc, out, _ = self._runner(["ethtool", "-g", self.interface])

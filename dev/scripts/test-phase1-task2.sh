@@ -37,8 +37,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo ""
-echo "=== Test 1: Default preset is used when no -o option ==="
-OUTPUT=$(./build/src/netperf -H localhost -p 12867 -l 1 2>&1)
+echo "=== Test 1: Default preset is used when no -o option in OMNI mode ==="
+OUTPUT=$(./build/src/netperf -H localhost -p 12867 -M -l 1 2>&1)
 # Check for fields from default.out preset
 if echo "$OUTPUT" | grep -q "CPU" && echo "$OUTPUT" | grep -q "MSS"; then
     echo "✅ PASS: Default preset provides extended output"

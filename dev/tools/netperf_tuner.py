@@ -211,6 +211,14 @@ class NetperfTuner:
                 f"echo {params['xps_cpus']} > $q/xps_cpus 2>/dev/null || true; "
                 f"echo {params['xps_rxqs']} > $q/xps_rxqs 2>/dev/null || true; done",
             ],
+            # 10. Pin interface IRQs to local NUMA node cores
+            [
+                "sh", "-c",
+                f"if command -v set_irq_affinity_bynode.sh >/dev/null 2>&1; then "
+                f"set_irq_affinity_bynode.sh {self.numa_node} {self.interface}; "
+                f"elif command -v set_irq_affinity >/dev/null 2>&1; then "
+                f"set_irq_affinity local {self.interface}; fi",
+            ],
         ]
 
         for k, v in sysctls.items():
@@ -359,7 +367,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.values:
             raw = [v.strip() for v in args.values.split(",") if v.strip()]
             vals = [int(v) if v.isdigit() else v for v in raw]
-        report = tuner.run_ab_sweep(knob=args.sweep, values=vals)
+        apply_fn = (
+            None
+            if args.dry_run
+            else (lambda cmd: subprocess.run(cmd, check=False, capture_output=True).returncode)
+        )
+        report = tuner.run_ab_sweep(knob=args.sweep, values=vals, apply_fn=apply_fn)
         if args.json:
             print(json.dumps(report, indent=2))
         else:

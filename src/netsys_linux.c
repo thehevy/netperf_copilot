@@ -109,8 +109,8 @@ find_cpu_freq() {
         if (strstr(linebuf,"cpu MHz") != NULL) {
 	  target = strtok(linebuf,":");
 	  target = strtok(NULL,":");
-	  fclose(proccpu);
 	  if (target != NULL) {
+	    fclose(proccpu);
 	    return rint(strtod(target+1,NULL));
 	  }
 	  break;

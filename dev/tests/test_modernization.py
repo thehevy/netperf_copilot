@@ -48,6 +48,9 @@ def _load_script_module(module_name: str, script_path: Path) -> Any:
 netperf_multi = _load_script_module("netperf_multi_mod", TOOLS_DIR / "netperf-multi")
 netperf_profile = _load_script_module("netperf_profile_mod", TOOLS_DIR / "netperf-profile")
 netperf_orchestrate = _load_script_module("netperf_orchestrate_mod", TOOLS_DIR / "netperf-orchestrate")
+netperf_template = _load_script_module("netperf_template_mod", TOOLS_DIR / "netperf-template")
+netperf_aggregate = _load_script_module("netperf_aggregate_mod", TOOLS_DIR / "netperf-aggregate")
+netperf_monitor = _load_script_module("netperf_monitor_mod", TOOLS_DIR / "netperf-monitor")
 
 
 CWF_288_ECORE_SNAPSHOT = """
@@ -444,6 +447,120 @@ class TestNetperfModernization(unittest.TestCase):
         )
         self.assertIn("FLOW-TX-16S-MTU9000", md)
         self.assertIn("189.40 Gbps", md)
+
+    def test_step6_c_engine_security_and_preset_fixes(self) -> None:
+        """Verify Phase 1 C engine fixes: link_width[32], json_escape_string, preset dirs, drain_zerocopy_completions."""
+        netslot_c = (SRC_DIR / "netslot_linux.c").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("static char interface_address[32];", netslot_c)
+        self.assertIn("char link_width[32];", netslot_c)
+
+        netsys_c = (SRC_DIR / "netsys_linux.c").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("if (target != NULL) {\n\t    fclose(proccpu);", netsys_c)
+
+        omni_c = (SRC_DIR / "nettest_omni.c").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("json_escape_string", omni_c)
+        self.assertIn("drain_zerocopy_completions", omni_c)
+        self.assertIn("MSG_ERRQUEUE | MSG_DONTWAIT", omni_c)
+        self.assertIn("./dev/catalog/output-presets", omni_c)
+        self.assertIn("-Z                Enable SO_ZEROCOPY / MSG_ZEROCOPY", omni_c)
+
+    def test_step6_preflight_rules_aa019_through_aa024(self) -> None:
+        """Verify AA-019 through AA-024 are evaluated by PreflightChecker.evaluate_feature_state."""
+        checker = PreflightChecker(interface="ens801f0np0")
+        state = {
+            "arch_type": "ecore",
+            "link_speed_mbps": 200000,
+            "tx_ring": 512,
+            "gro_off": True,
+            "tso_off": True,
+            "ecore_smt_assumption": True,
+            "shared_netserver_lock": True,
+            "rmem_max": 212992,
+            "tx_scheduling_layers": 9,
+        }
+        findings = checker.evaluate_feature_state(state)
+        ids = {f.check_id for f in findings}
+        for rule_id in ("AA-019", "AA-020", "AA-021", "AA-022", "AA-023", "AA-024"):
+            self.assertIn(rule_id, ids, f"Expected {rule_id} in findings")
+
+    def test_step6_multi_json_flattening_and_multi_nic_distribution(self) -> None:
+        """Verify NetperfInstance._parse_json flattens 'results' and MultiNetperf distributes flows across NICs."""
+        inst = netperf_multi.NetperfInstance(instance_id=0, host="192.168.10.2")
+        sample_json = """
+        {
+          "metadata": {
+            "local_active_cpu_util": 41.5,
+            "local_softirq_pct": 12.3
+          },
+          "results": {
+            "THROUGHPUT": 24500.0,
+            "MEAN_LATENCY": 18.2
+          }
+        }
+        """
+        parsed = inst._parse_json(sample_json)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed["THROUGHPUT"], 24500.0)
+        self.assertEqual(parsed["MEAN_LATENCY"], 18.2)
+        self.assertEqual(parsed["local_active_cpu_util"], 41.5)
+
+        # Multi-NIC with 1 host and 3 interfaces and instances=48 -> 16 per NIC = 48 total streams
+        runner = netperf_multi.MultiNetperf(
+            host="192.168.10.2",
+            instances=48,
+            interfaces="ens7np0,ens23np0,ens27np0",
+            direction="tx",
+        )
+        runner.create_instances()
+        self.assertEqual(len(runner.instances), 48)
+        ifaces = [i.interface for i in runner.instances]
+        self.assertEqual(ifaces.count("ens7np0"), 16)
+        self.assertEqual(ifaces.count("ens23np0"), 16)
+        self.assertEqual(ifaces.count("ens27np0"), 16)
+
+    def test_step6_template_and_aggregate_fixes(self) -> None:
+        """Verify SimpleTemplateEngine loop rendering and ResultComparator lower-is-better latency direction."""
+        simple = netperf_template.SimpleTemplateEngine()
+        rendered = simple.render(
+            "{% for item in results %}{{ item.test_name }}={{ item.throughput }};{% endfor %}",
+            {"results": [{"test_name": "t1", "throughput": 100}, {"test_name": "t2", "throughput": 200}]},
+        )
+        self.assertEqual(rendered, "t1=100;t2=200;")
+
+        base_res = [netperf_aggregate.NetperfResult({"THROUGHPUT": 10000.0, "MEAN_LATENCY": 50.0})]
+        curr_res = [netperf_aggregate.NetperfResult({"THROUGHPUT": 12000.0, "MEAN_LATENCY": 25.0})]
+        comp = netperf_aggregate.ResultComparator.compare(base_res, curr_res)
+        self.assertTrue(comp["differences"]["throughput"]["is_improvement"])
+        self.assertFalse(comp["differences"]["throughput"]["is_regression"])
+        # Latency decreased by 50% -> improvement, not regression
+        self.assertTrue(comp["differences"]["latency"]["is_improvement"])
+        self.assertFalse(comp["differences"]["latency"]["is_regression"])
+
+    def test_step6_catalog_output_dir_and_orchestrate_yaml(self) -> None:
+        """Verify netperf_catalog --output-dir --dry-run writes result.json, summary.csv, and dashboard.md."""
+        import tempfile
+        import shutil
+        from netperf_catalog import main as catalog_main
+
+        tmp_dir = Path(tempfile.mkdtemp(prefix="netperf_cat_test_"))
+        try:
+            rc = catalog_main([
+                "--suite", "core-locality",
+                "--host", "192.168.10.2",
+                "--interface", "ens801f0np0",
+                "--output-dir", str(tmp_dir),
+                "--dry-run",
+            ])
+            self.assertEqual(rc, 0)
+            self.assertTrue((tmp_dir / "result.json").exists())
+            self.assertTrue((tmp_dir / "summary.csv").exists())
+            self.assertTrue((tmp_dir / "dashboard.md").exists())
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+        hosts_yaml = REPO_ROOT / "dev" / "examples" / "hosts.yaml"
+        inv = netperf_orchestrate.HostInventory.from_yaml(hosts_yaml)
+        self.assertEqual(len(inv.hosts), 5)
 
 
 if __name__ == "__main__":

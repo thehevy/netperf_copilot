@@ -177,8 +177,8 @@ netperf -H remotehost
 # Modern OMNI (requires -M flag)
 netperf -H remotehost -M
 
-# 10-second test with CSV output
-netperf -H remotehost -l 10 -- -o
+# 10-second OMNI test with CSV output
+netperf -H remotehost -M -l 10 -- -o
 
 # With CPU utilization measurement
 netperf -H remotehost -c -C
@@ -190,21 +190,21 @@ netperf -H remotehost -c -C
 # TCP request-response
 netperf -H remotehost -t TCP_RR
 
-# With JSON output
-netperf -H remotehost -t TCP_RR -- -J
+# OMNI request-response with JSON output
+netperf -H remotehost -M -- -d rr -J
 ```
 
 ### Using Output Presets
 
 ```bash
 # Minimal output (throughput only)
-netperf -H remotehost -- -k dev/catalog/output-presets/minimal.out
+netperf -H remotehost -M -- -k minimal
 
 # Verbose output (all fields)
-netperf -H remotehost -- -k dev/catalog/output-presets/verbose.out
+netperf -H remotehost -M -- -k verbose
 
 # Latency-focused output
-netperf -H remotehost -t TCP_RR -- -k dev/catalog/output-presets/latency.out
+netperf -H remotehost -M -- -d rr -k latency
 ```
 
 ## 🔄 Backward Compatibility
@@ -234,18 +234,31 @@ This fork is **fully backward compatible** with upstream netperf:
 netperf/
 ├── src/              # Source code
 ├── doc/              # Documentation
+├── wiki/             # Comprehensive Project Wiki (8 guides & references)
 ├── dev/              # Development tools and advanced features
 │   ├── catalog/      # Output presets, config analysis
 │   ├── docs/         # Developer documentation (Phase 1-3 guides)
 │   ├── examples/     # Usage examples and sample configs
 │   ├── plans/        # Project roadmap and progress tracking
-│   ├── profiles/     # Built-in test profiles (10 profiles)
+│   ├── profiles/     # Built-in test profiles (15 profiles)
 │   ├── scripts/      # Build and utility scripts
-│   ├── tests/        # Integration test suites
-│   ├── tools/        # Advanced tools (6 production tools)
+│   ├── tests/        # Integration & unit test suites
+│   ├── tools/        # Advanced tools (11 production tools)
 │   └── Makefile      # Convenience wrapper
 └── build/            # Build output (generated)
 ```
+
+## 📚 Project Wiki
+
+Comprehensive documentation is maintained in the [`wiki/`](wiki/Home.md) directory:
+
+- **[Wiki Home & Architecture Overview](wiki/Home.md)**
+- **[Getting Started & Installation](wiki/Getting-Started-and-Installation.md)**
+- **[Core Engine & OMNI Guide](wiki/Core-Engine-and-OMNI-Guide.md)**
+- **[High-Speed 200G–800G & Intel Xeon 6 Guide](wiki/High-Speed-200G-800G-and-Xeon6-Guide.md)**
+- **[CLI Tools Reference](wiki/CLI-Tools-Reference.md)**
+- **[Test Profiles & Qualification Catalog](wiki/Test-Profiles-and-Qualification-Catalog.md)**
+- **[Pre-Flight Checks & Fault Monitoring](wiki/Pre-Flight-Checks-and-Fault-Monitoring.md)**
 
 ### Build Configuration
 
@@ -304,10 +317,10 @@ Statistical analysis with confidence intervals and outlier detection:
 
 ```bash
 # Analyze multiple test runs
-for i in {1..20}; do netperf -H host; done | netperf_stats.py -
+for i in {1..20}; do netperf -H host -M -- -k THROUGHPUT | grep THROUGHPUT= | cut -d= -f2; done | netperf_stats.py -
 
-# Generate histogram
-netperf_stats.py results.txt --histogram histogram.png
+# Display ASCII histogram and boxplot
+netperf_stats.py results.txt
 ```
 
 ### netperf-profile
@@ -315,11 +328,11 @@ netperf_stats.py results.txt --histogram histogram.png
 Pre-configured test profiles for common scenarios:
 
 ```bash
-# Run baseline profile (10 built-in profiles)
+# Run baseline profile (15 built-in profiles)
 netperf-profile -p baseline -H remotehost
 
 # Custom profile with YAML
-netperf-profile -p my-profile.yaml -H remotehost --dry-run
+netperf-profile --profile-file my-profile.yaml -H remotehost --dry-run
 ```
 
 ### netperf-orchestrate
@@ -328,10 +341,11 @@ Multi-host test orchestration:
 
 ```bash
 # Run tests across multiple hosts
-netperf-orchestrate -i hosts.yaml -p throughput --parallel
+netperf-orchestrate --hosts hosts.yaml -- -d stream -l 30 -J
 
-# Generate inventory
-netperf-orchestrate --generate-inventory > hosts.yaml
+# Check connectivity and status
+netperf-orchestrate --hosts hosts.yaml --check
+netperf-orchestrate --hosts hosts.yaml --status
 ```
 
 ### netperf-monitor
@@ -340,10 +354,10 @@ Real-time monitoring with terminal UI:
 
 ```bash
 # Monitor ongoing tests
-netperf-monitor --host remotehost --interval 1
+netperf-monitor -H remotehost -l 60 --refresh 0.5 -- -d send
 
-# Demo mode
-netperf-monitor --demo
+# Follow an existing log file
+netperf-monitor --follow test.log
 ```
 
 ### netperf-template

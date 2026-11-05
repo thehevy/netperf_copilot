@@ -21,4 +21,12 @@
 
 AUTOMAKE_OPTIONS = dist-bzip2 dist-zip
 SUBDIRS = src doc
-EXTRA_DIST = README.* Release_Notes inet_ntop.c autogen.sh m4
+EXTRA_DIST = README.* Release_Notes inet_ntop.c autogen.sh m4 dev/catalog/output-presets
+
+presetdir = $(datadir)/netperf/output-presets
+dist_preset_DATA = dev/catalog/output-presets/default.out \
+                   dev/catalog/output-presets/throughput.out \
+                   dev/catalog/output-presets/latency.out \
+                   dev/catalog/output-presets/cpu.out \
+                   dev/catalog/output-presets/minimal.out \
+                   dev/catalog/output-presets/verbose.out

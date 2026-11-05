@@ -45,6 +45,7 @@ from typing import Dict, List, Optional, Tuple, Any
 # Ensure sibling modules in dev/tools are importable
 sys.path.insert(0, str(Path(__file__).parent))
 from netperf_topology import TopologyAnalyzer, SystemTopology, format_cpu_list
+from netperf_report import AIValidationReporter, scan_kmsg_events, parse_ethtool_stats, compute_counter_deltas
 
 # Optional import for host process CPU affinity fallback
 try:
@@ -309,12 +310,25 @@ class NetperfInstance:
                 self.result = None
 
     def _parse_json(self, output: str) -> Optional[Dict[str, Any]]:
-        """Parse JSON output (ignoring any interval demo lines before the JSON object)."""
+        """Parse JSON output (ignoring any interval demo lines before the JSON object) and flatten 'results'."""
         text = output.strip()
         idx = text.find('{')
-        if idx >= 0:
-            return json.loads(text[idx:])
-        return json.loads(text)
+        data = json.loads(text[idx:]) if idx >= 0 else json.loads(text)
+        if isinstance(data, dict) and 'results' in data and isinstance(data['results'], dict):
+            flat: Dict[str, Any] = dict(data['results'])
+            if 'metadata' in data and isinstance(data['metadata'], dict):
+                flat['_metadata'] = data['metadata']
+                for meta_key in (
+                    'local_active_cpu_util', 'remote_active_cpu_util',
+                    'local_active_cpu_count', 'remote_active_cpu_count',
+                    'local_peak_cpu_id', 'remote_peak_cpu_id',
+                    'local_peak_cpu_util', 'remote_peak_cpu_util',
+                    'local_softirq_pct', 'remote_softirq_pct',
+                ):
+                    if meta_key in data['metadata'] and meta_key not in flat:
+                        flat[meta_key] = data['metadata'][meta_key]
+            return flat
+        return data
 
     def _parse_keyval(self, output: str) -> Dict[str, Any]:
         """Parse KEYVAL output format."""
@@ -396,7 +410,8 @@ class MultiNetperf:
                  lp_start_cpu: Optional[int] = None,
                  topology_snapshot: Optional[str] = None,
                  lp_topology_snapshot: Optional[str] = None,
-                 netserver_map_file: Optional[str] = None):
+                 netserver_map_file: Optional[str] = None,
+                 check_kmsg: bool = False):
         self.host = host
         self.hosts = expand_host_targets(host)
         self.num_instances = instances  # Instances per port/direction
@@ -422,9 +437,12 @@ class MultiNetperf:
         self.topology_snapshot = topology_snapshot
         self.lp_topology_snapshot = lp_topology_snapshot
         self.netserver_map_file = netserver_map_file
+        self.check_kmsg = check_kmsg
 
         self.instances: List[NetperfInstance] = []
         self.interrupted = False
+        self.kmsg_events: List[Dict[str, str]] = []
+        self.counter_deltas: Dict[str, int] = {}
 
         # Load topologies if affinity or per-core netserver is requested
         self.dut_topo: Optional[SystemTopology] = None
@@ -490,7 +508,11 @@ class MultiNetperf:
         else:
             roles = ['tx']
 
-        num_ports = max(1, len(self.hosts))
+        num_ports = max(1, len(self.hosts), len(self.interfaces))
+        if len(self.hosts) < len(self.interfaces) and num_ports > 1 and self.num_instances >= num_ports and self.num_instances % num_ports == 0:
+            flows_per_port = self.num_instances // num_ports
+        else:
+            flows_per_port = self.num_instances
         inst_id = 0
 
         # Track allocated cores per NUMA node so multi-port runs on the same NUMA node stay disjoint
@@ -521,18 +543,18 @@ class MultiNetperf:
                 if not avail_dut:
                     avail_dut = list(node_pool.app_cores) or list(node_pool.physical_cores)
                 strategy = TopologyAnalyzer.select_layout_strategy(
-                    self.dut_topo, self.layout, self.num_instances * len(roles), self.mtu
+                    self.dut_topo, self.layout, flows_per_port * len(roles), self.mtu
                 )
                 allocated_dut = TopologyAnalyzer.allocate_cores_from_pool(
                     avail_dut,
-                    count=self.num_instances * len(roles),
+                    count=flows_per_port * len(roles),
                     strategy=strategy,
                     l2_modules=node_pool.l2_modules,
                 )
                 used_dut_cores_by_node[numa_node].update(allocated_dut)
                 if len(roles) == 2:
-                    dut_tx_cores = allocated_dut[:self.num_instances]
-                    dut_rx_cores = allocated_dut[self.num_instances:]
+                    dut_tx_cores = allocated_dut[:flows_per_port]
+                    dut_rx_cores = allocated_dut[flows_per_port:]
                 else:
                     dut_tx_cores = allocated_dut
                     dut_rx_cores = allocated_dut
@@ -549,24 +571,24 @@ class MultiNetperf:
                     if not avail_lp:
                         avail_lp = list(lp_node_pool.app_cores) or list(lp_node_pool.physical_cores)
                     lp_strategy = TopologyAnalyzer.select_layout_strategy(
-                        self.lp_topo, self.layout, self.num_instances * len(roles), self.mtu
+                        self.lp_topo, self.layout, flows_per_port * len(roles), self.mtu
                     )
                     allocated_lp = TopologyAnalyzer.allocate_cores_from_pool(
                         avail_lp,
-                        count=self.num_instances * len(roles),
+                        count=flows_per_port * len(roles),
                         strategy=lp_strategy,
                         l2_modules=lp_node_pool.l2_modules,
                     )
                     used_lp_cores_by_node[numa_node].update(allocated_lp)
                     if len(roles) == 2:
-                        lp_tx_cores = allocated_lp[:self.num_instances]
-                        lp_rx_cores = allocated_lp[self.num_instances:]
+                        lp_tx_cores = allocated_lp[:flows_per_port]
+                        lp_rx_cores = allocated_lp[flows_per_port:]
                     else:
                         lp_tx_cores = allocated_lp
                         lp_rx_cores = allocated_lp
 
             for role in roles:
-                for flow_idx in range(self.num_instances):
+                for flow_idx in range(flows_per_port):
                     if self.use_affinity:
                         if role == 'rx' and dut_rx_cores:
                             dut_cpu = dut_rx_cores[flow_idx % len(dut_rx_cores)]
@@ -796,6 +818,29 @@ class MultiNetperf:
                 print(f"{key:32s}: {str(value):>15}")
         print(f"{'='*70}\n")
 
+    def _capture_kmsg_and_stats(self) -> Tuple[List[str], Dict[str, int]]:
+        """Capture baseline/post-test dmesg -T lines and ethtool -S counters when check_kmsg is enabled."""
+        dmesg_lines: List[str] = []
+        stats_totals: Dict[str, int] = {}
+        if not self.check_kmsg:
+            return dmesg_lines, stats_totals
+        try:
+            proc = subprocess.run(['dmesg', '-T'], capture_output=True, text=True, timeout=10)
+            if proc.returncode == 0:
+                dmesg_lines = proc.stdout.splitlines()
+        except Exception:
+            pass
+        for iface in self.interfaces:
+            try:
+                proc = subprocess.run(['ethtool', '-S', iface], capture_output=True, text=True, timeout=10)
+                if proc.returncode == 0:
+                    parsed = parse_ethtool_stats(proc.stdout)
+                    for k, v in parsed.items():
+                        stats_totals[k] = stats_totals.get(k, 0) + v
+            except Exception:
+                pass
+        return dmesg_lines, stats_totals
+
     def export_results(self, output_file: str) -> None:
         results = self.get_successful_results()
         aggregated = self.aggregate_results()
@@ -816,6 +861,13 @@ class MultiNetperf:
             },
             'instance_results': results,
             'aggregated': aggregated,
+            'unexpected_event_scan': {
+                'checked': self.check_kmsg,
+                'passed': len(self.kmsg_events) == 0,
+                'event_count': len(self.kmsg_events),
+                'events': self.kmsg_events,
+            },
+            'counter_deltas': self.counter_deltas,
         }
         with open(output_file, 'w') as f:
             json.dump(output, f, indent=2)
@@ -823,6 +875,8 @@ class MultiNetperf:
 
     def run(self, aggregate: bool = True, export: Optional[str] = None) -> bool:
         """Execute the multi-instance test (supporting sequential BX when direction == 'bx-seq')."""
+        pre_dmesg, pre_stats = self._capture_kmsg_and_stats()
+
         if self.direction == 'bx-seq':
             all_instances: List[NetperfInstance] = []
             for phase_dir in ('tx', 'rx'):
@@ -833,33 +887,33 @@ class MultiNetperf:
                 self.wait_all()
                 all_instances.extend(self.instances)
             self.instances = all_instances
-            self.print_summary()
-            if aggregate:
-                aggregated = self.aggregate_results()
-                self.print_aggregated_results(aggregated)
-            if export:
-                self.export_results(export)
-            successful = sum(1 for i in self.instances if i.is_success())
-            return successful == len(self.instances)
-
-        self.create_instances()
-        self.start_all()
-
-        if not self.interrupted:
+        else:
+            self.create_instances()
+            self.start_all()
+            if self.interrupted:
+                return False
             self.wait_all()
-            self.print_summary()
 
-            if aggregate:
-                aggregated = self.aggregate_results()
-                self.print_aggregated_results(aggregated)
+        post_dmesg, post_stats = self._capture_kmsg_and_stats()
+        if self.check_kmsg:
+            new_lines = post_dmesg[len(pre_dmesg):] if len(post_dmesg) >= len(pre_dmesg) else post_dmesg[-40:]
+            matches = scan_kmsg_events('\n'.join(new_lines))
+            self.kmsg_events = [{'code': m.code, 'category': m.category, 'line': m.line} for m in matches]
+            self.counter_deltas = compute_counter_deltas(pre_stats, post_stats)
+            if self.kmsg_events:
+                print("\n[FAULT GATE] Unexpected kernel/hardware events detected in dmesg:", file=sys.stderr)
+                for ev in self.kmsg_events:
+                    print(f"  [{ev['code']}] ({ev['category']}): {ev['line']}", file=sys.stderr)
 
-            if export:
-                self.export_results(export)
+        self.print_summary()
+        if aggregate:
+            aggregated = self.aggregate_results()
+            self.print_aggregated_results(aggregated)
+        if export:
+            self.export_results(export)
 
-            successful = sum(1 for i in self.instances if i.is_success())
-            return successful == len(self.instances)
-
-        return False
+        successful = sum(1 for i in self.instances if i.is_success())
+        return successful == len(self.instances) and (not self.check_kmsg or len(self.kmsg_events) == 0)
 
 
 def find_netperf() -> str:
@@ -955,6 +1009,8 @@ Examples:
                         help='Do not print aggregated results')
     parser.add_argument('--export', metavar='FILE',
                         help='Export results to JSON file')
+    parser.add_argument('--check-kmsg', action='store_true',
+                        help='Scan dmesg -T and ethtool -S before/after test for U1-U13 hardware/driver faults')
 
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose output')
@@ -993,6 +1049,7 @@ Examples:
         lp_start_cpu=args.lp_start_cpu,
         topology_snapshot=args.topology_snapshot,
         lp_topology_snapshot=args.lp_topology_snapshot,
+        check_kmsg=args.check_kmsg,
     )
 
     success = multi.run(

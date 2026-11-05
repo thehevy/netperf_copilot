@@ -46,7 +46,7 @@ fi
 
 # Test 2: Basic OMNI test
 echo -e "\n${YELLOW}Test 2: Basic OMNI TCP Send${NC}"
-if timeout 15 $NETPERF -H $SERVER -- -d send -l 10 > "$RESULTS_DIR/test2.txt" 2>&1; then
+if timeout 15 $NETPERF -H $SERVER -M -l 10 -- -d send -k > "$RESULTS_DIR/test2.txt" 2>&1; then
     if grep -q "THROUGHPUT=" "$RESULTS_DIR/test2.txt"; then
         TP=$(grep "THROUGHPUT=" "$RESULTS_DIR/test2.txt" | head -1 | sed 's/.*THROUGHPUT=//; s/ .*//')
         test_result 0 "Basic test OK (Throughput: $TP Mbps)"
@@ -59,8 +59,8 @@ fi
 
 # Test 3: netperf-multi
 echo -e "\n${YELLOW}Test 3: netperf-multi (4 parallel instances)${NC}"
-if timeout 30 $TOOLS_DIR/netperf-multi -n 4 -H $SERVER --netperf $NETPERF -- \
-    -d send -l 10 > "$RESULTS_DIR/test3.txt" 2>&1; then
+if timeout 30 $TOOLS_DIR/netperf-multi -n 4 -H $SERVER --netperf $NETPERF -l 10 -t OMNI -- \
+    -d send > "$RESULTS_DIR/test3.txt" 2>&1; then
     if grep -q "Successful:" "$RESULTS_DIR/test3.txt"; then
         SUCC=$(grep "Successful:" "$RESULTS_DIR/test3.txt" | awk '{print $2}')
         test_result 0 "Parallel execution OK ($SUCC/4 successful)"
@@ -75,7 +75,7 @@ fi
 echo -e "\n${YELLOW}Test 4: netperf_stats.py (Statistical Analysis)${NC}"
 seq 9000 100 9900 > "$RESULTS_DIR/test4-data.txt"
 if python3 $TOOLS_DIR/netperf_stats.py "$RESULTS_DIR/test4-data.txt" > "$RESULTS_DIR/test4.txt" 2>&1; then
-    if grep -q "Sample size:" "$RESULTS_DIR/test4.txt"; then
+    if grep -q "Count:" "$RESULTS_DIR/test4.txt"; then
         test_result 0 "Statistical analysis OK"
     else
         test_result 1 "Incomplete statistics output"
@@ -88,8 +88,8 @@ fi
 echo -e "\n${YELLOW}Test 5: netperf-profile (Baseline profile dry-run)${NC}"
 if timeout 20 $TOOLS_DIR/netperf-profile -p baseline -H $SERVER --netperf $NETPERF \
     --dry-run > "$RESULTS_DIR/test5.txt" 2>&1; then
-    if grep -q "Would execute:" "$RESULTS_DIR/test5.txt"; then
-        NUM=$(grep -c "Would execute:" "$RESULTS_DIR/test5.txt")
+    if grep -q "Command:" "$RESULTS_DIR/test5.txt"; then
+        NUM=$(grep -c "Command:" "$RESULTS_DIR/test5.txt")
         test_result 0 "Profile validation OK ($NUM tests)"
     else
         test_result 1 "Profile validation failed"
@@ -116,7 +116,7 @@ fi
 
 # Test 7: KEYVAL output format
 echo -e "\n${YELLOW}Test 7: KEYVAL Output Format${NC}"
-if timeout 15 $NETPERF -H $SERVER -- -d send -l 10 -k THROUGHPUT,LOCAL_CPU_UTIL \
+if timeout 15 $NETPERF -H $SERVER -M -l 10 -- -d send -k THROUGHPUT,LOCAL_CPU_UTIL \
     > "$RESULTS_DIR/test7.txt" 2>&1; then
     if grep -q "THROUGHPUT=" "$RESULTS_DIR/test7.txt"; then
         test_result 0 "KEYVAL format OK"
@@ -129,7 +129,7 @@ fi
 
 # Test 8: Request-Response pattern
 echo -e "\n${YELLOW}Test 8: Request-Response (RR) Pattern${NC}"
-if timeout 15 $NETPERF -H $SERVER -- -d rr -l 10 > "$RESULTS_DIR/test8.txt" 2>&1; then
+if timeout 15 $NETPERF -H $SERVER -M -l 10 -- -d rr > "$RESULTS_DIR/test8.txt" 2>&1; then
     if grep -qE "TRANSACTION_RATE=|MEAN_LATENCY=|Latency|Transaction Rate" "$RESULTS_DIR/test8.txt"; then
         test_result 0 "RR pattern OK"
     else
@@ -141,7 +141,7 @@ fi
 
 # Test 9: UDP traffic
 echo -e "\n${YELLOW}Test 9: UDP Traffic${NC}"
-if timeout 15 $NETPERF -H $SERVER -- -d send -T udp -l 10 > "$RESULTS_DIR/test9.txt" 2>&1; then
+if timeout 15 $NETPERF -H $SERVER -M -l 10 -- -d send -T udp -k > "$RESULTS_DIR/test9.txt" 2>&1; then
     if grep -q "THROUGHPUT=" "$RESULTS_DIR/test9.txt"; then
         test_result 0 "UDP test OK"
     else
@@ -153,7 +153,7 @@ fi
 
 # Test 10: Multiple output selectors
 echo -e "\n${YELLOW}Test 10: Multiple Output Selectors${NC}"
-if timeout 15 $NETPERF -H $SERVER -- -d send -l 10 -k THROUGHPUT,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL \
+if timeout 15 $NETPERF -H $SERVER -M -l 10 -- -d send -k THROUGHPUT,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL \
     > "$RESULTS_DIR/test10.txt" 2>&1; then
     if grep -q "THROUGHPUT=" "$RESULTS_DIR/test10.txt" && \
        grep -q "LOCAL_CPU_UTIL=" "$RESULTS_DIR/test10.txt"; then

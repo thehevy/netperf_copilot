@@ -234,14 +234,43 @@ class HostInventory:
     def __init__(self, hosts: List[RemoteHost]):
         self.hosts = hosts
 
+    @staticmethod
+    def _parse_hosts_yaml_fallback(content: str) -> Dict[str, Any]:
+        """Stdlib YAML parser fallback for hosts.yaml when PyYAML is not installed."""
+        hosts_list: List[Dict[str, Any]] = []
+        current_host: Optional[Dict[str, Any]] = None
+        for raw_line in content.splitlines():
+            line = raw_line.split('#', 1)[0].strip()
+            if not line or line == 'hosts:':
+                continue
+            if line.startswith('- '):
+                if current_host:
+                    hosts_list.append(current_host)
+                current_host = {}
+                line = line[2:].strip()
+            if current_host is not None and ':' in line:
+                k, v = line.split(':', 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k == 'ssh_port' and v.isdigit():
+                    current_host[k] = int(v)
+                else:
+                    current_host[k] = v
+        if current_host:
+            hosts_list.append(current_host)
+        return {'hosts': hosts_list}
+
     @classmethod
     def from_yaml(cls, filepath: Path):
         """Load inventory from YAML file"""
-        if not HAS_YAML:
-            raise ImportError("PyYAML required for YAML inventory files")
-
-        with open(filepath, 'r') as f:
-            data = yaml.safe_load(f)
+        content = Path(filepath).read_text(encoding='utf-8')
+        if HAS_YAML:
+            data = yaml.safe_load(content) or {}
+        else:
+            try:
+                data = json.loads(content)
+            except json.JSONDecodeError:
+                data = cls._parse_hosts_yaml_fallback(content)
 
         hosts = []
         for host_data in data.get('hosts', []):
@@ -250,7 +279,7 @@ class HostInventory:
                 address=host_data['address'],
                 role=host_data.get('role', 'both'),
                 ssh_user=host_data.get('ssh_user'),
-                ssh_port=host_data.get('ssh_port', 22),
+                ssh_port=int(host_data.get('ssh_port', 22)),
                 ssh_key=host_data.get('ssh_key')
             )
             hosts.append(host)
@@ -374,12 +403,22 @@ class RemoteOrchestrator:
                     count=count,
                 )
                 status = mgr.start_pool(pool)
-                success = status.get("running_count", 0) > 0
+                planned_cnt = len(pool.core_to_port)
+                if isinstance(status, tuple):
+                    success, msg = status
+                    running_cnt = planned_cnt if success else 0
+                elif isinstance(status, dict):
+                    running_cnt = status.get("running_count", 0)
+                    planned_cnt = status.get("planned_count", planned_cnt)
+                    success = running_cnt > 0
+                    msg = f"{running_cnt}/{planned_cnt} per-core netservers started"
+                else:
+                    success = bool(status)
+                    running_cnt = planned_cnt if success else 0
+                    msg = f"{running_cnt}/{planned_cnt} per-core netservers started"
                 results[host.name] = success
                 print(
-                    f"  {'✓' if success else '✗'} {host.name}: "
-                    f"{status.get('running_count', 0)}/{status.get('planned_count', 0)} "
-                    f"per-core netservers started"
+                    f"  {'✓' if success else '✗'} {host.name}: {msg}"
                 )
             return results
 

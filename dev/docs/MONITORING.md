@@ -280,14 +280,14 @@ export TERM=xterm-256color
 
 **Problem**: Monitor shows progress bar but no metrics update.
 
-**Solution**: Ensure `--demo-mode` is passed to netperf:
+**Solution**: Ensure `-M -D 0.5` is passed to netperf:
 
 ```bash
-# The monitor automatically adds --demo-mode
-./dev/tools/netperf-monitor -H server -- -d send -l 60
+# The monitor automatically adds -M -D 0.5
+./dev/tools/netperf-monitor -H server -l 60 -- -d send
 
-# But if calling netperf directly, add it manually
-netperf -H server --demo-mode -- -d send -l 60
+# If calling netperf directly, pass -M -D 0.5 before --
+netperf -H server -M -D 0.5 -l 60 -- -d send
 ```
 
 ### Display Flickers

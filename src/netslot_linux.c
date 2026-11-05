@@ -29,7 +29,7 @@
 #include <unistd.h>
 
 static char interface_match[32];
-static char interface_address[13];
+static char interface_address[32];
 static char interface_slot[64]="not found";
 
 static int
@@ -177,7 +177,7 @@ find_interface_slot(char *interface_name) {
   int ret;
   int numa_node = -1;
   char link_speed[32];
-  char link_width[16];
+  char link_width[32];
   char devlink[256];
   char syspath[160];
   ssize_t linklen;

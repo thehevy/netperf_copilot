@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -84,14 +85,18 @@ class QualificationCatalog:
                         "netperf-multi",
                         "-H", self.host,
                         "-i", self.interface,
+                        "-t", "OMNI",
                         "--direction", direction,
                         "-n", str(streams),
                         "-l", str(self.duration),
                         "--mtu", str(mtu),
+                        "--affinity",
                         "--layout", layout,
                         "--per-core-netserver",
                         "--base-port", str(self.base_port),
+                        "--",
                         "-m", "65536" if mtu >= 9000 else "16384",
+                        "-D",
                     ]
                     cases.append(
                         CatalogTestCase(
@@ -267,20 +272,73 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.output_dir:
         out_dir = Path(args.output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
-        rows = [
-            {
+        env_info = {
+            "cpu_model": catalog.topology.model_name,
+            "arch_type": catalog.topology.arch_type,
+            "interface": args.interface,
+        }
+        rows: List[Dict[str, Any]] = []
+        result_records: List[Dict[str, Any]] = []
+
+        for c in cases:
+            tput_gbps = 0.0
+            tx_gbps = 0.0
+            rx_gbps = 0.0
+            cv_pct = 0.0
+            verdict = "SKIP" if args.dry_run else "PASS"
+
+            if not args.dry_run:
+                try:
+                    proc = subprocess.run(
+                        c.command,
+                        capture_output=True,
+                        text=True,
+                        timeout=max(60, args.duration * 2 + 30),
+                    )
+                    if proc.returncode != 0:
+                        verdict = "FAIL"
+                except Exception:
+                    verdict = "SKIP"
+
+            row = {
                 "test_case_id": c.test_case_id,
                 "direction": c.direction,
                 "streams": c.streams,
                 "mtu": c.mtu,
-                "throughput_gbps": 0.0,
-                "tx_throughput_gbps": 0.0,
-                "rx_throughput_gbps": 0.0,
-                "cv_pct": 0.0,
-                "verdict": "SKIP" if args.dry_run else "PASS",
+                "throughput_gbps": tput_gbps,
+                "tx_throughput_gbps": tx_gbps,
+                "rx_throughput_gbps": rx_gbps,
+                "cv_pct": cv_pct,
+                "verdict": verdict,
             }
-            for c in cases
-        ]
+            rows.append(row)
+            rec = AIValidationReporter.build_result_json(
+                test_case_id=c.test_case_id,
+                suite_name=args.suite,
+                metrics={
+                    "throughput_gbps": tput_gbps,
+                    "tx_throughput_gbps": tx_gbps,
+                    "rx_throughput_gbps": rx_gbps,
+                    "cv_pct": cv_pct,
+                },
+                environment=env_info,
+                duration_sec=float(args.duration),
+            )
+            if args.dry_run or verdict == "SKIP":
+                rec["verdict"] = "SKIP"
+            result_records.append(rec)
+
+        (out_dir / "result.json").write_text(
+            json.dumps(
+                {
+                    "suite_name": args.suite,
+                    "environment": env_info,
+                    "results": result_records,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
         (out_dir / "summary.csv").write_text(
             AIValidationReporter.render_summary_csv(rows), encoding="utf-8"
         )
@@ -288,11 +346,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             AIValidationReporter.render_dashboard_markdown(
                 args.suite,
                 rows,
-                environment={
-                    "cpu_model": catalog.topology.cpu_model,
-                    "arch_type": catalog.topology.arch_type,
-                    "interface": args.interface,
-                },
+                environment=env_info,
             ),
             encoding="utf-8",
         )
