@@ -1,5 +1,5 @@
 name: e835-200g-gnr-pcore
-description: Intel E835 200GbE Qualification Suite for Xeon 6 Granite Rapids P-Core (6960P/6980P)
+description: Intel E835 200GbE Qualification Suite for Xeon 6 Granite Rapids P-Core
 version: "2.0.0"
 category: 200g-qualification
 

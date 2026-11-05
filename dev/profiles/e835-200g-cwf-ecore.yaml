@@ -1,5 +1,5 @@
 name: e835-200g-cwf-ecore
-description: Intel E835 200GbE Qualification Suite for Xeon 6 Clearwater Forest / Sierra Forest E-Core (6980E+)
+description: Intel E835 200GbE Qualification Suite for Xeon 6 Clearwater Forest / Sierra Forest E-Core
 version: "2.0.0"
 category: 200g-qualification
 

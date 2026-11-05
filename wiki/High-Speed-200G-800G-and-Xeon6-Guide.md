@@ -6,12 +6,12 @@ Achieving deterministic line rate at **200GbE (189–192 Gbps TCP goodput)**, **
 
 ## 1. Intel Xeon 6 P-Core vs. E-Core Topology Strategies
 
-`netperf_topology.py` automatically detects whether the host CPU is an **Intel Xeon 6 P-Core** (Granite Rapids `6980P`/`6960P`, or Sapphire/Emerald Rapids) or an **Intel Xeon 6 E-Core** (Clearwater Forest `6980E+` 288-core / Sierra Forest `6780E` 144-core) and applies the optimal core layout:
+`netperf_topology.py` automatically detects whether the host CPU is an **Intel Xeon 6 P-Core** (Granite Rapids `Xeon P-Core`/`Xeon P-Core`, or Sapphire/Emerald Rapids) or an **Intel Xeon 6 E-Core** (Clearwater Forest `Xeon E-Core` 288-core / Sierra Forest `6780E` 144-core) and applies the optimal core layout:
 
 | Platform / Microarchitecture | Core Architecture | Optimal Layout Strategy | Optimal `ice` TX Ring | Stream Sweet Spot (200GbE) |
 | :--- | :--- | :--- | :---: | :---: |
-| **Xeon 6 Clearwater Forest / Sierra Forest** (`6980E+`, `6780E`) | E-Core (No SMT, 4 cores share 4 MB L2 module) | `spread_l2` (1–2 cores per 4-core L2 module before filling siblings) | **512** (`rx 4096`) | **16 streams** (~35 Gbps/flow, ~189.4 Gbps aggregate) |
-| **Xeon 6 Granite Rapids** (`6980P`, `6960P`) | P-Core (2-way SMT, dedicated 2 MB L2 per core) | `spread_step2` (physical cores only, filtering SMT siblings >= 128) | **2048** (`rx 4096`) | **8–16 streams** (~52 Gbps/flow, ~191.2 Gbps aggregate) |
+| **Xeon 6 Clearwater Forest / Sierra Forest** (`Xeon E-Core`, `6780E`) | E-Core (No SMT, 4 cores share 4 MB L2 module) | `spread_l2` (1–2 cores per 4-core L2 module before filling siblings) | **512** (`rx 4096`) | **16 streams** (~35 Gbps/flow, ~189.4 Gbps aggregate) |
+| **Xeon 6 Granite Rapids** (`Xeon P-Core`, `Xeon P-Core`) | P-Core (2-way SMT, dedicated 2 MB L2 per core) | `spread_step2` (physical cores only, filtering SMT siblings >= 128) | **2048** (`rx 4096`) | **8–16 streams** (~52 Gbps/flow, ~191.2 Gbps aggregate) |
 
 ### Why E-Core Needs `tx_ring=512` and `spread_l2`
 - **L2 Cache Contention**: On Clearwater Forest / Sierra Forest, 4 consecutive physical cores (`[0,1,2,3]`, `[4,5,6,7]`, ...) share a single L2 cache and L2-to-mesh interface. Packing 8 streams onto cores `0..7` saturates two L2 modules while leaving 34 other L2 modules idle. `spread_l2` round-robins across distinct 4-core L2 modules first (`0, 4, 8, 12, ...`).

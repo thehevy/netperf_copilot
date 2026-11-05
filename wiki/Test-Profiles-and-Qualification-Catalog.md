@@ -17,8 +17,8 @@ Run any profile with:
 
 | Profile Name | Target Scenario | Streams & Direction | Key Settings |
 | :--- | :--- | :--- | :--- |
-| **`e835-200g-cwf-ecore`** | Intel E835 200GbE on Xeon 6 Clearwater Forest / Sierra Forest E-Core (`6980E+`) | 1, 8, 16, 32 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_l2`, `per_core_netserver: true`, `tx_ring: 512`, `message_size: 65536` |
-| **`e835-200g-gnr-pcore`** | Intel E835 200GbE on Xeon 6 Granite Rapids P-Core (`6980P`/`6960P`) | 1, 8, 16 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_step2`, `per_core_netserver: true`, `tx_ring: 2048`, `nodelay: true` |
+| **`e835-200g-cwf-ecore`** | Intel E835 200GbE on Xeon 6 Clearwater Forest / Sierra Forest E-Core (`Xeon E-Core`) | 1, 8, 16, 32 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_l2`, `per_core_netserver: true`, `tx_ring: 512`, `message_size: 65536` |
+| **`e835-200g-gnr-pcore`** | Intel E835 200GbE on Xeon 6 Granite Rapids P-Core (`Xeon P-Core`/`Xeon P-Core`) | 1, 8, 16 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_step2`, `per_core_netserver: true`, `tx_ring: 2048`, `nodelay: true` |
 | **`e835-3x200g-multiport`** | Aggregate 3x200GbE (600GbE Total) Multi-NIC / Multi-NUMA | 48 TX (16/NIC), 48 RX (16/NIC), 24 BX | `interfaces: "ens7np0,ens23np0,ens27np0"`, `layout: spread_l2`, `per_core_netserver: true` |
 | **`e835-mtu1500-smallpkt`** | Standard MTU 1500 Small-Packet PPS & Tail-Latency RR | 1B TCP_RR, 16-flow 64B TCP_RR, 16-flow 16KB TCP_STREAM, 8-flow 64B UDP_STREAM | `mtu: 1500`, `layout: spread_step2`, `per_core_netserver: true`, `nodelay: true` |
 | **`ocp-8x25g-lag-qos`** | OCP 8x25GbE Breakout & Active-Active LACP LAG + 4-TC DSCP QoS | 16 TX, 8 BX, 1 EF low-latency TCP_RR | `dscp: "EF,CS3,AF21,CS0"`, `layout: spread_step2`, `per_core_netserver: true` |

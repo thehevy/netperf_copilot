@@ -51,7 +51,7 @@ class AntiAffinityRule:
     remediation: str
 
 
-# 24 Feature Anti-Affinity Rules from E835 Linux Qualification Plan (Section 4)
+# 24 Feature Anti-Affinity Rules for High-Speed 100G-800G Ethernet NICs
 ANTI_AFFINITY_RULES: List[AntiAffinityRule] = [
     AntiAffinityRule(
         "AA-001", "adq", "rocev2", "FAIL",

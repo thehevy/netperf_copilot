@@ -1,21 +1,21 @@
 # Multi-Host Validation Report
 
 **Date**: January 31, 2026  
-**Test Environment**: Production hardware (Intel Granite Rapids servers)  
+**Test Environment**: Production multi-core server hardware  
 **Version**: netperf v2.7.1.hevy with backwards compatibility
 
 ## Test Infrastructure
 
-### Server (nd-gnr-gb-1)
+### Server (server-node-1)
 
-- SSH Address: 10.166.84.106
-- Test Interface: enp167s0f0np0 (192.168.10.1/24)
+- SSH Address: 192.0.2.10
+- Test Interface: eth0 (192.168.10.1/24)
 - Role: netserver daemon
 
-### Client (nd-gnr-gb-2)
+### Client (client-node-2)
 
-- SSH Address: 10.166.84.107
-- Test Interface: enp167s0f0np0 (192.168.10.2/24)
+- SSH Address: 192.0.2.11
+- Test Interface: eth0 (192.168.10.2/24)
 - Role: netperf client
 
 ### Network
@@ -100,7 +100,7 @@ bytes  Bytes  bytes    bytes   secs.    per sec
   "metadata": {
     "netperf_version": "2.7.1.hevy",
     "timestamp": "2026-01-31T19:33:46Z",
-    "hostname": "nd-gnr-gb-2",
+    "hostname": "client-node-2",
     "platform": "Linux 6.12.0-124.28.1.el10_1.x86_64 x86_64"
   },
   "results": {
@@ -182,6 +182,6 @@ The implementation is ready for production use.
 ---
 
 **Validated by**: Multi-host integration tests  
-**Hardware**: Intel Granite Rapids (nd-gnr-gb-1, nd-gnr-gb-2)  
+**Hardware**: Multi-Core Server Cluster (server-node-1, client-node-2)  
 **Network**: Direct 100GbE connection  
 **Date**: January 31, 2026
