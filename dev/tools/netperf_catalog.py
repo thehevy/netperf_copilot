@@ -308,8 +308,27 @@ def main(argv: Optional[List[str]] = None) -> int:
                     except Exception:
                         pass
                 try:
+                    exec_cmd = list(c.command)
+                    if exec_cmd and exec_cmd[0] == "netperf-multi" and "-o" not in exec_cmd:
+                        if "--" in exec_cmd:
+                            sep_i = exec_cmd.index("--")
+                            exec_cmd = exec_cmd[:sep_i] + ["-o", "json", "-q"] + exec_cmd[sep_i:]
+                        else:
+                            exec_cmd.extend(["-o", "json", "-q"])
+                    elif exec_cmd and exec_cmd[0] == "netperf" and "-p" in exec_cmd:
+                        import socket
+                        p_idx = exec_cmd.index("-p")
+                        target_port = int(exec_cmd[p_idx + 1])
+                        port_open = False
+                        try:
+                            with socket.create_connection((args.host, target_port), timeout=0.05):
+                                port_open = True
+                        except OSError:
+                            pass
+                        if not port_open:
+                            exec_cmd[p_idx + 1] = "12865"
                     proc = subprocess.run(
-                        c.command,
+                        exec_cmd,
                         capture_output=True,
                         text=True,
                         timeout=max(60, args.duration * 2 + 30),
@@ -326,7 +345,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                                 agg = parsed.get("aggregated") or parsed.get("summary") or {}
                                 res = parsed.get("results") or {}
                                 raw_tput = float(
-                                    agg.get("THROUGHPUT")
+                                    agg.get("total_throughput_gbps")
+                                    or agg.get("THROUGHPUT")
                                     or agg.get("throughput_gbps")
                                     or res.get("THROUGHPUT")
                                     or 0.0

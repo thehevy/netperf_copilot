@@ -609,6 +609,8 @@ class TestNetperfModernization(unittest.TestCase):
         self.assertIn("/opt/netperf/netserver -p", spec.instances[0].command)
         rc = ns_main(["--action", "plan", "-n", "4", "--netserver", "/opt/netperf/netserver"])
         self.assertEqual(rc, 0)
+        self.assertIn('strncasecmp(tmpval, "0x", 2) == 0', omni_c)
+        self.assertIn("print_headers && (netperf_output_mode != JSON)", omni_c)
 
 
 if __name__ == "__main__":

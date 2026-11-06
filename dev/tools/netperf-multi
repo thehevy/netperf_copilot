@@ -570,6 +570,12 @@ class MultiNetperf:
                     ]
                     if not avail_lp:
                         avail_lp = list(lp_node_pool.app_cores) or list(lp_node_pool.physical_cores)
+                    if self.per_core_netserver and not self.lp_topology_snapshot and not self.netserver_map_file:
+                        open_lp = self._probe_open_lp_cores(
+                            target_host, list(lp_node_pool.physical_cores), self.base_port, used_lp_cores_by_node[numa_node], lp_min
+                        )
+                        if open_lp:
+                            avail_lp = open_lp
                     lp_strategy = TopologyAnalyzer.select_layout_strategy(
                         self.lp_topo, self.layout, flows_per_port * len(roles), self.mtu
                     )
@@ -642,11 +648,30 @@ class MultiNetperf:
 
                     inst_id += 1
 
+    @staticmethod
+    def _probe_open_lp_cores(
+        host: str, candidate_cores: List[int], base_port: int, used_cores: set, lp_min: Optional[int] = None
+    ) -> List[int]:
+        """Probe which candidate physical cores on target_host have an active per-core netserver listener."""
+        import socket
+        open_cores: List[int] = []
+        for c in candidate_cores:
+            if c in used_cores or (lp_min is not None and c < lp_min):
+                continue
+            port = TopologyAnalyzer.get_netserver_port_for_core(c, base_port)
+            try:
+                with socket.create_connection((host, port), timeout=0.04):
+                    open_cores.append(c)
+            except OSError:
+                pass
+        return open_cores
+
     def start_all(self) -> None:
         """Start all created instances."""
         total = len(self.instances)
-        print(f"Starting {total} parallel netperf stream(s) across {len(self.hosts)} target(s) "
-              f"[direction={self.direction.upper()}]...")
+        if self.output_format != 'json':
+            print(f"Starting {total} parallel netperf stream(s) across {len(self.hosts)} target(s) "
+                  f"[direction={self.direction.upper()}]...")
 
         start_time = time.time()
         for i, instance in enumerate(self.instances):
@@ -841,10 +866,10 @@ class MultiNetperf:
                 pass
         return dmesg_lines, stats_totals
 
-    def export_results(self, output_file: str) -> None:
+    def build_output_payload(self, aggregate: bool = True) -> Dict[str, Any]:
         results = self.get_successful_results()
-        aggregated = self.aggregate_results()
-        output = {
+        aggregated = self.aggregate_results() if aggregate else None
+        return {
             'test_config': {
                 'host': self.host,
                 'hosts': self.hosts,
@@ -869,9 +894,13 @@ class MultiNetperf:
             },
             'counter_deltas': self.counter_deltas,
         }
+
+    def export_results(self, output_file: str) -> None:
+        output = self.build_output_payload(aggregate=True)
         with open(output_file, 'w') as f:
             json.dump(output, f, indent=2)
-        print(f"Results exported to {output_file}")
+        if self.output_format != 'json':
+            print(f"Results exported to {output_file}")
 
     def run(self, aggregate: bool = True, export: Optional[str] = None) -> bool:
         """Execute the multi-instance test (supporting sequential BX when direction == 'bx-seq')."""
@@ -905,10 +934,14 @@ class MultiNetperf:
                 for ev in self.kmsg_events:
                     print(f"  [{ev['code']}] ({ev['category']}): {ev['line']}", file=sys.stderr)
 
-        self.print_summary()
-        if aggregate:
-            aggregated = self.aggregate_results()
-            self.print_aggregated_results(aggregated)
+        if self.output_format == 'json':
+            payload = self.build_output_payload(aggregate=aggregate)
+            print(json.dumps(payload, indent=2))
+        else:
+            self.print_summary()
+            if aggregate:
+                aggregated = self.aggregate_results()
+                self.print_aggregated_results(aggregated)
         if export:
             self.export_results(export)
 
@@ -1014,6 +1047,8 @@ Examples:
     parser.add_argument('--check-kmsg', action='store_true',
                         help='Scan dmesg -T and ethtool -S before/after test for U1-U13 hardware/driver faults')
 
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Suppress non-JSON banner output')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose output')
     parser.add_argument('--version', action='version', version='%(prog)s 2.0.0')

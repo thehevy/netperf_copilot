@@ -279,6 +279,14 @@ find_interface_ids(char *interface_name, int *vendor, int *device, int *sub_vend
 #else /* !defined(__linux) */
 #include <string.h>
 
+void
+find_interface_pcie_info(char *interface_name, int *numa_node, char *link_speed, char *link_width, int len) {
+  (void)interface_name;
+  if (numa_node) *numa_node = -1;
+  if (link_speed && len > 0) { strncpy(link_speed, "N/A", (size_t)len); link_speed[len - 1] = 0; }
+  if (link_width && len > 0) { strncpy(link_width, "N/A", (size_t)len); link_width[len - 1] = 0; }
+}
+
 char *
 find_interface_slot(char *interface_name) {
   (void)interface_name;

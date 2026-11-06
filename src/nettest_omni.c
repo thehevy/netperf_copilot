@@ -2925,6 +2925,9 @@ json_escape_string(char *dest, size_t dest_size, const char *src)
 
 #if defined(__linux)
 extern void find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_ring, int *combined_channels);
+extern void find_interface_pcie_info(char *interface_name, int *numa_node, char *link_speed, char *link_width, int len);
+extern char *find_interface_slot(char *interface_name);
+extern void find_system_info(char **system_model, char **cpu_model, int *cpu_frequency);
 #endif
 
 void
@@ -2973,14 +2976,50 @@ print_omni_json()
 
 #if defined(__linux)
   {
+    char *sys_model = NULL;
+    char *cpu_model = NULL;
+    int cpu_freq_mhz = -1;
     char *env_if = getenv("NETPERF_INTERFACE");
+    find_system_info(&sys_model, &cpu_model, &cpu_freq_mhz);
+    if (sys_model) {
+      json_escape_string(escaped, sizeof(escaped), sys_model);
+      fprintf(where, ",\n    \"system_model\": \"%s\"", escaped);
+      free(sys_model);
+    }
+    if (cpu_model) {
+      json_escape_string(escaped, sizeof(escaped), cpu_model);
+      fprintf(where, ",\n    \"cpu_model\": \"%s\"", escaped);
+      free(cpu_model);
+    }
+    if (cpu_freq_mhz > 0) {
+      fprintf(where, ",\n    \"cpu_frequency_mhz\": %d", cpu_freq_mhz);
+    }
     if (env_if && env_if[0] != '\0') {
       int link_mbps = -1, rx_r = -1, tx_r = -1, comb_ch = -1;
+      int nic_numa = -1;
+      char pcie_speed[32], pcie_width[32];
+      char *slot_str = NULL;
       find_driver_ext_info(env_if, &link_mbps, &rx_r, &tx_r, &comb_ch);
       if (link_mbps > 0) fprintf(where, ",\n    \"nic_link_speed_mbps\": %d", link_mbps);
       if (rx_r > 0) fprintf(where, ",\n    \"nic_rx_ring\": %d", rx_r);
       if (tx_r > 0) fprintf(where, ",\n    \"nic_tx_ring\": %d", tx_r);
       if (comb_ch > 0) fprintf(where, ",\n    \"nic_combined_channels\": %d", comb_ch);
+      find_interface_pcie_info(env_if, &nic_numa, pcie_speed, pcie_width, sizeof(pcie_speed));
+      if (nic_numa >= 0) fprintf(where, ",\n    \"nic_numa_node\": %d", nic_numa);
+      if (strcmp(pcie_speed, "N/A") != 0) {
+        json_escape_string(escaped, sizeof(escaped), pcie_speed);
+        fprintf(where, ",\n    \"nic_pcie_speed\": \"%s\"", escaped);
+      }
+      if (strcmp(pcie_width, "N/A") != 0) {
+        json_escape_string(escaped, sizeof(escaped), pcie_width);
+        fprintf(where, ",\n    \"nic_pcie_width\": \"x%s\"", escaped);
+      }
+      slot_str = find_interface_slot(env_if);
+      if (slot_str) {
+        json_escape_string(escaped, sizeof(escaped), slot_str);
+        fprintf(where, ",\n    \"nic_slot\": \"%s\"", escaped);
+        free(slot_str);
+      }
     }
   }
 #endif
@@ -3039,6 +3078,12 @@ print_omni_json()
 	    fprintf(where,
 		    "    \"%s\": null",
 		    netperf_output_enum_to_str(output_list[i][j]));
+	  } else if (strncasecmp(tmpval, "0x", 2) == 0) {
+	    json_escape_string(escaped, sizeof(escaped), tmpval);
+	    fprintf(where,
+		    "    \"%s\": \"%s\"",
+		    netperf_output_enum_to_str(output_list[i][j]),
+		    escaped);
 	  } else {
 	    fprintf(where,
 		    "    \"%s\": %s",
@@ -4302,7 +4347,7 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 		     protocol,
 		     0);
 
-  if ( print_headers ) {
+  if ( print_headers && (netperf_output_mode != JSON) ) {
     print_top_test_header(header_str,local_res,remote_res);
   }
 

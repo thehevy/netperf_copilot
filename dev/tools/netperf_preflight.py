@@ -534,10 +534,12 @@ class PreflightChecker:
         return findings
 
     @staticmethod
-    def evaluate_warmup_stability(samples_gbps: List[float], max_cv_pct: float = 5.0) -> CheckFinding:
+    def evaluate_warmup_stability(
+        samples_gbps: List[float], max_cv_pct: float = 5.0, min_mean_gbps: float = 0.0
+    ) -> CheckFinding:
         """
         Evaluate the 5-iteration 10s single-flow LP Warmup & Sanity Gate.
-        Flags FAIL if mean throughput is 0 or CV >= max_cv_pct.
+        Flags FAIL if mean throughput is 0, below min_mean_gbps, or CV >= max_cv_pct.
         """
         if not samples_gbps:
             return CheckFinding(
@@ -555,6 +557,13 @@ class PreflightChecker:
         variance = sum((x - mean) ** 2 for x in samples_gbps) / (n - 1 if n > 1 else 1)
         stddev = variance ** 0.5
         cv_pct = (stddev / mean) * 100.0
+        if min_mean_gbps > 0 and mean < min_mean_gbps:
+            return CheckFinding(
+                "WARMUP-LOW-TPUT", "warmup_gate", "FAIL",
+                f"Warmup gate failed: mean={mean:.2f} Gbps (< {min_mean_gbps:.1f} Gbps), CV={cv_pct:.2f}%",
+                details=f"samples={[round(s, 2) for s in samples_gbps]}",
+                remediation="Verify link speed, MTU, socket buffers, and core affinity.",
+            )
         if cv_pct > max_cv_pct:
             return CheckFinding(
                 "WARMUP-BIMODAL", "warmup_gate", "FAIL",
@@ -768,14 +777,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         for _ in range(args.warmup_runs):
             rc, out, _ = checker._runner([
                 "netperf-multi", "-H", args.host, "-i", args.interface,
-                "-n", str(args.streams), "-l", "5", "-o", "json", "--no-aggregate",
+                "-n", str(args.streams), "-l", "3", "-o", "json", "-q",
             ])
             if rc == 0 and out.strip():
                 try:
-                    data = json.loads(out)
+                    text = out.strip()
+                    j_start = text.find("{")
+                    j_end = text.rfind("}")
+                    data = json.loads(text[j_start : j_end + 1] if j_start >= 0 and j_end > j_start else text)
                     agg = data.get("aggregated", {})
-                    val = float(agg.get("THROUGHPUT", agg.get("throughput", 0.0)))
-                    samples.append(val / 1000.0 if val > 1000.0 else val)
+                    if "total_throughput_gbps" in agg:
+                        samples.append(float(agg["total_throughput_gbps"]))
+                    else:
+                        val = float(agg.get("THROUGHPUT", agg.get("throughput", 0.0)))
+                        samples.append(val / 1000.0 if val > 1000.0 else val)
                 except Exception:
                     pass
         if samples:
