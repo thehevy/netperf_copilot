@@ -189,6 +189,8 @@ struct omni_results_struct {
 
   int32_t    peak_cpu_id;   /* ID of the most utilized CPU */
   float      peak_cpu_util; /* its individual utilization */
+  float      active_cpu_util; /* mean utilization of active CPUs (>= 5%) */
+  int32_t    active_cpu_count; /* count of active CPUs (>= 5%) */
   int32_t    vendor;
   int32_t    device;        /* pci device id of the probable egress
 			       interface */
@@ -197,7 +199,7 @@ struct omni_results_struct {
   int32_t    transport_retrans;
   /* there are 27 ints above here, add another and you need to adjust
      the define below */
-  #define OMNI_RESULTS_CONV_CUTOFF 27
+  #define OMNI_RESULTS_CONV_CUTOFF 29
   char       ifname[16];    /* the probable egress interface */
   char       driver[32];    /* size based on linux/ethtool.h */
   char       version[32];

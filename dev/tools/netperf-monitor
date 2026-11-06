@@ -18,7 +18,7 @@ Features:
 - Multi-test monitoring dashboard
 
 Usage:
-    netperf-monitor -H server -- -d send -l 60
+    netperf-monitor -d 60 -H server -- -d send
     netperf-monitor --follow test.log
     netperf-monitor --dashboard tests.json
     netperf-monitor --export-prometheus :9090
@@ -532,7 +532,7 @@ def main():
         epilog="""
 Examples:
   # Monitor live test
-  %(prog)s -H 192.168.1.10 -- -d send -l 60
+  %(prog)s -d 60 -H 192.168.1.10 -- -d send
   
   # Follow log file
   %(prog)s --follow test.log
@@ -541,7 +541,7 @@ Examples:
   %(prog)s --dashboard tests.json
   
   # With custom netperf path
-  %(prog)s --netperf /usr/local/bin/netperf -H server -- -d send -l 30
+  %(prog)s --netperf /usr/local/bin/netperf -d 30 -H server -- -d send
 
 Output Metrics:
   - Real-time throughput (Mbps)

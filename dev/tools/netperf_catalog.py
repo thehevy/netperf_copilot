@@ -33,6 +33,7 @@ class CatalogTestCase:
     mtu: int
     command: List[str]
     parameters: Dict[str, Any] = field(default_factory=dict)
+    pre_commands: List[List[str]] = field(default_factory=list)
 
 
 class QualificationCatalog:
@@ -124,7 +125,10 @@ class QualificationCatalog:
         irq_core = local_pool.irq_cores[0] if local_pool and local_pool.irq_cores else 2
         l2_sibling = local_pool.irq_cores[1] if local_pool and len(local_pool.irq_cores) > 1 else irq_core + 1
         local_app_core = local_pool.app_cores[0] if local_pool and local_pool.app_cores else 4
-        remote_app_core = remote_pool.app_cores[0] if remote_pool and remote_pool.app_cores else 72
+        if remote_numa == local_numa and local_pool and len(local_pool.app_cores) > 1:
+            remote_app_core = local_pool.app_cores[-1]
+        else:
+            remote_app_core = remote_pool.app_cores[0] if remote_pool and remote_pool.app_cores else 72
 
         scenarios = [
             ("LOC-SAME-CORE", "App pinned to exact Queue-0 IRQ core", irq_core),
@@ -137,7 +141,7 @@ class QualificationCatalog:
             cmd = [
                 "netperf",
                 "-H", self.host,
-                "-p", str(self.base_port),
+                "-p", str(self.base_port + core),
                 "-M",
                 "-l", str(self.duration),
                 "-T", f"{core},{core}",
@@ -194,6 +198,16 @@ class QualificationCatalog:
                         mtu=9000,
                         command=cmd,
                         parameters={"tx_ring": ring, "rx_ring": max(ring, 4096), **c_cfg},
+                        pre_commands=[
+                            ["ethtool", "-G", self.interface, "rx", str(max(ring, 4096)), "tx", str(ring)],
+                            [
+                                "ethtool", "-C", self.interface,
+                                "adaptive-rx", str(c_cfg["adaptive"]),
+                                "adaptive-tx", str(c_cfg["adaptive"]),
+                                "rx-usecs", str(c_cfg["rx_usecs"]),
+                                "tx-usecs", str(c_cfg["tx_usecs"]),
+                            ],
+                        ],
                     )
                 )
         return cases
@@ -249,7 +263,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         description="Structured 200G-800G Qualification Test Catalog & Matrix Generator"
     )
     parser.add_argument(
-        "--suite",
+        "-s", "--suite",
         choices=list(QualificationCatalog.SUITES),
         default="flow-scaling",
         help="Qualification suite to generate/execute",
@@ -288,6 +302,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             verdict = "SKIP" if args.dry_run else "PASS"
 
             if not args.dry_run:
+                for pre_cmd in c.pre_commands:
+                    try:
+                        subprocess.run(pre_cmd, capture_output=True, text=True, timeout=15)
+                    except Exception:
+                        pass
                 try:
                     proc = subprocess.run(
                         c.command,
@@ -297,6 +316,29 @@ def main(argv: Optional[List[str]] = None) -> int:
                     )
                     if proc.returncode != 0:
                         verdict = "FAIL"
+                    elif proc.stdout:
+                        try:
+                            text = proc.stdout.strip()
+                            j_start = text.find("{")
+                            j_end = text.rfind("}")
+                            if j_start >= 0 and j_end > j_start:
+                                parsed = json.loads(text[j_start : j_end + 1])
+                                agg = parsed.get("aggregated") or parsed.get("summary") or {}
+                                res = parsed.get("results") or {}
+                                raw_tput = float(
+                                    agg.get("THROUGHPUT")
+                                    or agg.get("throughput_gbps")
+                                    or res.get("THROUGHPUT")
+                                    or 0.0
+                                )
+                                tput_gbps = raw_tput / 1000.0 if raw_tput > 1000.0 else raw_tput
+                                raw_tx = float(agg.get("tx_throughput_mbps") or agg.get("tx_throughput_gbps") or 0.0)
+                                raw_rx = float(agg.get("rx_throughput_mbps") or agg.get("rx_throughput_gbps") or 0.0)
+                                tx_gbps = (raw_tx / 1000.0 if raw_tx > 1000.0 else raw_tx) or (tput_gbps if c.direction == "tx" else 0.0)
+                                rx_gbps = (raw_rx / 1000.0 if raw_rx > 1000.0 else raw_rx) or (tput_gbps if c.direction == "rx" else 0.0)
+                                cv_pct = float(agg.get("cv_pct", 0.0))
+                        except Exception:
+                            pass
                 except Exception:
                     verdict = "SKIP"
 

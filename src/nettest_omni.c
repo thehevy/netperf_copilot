@@ -582,12 +582,16 @@ enum netperf_output_name {
   LOCAL_CPU_COUNT,
   LOCAL_CPU_PEAK_UTIL,
   LOCAL_CPU_PEAK_ID,
+  LOCAL_CPU_ACTIVE_UTIL,
+  LOCAL_CPU_ACTIVE_COUNT,
   LOCAL_CPU_MODEL,
   LOCAL_CPU_FREQUENCY,
   REMOTE_CPU_BIND,
   REMOTE_CPU_COUNT,
   REMOTE_CPU_PEAK_UTIL,
   REMOTE_CPU_PEAK_ID,
+  REMOTE_CPU_ACTIVE_UTIL,
+  REMOTE_CPU_ACTIVE_COUNT,
   REMOTE_CPU_MODEL,
   REMOTE_CPU_FREQUENCY,
   SOURCE_PORT,
@@ -1212,6 +1216,10 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "LOCAL_CPU_PEAK_UTIL";
   case LOCAL_CPU_PEAK_ID:
     return "LOCAL_CPU_PEAK_ID";
+  case LOCAL_CPU_ACTIVE_UTIL:
+    return "LOCAL_CPU_ACTIVE_UTIL";
+  case LOCAL_CPU_ACTIVE_COUNT:
+    return "LOCAL_CPU_ACTIVE_COUNT";
   case   LOCAL_NODELAY:
     return "LOCAL_NODELAY";
   case   LOCAL_CORK:
@@ -1288,6 +1296,10 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "REMOTE_CPU_PEAK_UTIL";
   case REMOTE_CPU_PEAK_ID:
     return "REMOTE_CPU_PEAK_ID";
+  case REMOTE_CPU_ACTIVE_UTIL:
+    return "REMOTE_CPU_ACTIVE_UTIL";
+  case REMOTE_CPU_ACTIVE_COUNT:
+    return "REMOTE_CPU_ACTIVE_COUNT";
   case   REMOTE_NODELAY:
     return "REMOTE_NODELAY";
   case   REMOTE_CORK:
@@ -2160,6 +2172,13 @@ print_omni_init_list() {
   set_output_elt(LOCAL_CPU_PEAK_ID, "Local", "Peak", "Per CPU", "ID", "%d",
 		 &lib_local_cpu_stats.peak_cpu_id, 1, 0, NETPERF_TYPE_INT32);
 
+  set_output_elt(LOCAL_CPU_ACTIVE_UTIL, "Local", "Active", "CPU", "Util %",
+		 "%.2f", &lib_local_cpu_stats.active_cpu_util, 1, 0,
+                 NETPERF_TYPE_FLOAT);
+
+  set_output_elt(LOCAL_CPU_ACTIVE_COUNT, "Local", "Active", "CPU", "Count", "%d",
+		 &lib_local_cpu_stats.active_cpu_count, 1, 0, NETPERF_TYPE_INT32);
+
   set_output_elt(LOCAL_CPU_BIND, "Local", "CPU", "Bind", "", "%d",
 		 &local_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
 
@@ -2281,6 +2300,13 @@ print_omni_init_list() {
 
   set_output_elt(REMOTE_CPU_PEAK_ID, "Remote", "Peak", "Per CPU", "ID", "%d",
 		 &lib_remote_cpu_stats.peak_cpu_id, 1, 0, NETPERF_TYPE_INT32);
+
+  set_output_elt(REMOTE_CPU_ACTIVE_UTIL, "Remote", "Active", "CPU", "Util %",
+		 "%.2f", &lib_remote_cpu_stats.active_cpu_util, 1, 0,
+                 NETPERF_TYPE_FLOAT);
+
+  set_output_elt(REMOTE_CPU_ACTIVE_COUNT, "Remote", "Active", "CPU", "Count", "%d",
+		 &lib_remote_cpu_stats.active_cpu_count, 1, 0, NETPERF_TYPE_INT32);
 
   set_output_elt(REMOTE_CPU_BIND, "Remote", "CPU", "Bind", "", "%d",
 		 &remote_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
@@ -2940,6 +2966,8 @@ print_omni_json()
   fprintf(where, "    \"zerocopy_enabled\": %s,\n", use_zerocopy ? "true" : "false");
   fprintf(where, "    \"local_active_cpu_util\": %.2f,\n", lib_local_cpu_stats.active_cpu_util);
   fprintf(where, "    \"local_active_cpu_count\": %d,\n", lib_local_cpu_stats.active_cpu_count);
+  fprintf(where, "    \"remote_active_cpu_util\": %.2f,\n", lib_remote_cpu_stats.active_cpu_util);
+  fprintf(where, "    \"remote_active_cpu_count\": %d,\n", lib_remote_cpu_stats.active_cpu_count);
   fprintf(where, "    \"local_softirq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_swintr);
   fprintf(where, "    \"local_irq_pct\": %.2f", lib_local_cpu_stats.cpu_irq);
 
@@ -5167,6 +5195,8 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	lib_remote_cpu_stats.cpu_swintr = omni_result->cpu_percent_swintr;
 	lib_remote_cpu_stats.peak_cpu_util = omni_result->peak_cpu_util;
 	lib_remote_cpu_stats.peak_cpu_id = omni_result->peak_cpu_id;
+	lib_remote_cpu_stats.active_cpu_util = omni_result->active_cpu_util;
+	lib_remote_cpu_stats.active_cpu_count = omni_result->active_cpu_count;
 	/* why?  because some stacks want to be clever and autotune their
 	   socket buffer sizes, which means that if we accept the defaults,
 	   the size we get from getsockopt() at the beginning of a
@@ -6260,6 +6290,8 @@ recv_omni()
     omni_results->cpu_percent_swintr  = lib_local_cpu_stats.cpu_swintr;
     omni_results->peak_cpu_util       = lib_local_cpu_stats.peak_cpu_util;
     omni_results->peak_cpu_id         = lib_local_cpu_stats.peak_cpu_id;
+    omni_results->active_cpu_util     = lib_local_cpu_stats.active_cpu_util;
+    omni_results->active_cpu_count    = lib_local_cpu_stats.active_cpu_count;
   }
 
 #if defined(WANT_INTERVALS)

@@ -88,4 +88,4 @@ flowchart LR
 | **Workload Profiles (15)** | [`dev/profiles/*.yaml`](https://github.com/thehevy/netperf_copilot/blob/master/dev/profiles/) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
 | **Output Presets (6)** | [`dev/catalog/output-presets/*.out`](https://github.com/thehevy/netperf_copilot/blob/master/dev/catalog/output-presets/) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
 | **Verification Suite** | [`dev/tests/test_modernization.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
-| **Project Wiki (8 Guides)** | [`wiki/`](Home.md) | Complete user, architect, and qualification operator documentation |
+| **Project Wiki (9 Guides)** | [`wiki/`](Home.md) | Complete user, architect, and qualification operator documentation |

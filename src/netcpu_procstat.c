@@ -375,11 +375,11 @@ calc_cpu_util_internal(float elapsed_time)
     lib_local_per_cpu_util[i] *= correction_factor;
 
     /* Track peak CPU utilization and active CPU count/utilization (>= 1.0%) */
-    if (lib_local_per_cpu_util[i] >= lib_local_cpu_stats.peak_cpu_util) {
+    if (lib_local_per_cpu_util[i] > lib_local_cpu_stats.peak_cpu_util) {
       lib_local_cpu_stats.peak_cpu_util = lib_local_per_cpu_util[i];
       lib_local_cpu_stats.peak_cpu_id = i;
     }
-    if (lib_local_per_cpu_util[i] >= 1.0f) {
+    if (lib_local_per_cpu_util[i] >= 5.0f) {
       active_util_sum += lib_local_per_cpu_util[i];
       active_cpus++;
     }

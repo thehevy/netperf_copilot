@@ -49,12 +49,13 @@ class NetserverPoolSpec:
     isolation_cores_excluded: List[int] = field(default_factory=list)
     core_to_port: Dict[int, int] = field(default_factory=dict)
     commands: List[str] = field(default_factory=list)
+    netserver_path: str = "netserver"
 
     @property
     def instances(self) -> List[NetserverInstancePlan]:
         out: List[NetserverInstancePlan] = []
         for core, port in sorted(self.core_to_port.items()):
-            cmd = f"numactl --physcpubind={core} --membind={self.numa_node} netserver -p {port}"
+            cmd = f"numactl --physcpubind={core} --membind={self.numa_node} {self.netserver_path} -p {port}"
             out.append(NetserverInstancePlan(core=core, port=port, numa_node=self.numa_node, command=cmd))
         return out
 
@@ -215,6 +216,7 @@ class NetserverPoolManager:
             isolation_cores_excluded=list(node_pool.isolation_cores),
             core_to_port=core_to_port,
             commands=commands,
+            netserver_path=self.netserver_path,
         )
 
     def start_pool(self, spec: NetserverPoolSpec, dry_run: bool = False,
@@ -321,7 +323,7 @@ class NetserverPoolManager:
         }
 
 
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     import argparse
     parser = argparse.ArgumentParser(
         description="Manage topology-aware per-core pinned netserver pools (DUT & Load Partner)"
@@ -335,7 +337,7 @@ def main() -> int:
     parser.add_argument("--numa-node", type=int, help="Explicit NUMA node override")
     parser.add_argument("--base-port", type=int, default=18600,
                         help="Base port for per-core netserver: port = base_port + core (default: 18600)")
-    parser.add_argument("--max-instances", type=int, default=64,
+    parser.add_argument("-n", "--count", "--max-instances", dest="max_instances", type=int, default=64,
                         help="Maximum per-core netserver instances to spawn (default: 64)")
     parser.add_argument("--min-core", type=int,
                         help="Minimum core ID override (e.g. 43 on LP if cores 0-42 handle IRQs)")
@@ -346,7 +348,9 @@ def main() -> int:
     parser.add_argument("--export-map", metavar="FILE",
                         help="Write core-to-port mapping JSON to FILE")
 
-    action = parser.add_mutually_exclusive_group(required=True)
+    action = parser.add_mutually_exclusive_group(required=False)
+    action.add_argument("--action", choices=["start", "stop", "verify", "plan"],
+                        help="Action to perform: start, stop, verify, or plan")
     action.add_argument("--start", action="store_true", help="Start per-core pinned netserver pool")
     action.add_argument("--stop", action="store_true", help="Stop all netserver instances")
     action.add_argument("--verify", action="store_true", help="Verify running netserver pool hygiene")
@@ -354,7 +358,11 @@ def main() -> int:
 
     parser.add_argument("--dry-run", action="store_true", help="Dry-run mode")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.action:
+        setattr(args, args.action, True)
+    if not (args.start or args.stop or args.verify or args.plan):
+        parser.error("one of the arguments --action --start --stop --verify --plan is required")
 
     if args.snapshot:
         topo = TopologyAnalyzer.from_topology_snapshot(Path(args.snapshot).read_text())

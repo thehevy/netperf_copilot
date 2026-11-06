@@ -868,7 +868,26 @@ Examples:
 
     # Run tests
     if args.profile or args.netperf_args:
-        test_args = args.netperf_args or []
+        test_args = list(args.netperf_args or [])
+        if args.profile and not test_args:
+            prof_path = Path(args.profile)
+            if not prof_path.exists():
+                prof_path = Path(__file__).resolve().parents[1] / "profiles" / f"{args.profile}.yaml"
+            if prof_path.exists() and yaml is not None:
+                prof_data = yaml.safe_load(prof_path.read_text(encoding="utf-8")) or {}
+                tests = prof_data.get("tests") or []
+                glob = prof_data.get("global") or {}
+                if tests:
+                    t0 = tests[0]
+                    dur = t0.get("duration", glob.get("duration", 10))
+                    raw_d = str(t0.get("direction", "stream")).lower()
+                    omni_d = {"tx": "stream", "send": "stream", "rx": "maerts", "recv": "maerts", "rr": "rr"}.get(raw_d, "stream")
+                    test_args = ["-l", str(dur), "-M", "--", "-d", omni_d]
+                    if "message_size" in t0:
+                        test_args.extend(["-m", str(t0["message_size"])])
+                    if t0.get("nodelay", glob.get("nodelay", False)):
+                        test_args.append("-D")
+                    test_args.append("-J")
 
         clients = inventory.get_clients()
         servers = inventory.get_servers()

@@ -71,7 +71,7 @@ In traditional multi-stream `netperf` scripts, a single `netserver` daemon liste
 3. **NIC Softirq (`ksoftirqd`) vs. Application Thread Collision**: Without topology-aware core partitioning, `netperf -T` or OS scheduler placement frequently schedules `netperf`/`netserver` user-space threads onto the exact same CPU cores (`0..15`) servicing the NIC's hardware RSS/MSIX interrupt queues. When a single core must execute both the kernel `NET_RX_SOFTIRQ` NAPI poll loop and user-space `recv()` system calls at 200 Gbps, L1 instruction/data cache thrashing and context-switch overhead collapse per-stream throughput by **30%–50%**.
 
 ### 2.2 Data-Path Copy Tax and the 1 MB Buffer Ceiling
-In `src/netsh.h` and `src/nettest_omni.c`, upstream `netperf` hardcoded `MAXMESSAGESIZE` to `1048576` bytes (1 MB) and relied exclusively on standard copy-mode `send()` / `sendto()` calls.
+In `src/netlib.h` and `src/nettest_omni.c`, upstream `netperf` hardcoded `MAXMESSAGESIZE` to `1048576` bytes (1 MB) and relied exclusively on standard copy-mode `send()` / `sendto()` calls.
 
 At a line rate of $R = 200\text{ Gbps}$ ($25\text{ GB/s}$), standard socket transmission requires the CPU to copy every byte from the user-space send buffer into kernel `sk_buff` page fragments via `copy_from_user()`. Including read and write memory traffic, this imposes a minimum DRAM bandwidth tax of:
 
@@ -129,37 +129,37 @@ In [`src/netsh.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/ne
 3. Output defaults to machine-parseable `KEY=VALUE` format, or switches to structured **JSON (`-- -J`)**, **CSV (`-- -o`)**, or **Columnar (`-- -O`)**.
 4. Named **Output Presets** (`-- -k minimal|default|throughput|latency|cpu|verbose`) automatically resolve from `NETPERF_PRESET_DIR`, `dev/catalog/output-presets/`, or `$(datadir)/netperf/output-presets/` (installed via `dist_preset_DATA` in [`Makefile.am`](https://github.com/thehevy/netperf_copilot/blob/master/Makefile.am)).
 
-### 3.2 4 MB Socket Buffers and Native `MSG_ZEROCOPY` (`-Z`)
-In [`src/netsh.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/netsh.h) and [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), we increased `MAXMESSAGESIZE` fourfold to **4 MB (`4,194,304` bytes)** and implemented the global `-Z` flag to enable Linux kernel zero-copy transmit:
+### 3.2 4 MB Socket Buffers and Native `MSG_ZEROCOPY` (`-- -Z`)
+In [`src/netlib.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/netlib.h) and [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), we increased `MAXMESSAGESIZE` fourfold to **4 MB (`4,194,304` bytes)** and implemented the OMNI test-specific `-Z` flag (passed after `--`) to enable Linux kernel zero-copy transmit:
 
-1. **Socket Initialization**: During data socket creation in `send_omni_inner()`, if `local_zerocopy` (`-Z`) is enabled on an `AF_INET`/`AF_INET6` `SOCK_STREAM` or `SOCK_DGRAM` socket, `netperf` enables `SO_ZEROCOPY`:
+1. **Socket Initialization**: During data socket creation in `send_omni_inner()`, if `use_zerocopy` (`-- -Z`) is enabled on an `AF_INET`/`AF_INET6` `SOCK_STREAM` or `SOCK_DGRAM` socket, `netperf` enables `SO_ZEROCOPY`:
    ```c
    #ifdef SO_ZEROCOPY
-   if (local_zerocopy) {
+   if (use_zerocopy) {
      int one = 1;
      if (setsockopt(data_socket, SOL_SOCKET, SO_ZEROCOPY, &one, sizeof(one)) < 0) {
        fprintf(where, "netperf: SO_ZEROCOPY failed (errno=%d), falling back to copy mode\n", errno);
-       local_zerocopy = 0;
+       use_zerocopy = 0;
      }
    }
    #endif
    ```
 2. **Page-Pinning Data Path (`MSG_ZEROCOPY`)**: The inner transmit loop passes `MSG_ZEROCOPY` to `send()` / `sendto()`, instructing the kernel to pin user-space pages directly into the socket's scatter-gather list (`skb_shinfo(skb)->frags`) for NIC DMA without CPU copy.
-3. **Non-Blocking Error-Queue Completion Draining (`drain_zerocopy_completions()`)**: Every `MSG_ZEROCOPY` call queues a completion notification (`SO_EE_ORIGIN_ZEROCOPY`) onto the socket's error queue (`MSG_ERRQUEUE`) once the NIC DMA completes. If an application never drains `MSG_ERRQUEUE`, the socket's option memory accounting (`sk_omem_alloc`) reaches `sysctl net.core.optmem_max` within milliseconds at 200 Gbps, causing subsequent `send()` calls to fail with `ENOBUFS`. We implemented `drain_zerocopy_completions(SOCKET data_socket)` in [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c#L3658-L3683), which drains `MSG_ERRQUEUE | MSG_DONTWAIT` every 64 sends and immediately retries on `ENOBUFS`.
+3. **Non-Blocking Error-Queue Completion Draining (`drain_zerocopy_completions()`)**: Every `MSG_ZEROCOPY` call queues a completion notification (`SO_EE_ORIGIN_ZEROCOPY`) onto the socket's error queue (`MSG_ERRQUEUE`) once the NIC DMA completes. If an application never drains `MSG_ERRQUEUE`, the socket's option memory accounting (`sk_omem_alloc`) reaches `sysctl net.core.optmem_max` within milliseconds at 200 Gbps, causing subsequent `send()` calls to fail with `ENOBUFS`. We implemented `drain_zerocopy_completions(SOCKET data_socket)` in [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), which drains `MSG_ERRQUEUE | MSG_DONTWAIT` periodically and immediately retries on `ENOBUFS`.
 
 ### 3.3 2048-Core `/proc/stat` Engine with `active_cpu_util` & `peak_cpu_id`
 In [`src/netcpu_procstat.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netcpu_procstat.c) and [`src/netlib.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/netlib.h), we expanded `MAXCPUS` to **2048** and introduced two high-core-count telemetry metrics computed during `calc_cpu_util_internal()`:
 
-$$\text{active\_cpu\_util} = \frac{1}{|C_{\text{active}}|} \sum_{i \in C_{\text{active}}} u_i \quad \text{where } C_{\text{active}} = \{ i \in [0, N_{\text{cpus}}-1] \mid u_i > 5.0\% \}$$
+$$\text{active\_cpu\_util} = \frac{1}{|C_{\text{active}}|} \sum_{i \in C_{\text{active}}} u_i \quad \text{where } C_{\text{active}} = \{ i \in [0, N_{\text{cpus}}-1] \mid u_i \ge 5.0\% \}$$
 
 $$\text{peak\_cpu\_id} = \arg\max_{i \in [0, N_{\text{cpus}}-1]} u_i$$
 
-Both metrics are automatically emitted in OMNI JSON metadata (`"active_cpu_util"` and `"peak_cpu_id"`), enabling instant identification of single-core softirq or application bottlenecks on 288–576 thread servers.
+Both metrics are automatically emitted in OMNI JSON metadata (`"local_active_cpu_util"`, `"remote_active_cpu_util"`, and `"LOCAL_CPU_PEAK_ID"`) as well as OMNI output selectors (`LOCAL_CPU_ACTIVE_UTIL`, `LOCAL_CPU_ACTIVE_COUNT`, `REMOTE_CPU_ACTIVE_UTIL`, `REMOTE_CPU_ACTIVE_COUNT`), enabling instant identification of single-core softirq or application bottlenecks on 288–576 thread servers.
 
 ### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
 - **100G–800G Link Speed Detection ([`src/netdrv_ethtool.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netdrv_ethtool.c))**: Queries `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
 - **Linux `sysfs` PCIe Gen5/Gen6 & DMI Inspection ([`src/netslot_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netslot_linux.c), [`src/netsys_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netsys_linux.c))**: Reads `/sys/class/net/<iface>/device/current_link_speed` (`32.0 GT/s PCIe` for Gen5, `64.0 GT/s PCIe` for Gen6), `current_link_width` (`x16`), `numa_node`, and `/sys/class/dmi/id/product_name` using safe 32–128 byte bounded buffers.
-- **RFC 8259 JSON Escaping ([`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c#L7245-L7284))**: All string fields in `-- -J` JSON output pass through `json_escape_string()` so embedded quotes, backslashes, or control characters in `COMMAND_LINE` never corrupt downstream JSON parsers.
+- **RFC 8259 JSON Escaping ([`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c))**: All string fields in `-- -J` JSON output pass through `json_escape_string()` so embedded quotes, backslashes, or control characters in `COMMAND_LINE` never corrupt downstream JSON parsers.
 
 ---
 
@@ -210,17 +210,17 @@ flowchart TB
 1. **Why Linear Core Pinning Fails on E-Core (`spread_l2` Solution)**:
    On high-density E-core processors, cores are grouped into **4-core clusters sharing a single 4 MB L2 cache** (`/sys/devices/system/cpu/cpu*/cache/index2/shared_cpu_list = 0-3, 4-7, ...`).
    - If a 16-stream test pins streams linearly to cores `16..31`, all 4 cores in L2 Module 4 (`16,17,18,19`) simultaneously stream 64 KB socket buffers and `tx_ring=2048` descriptor rings through the same 4 MB L2 cache. The working set exceeds the L2 capacity, triggering continuous L2 cache evictions and LLC/DRAM stalls.
-   - [`netperf_topology.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_topology.py) detects the 4-core L2 topology and automatically selects the **`spread_l2`** allocation strategy, picking **1 core per L2 module first** (`[16, 20, 24, 28, 32, ...]`) before wrapping around to a second core per module, while pairing with a smaller **`tx_ring = 512`** so active descriptors remain L2-resident.
+   - [`netperf_topology.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_topology.py) detects the 4-core L2 topology and automatically selects the **`spread_l2`** allocation strategy, picking **1 core per L2 module first** (`[16, 20, 24, 28, 32, ...]`) before wrapping around to a second core per module, while pairing with a smaller **`tx_ring = 512`** (`rx_ring = 4096`) so active descriptors remain L2-resident.
 2. **Why SMT Sibling Pinning Fails on P-Core (`spread_step2` Solution)**:
-   On P-core processors with 2-way SMT, pinning two high-rate TCP streams to sibling threads `(cpu_0, cpu_128)` halves per-stream instruction retirement and L1/L2 bandwidth. `netperf_topology.py` parses `thread_siblings_list`, filters out secondary SMT threads, and strides across physical cores (`spread_step2`) with **`tx_ring = 2048`** and **`rx_usecs = 64`**.
+   On P-core processors with 2-way SMT, pinning two high-rate TCP streams to sibling threads `(cpu_0, cpu_128)` halves per-stream instruction retirement and L1/L2 bandwidth. `netperf_topology.py` parses `thread_siblings_list`, filters out secondary SMT threads, and strides across physical cores (`spread_step2`) with **`tx_ring = 2048`**, **`rx_ring = 4096`**, and **`rx_usecs = 10, tx_usecs = 20`**.
 
 | Architectural Dimension | High-Density E-Core (`cwf-ecore`) | High-Frequency P-Core (`gnr-pcore`) |
 | :--- | :--- | :--- |
 | **SMT Threads per Core** | `1` (No SMT) | `2` (2-way SMT; sibling threads filtered) |
 | **L2 Cache Organization** | Shared 4 MB L2 per **4-core module** | Private 2 MB L2 per **single physical core** |
 | **Optimal Core Stride Strategy** | **`spread_l2`** (`[16, 20, 24, 28, ...]`, 1 core/module first) | **`spread_step2`** (Physical cores only, step-2 stride) |
-| **Optimal TX / RX Ring Descriptors** | **`TX = 512`, `RX = 2048`** (prevents 4 MB L2 eviction) | **`TX = 2048`, `RX = 2048`** (maximizes deep-pipeline burst) |
-| **Interrupt Coalescing** | `adaptive-rx on`, `adaptive-tx on` | `adaptive-rx off`, `rx-usecs 64`, `tx-usecs 64` |
+| **Optimal TX / RX Ring Descriptors** | **`TX = 512`, `RX = 4096`** (prevents 4 MB L2 eviction) | **`TX = 2048`, `RX = 4096`** (maximizes deep-pipeline burst) |
+| **Interrupt Coalescing** | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` |
 
 ### 4.2 Per-Core Lockless `netserver` Pool (`netserver-manager`)
 To eliminate all three legacy `netserver` bottlenecks, [`netserver-manager`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netserver-manager) replaces the single port-12865 daemon with a **per-core pool of isolated `netserver` processes**:
@@ -235,14 +235,14 @@ sequenceDiagram
 
     Topo->>Mgr: Identify NIC NUMA node & IRQ cores (0..15)
     Mgr->>IRQ: Reserve cores 0..15 exclusively for kernel softirq
-    Mgr->>Pool: Spawn taskset -c (16+i) netserver -p (18600+i)
-    Multi->>Pool: Stream i connects to port (18600 + i) with -T lcpu,rcpu
+    Mgr->>Pool: Spawn numactl --physcpubind=C netserver -p (18600+C)
+    Multi->>Pool: Stream i connects to port (18600 + C) with -T lcpu,C
     Pool-->>Multi: Zero accept-lock contention, 1:1 NUMA-local core pinning
 ```
 
-For $N_{\text{streams}}$ streams with base port $P_0 = 18600$ and $N_{\text{IRQ}} = 16$ reserved NIC interrupt cores, stream $i \in [0, N_{\text{streams}}-1]$ maps deterministically to:
+For each non-IRQ physical core $C$ on the NIC's local NUMA node with base port $P_0 = 18600$, `netserver-manager` maps deterministically to:
 
-$$\text{Port}(i) = P_0 + (i \bmod N_{\text{pool}}), \qquad \text{CPU}_{\text{remote}}(i) = \text{Core}_{\text{non-IRQ, spread}}[i]$$
+$$\text{Port}(C) = P_0 + C$$
 
 Each `netserver` instance handles exactly one stream on its own TCP listen socket and pre-pinned physical CPU core—achieving **zero kernel accept-queue lock contention** and **zero collision with NIC hardware interrupts**.
 
@@ -256,12 +256,12 @@ Each `netserver` instance handles exactly one stream on its own TCP listen socke
 1. **`tx` (Unidirectional Send)**: Drives $N$ outbound `send` streams from the local host to the remote host.
 2. **`rx` (Unidirectional Receive / `MAERTS`)**: Drives $N$ inbound `recv` streams from the remote host to the local host.
 3. **`bx` (Simultaneous Bidirectional Full-Duplex)**: Launches $N_{\text{TX}}$ outbound streams and $N_{\text{RX}}$ inbound streams simultaneously. Critically, `netperf-multi` partitions the non-IRQ CPU pool into **strictly disjoint TX and RX core sets**:
-   $$C_{\text{TX}} \cap C_{\text{RX}} = \emptyset, \qquad P_{\text{TX}}(i) = 18600 + i, \qquad P_{\text{RX}}(j) = 18600 + N_{\text{TX}} + j$$
+   $$C_{\text{TX}} \cap C_{\text{RX}} = \emptyset, \qquad P(C) = 18600 + C$$
    This guarantees that an outbound `send()` thread never contends with an inbound `recv()` thread on the same CPU core or `netserver` port.
 4. **`bx-seq` (Sequential Bidirectional)**: Executes the full-rate `tx` phase first, records metrics, and immediately executes the full-rate `rx` phase. This mode isolates unidirectional NIC DMA and PCIe read/write efficiency from full-duplex LLC/PCIe credit contention.
 
 ### 5.2 Multi-NIC Breakout, Multi-Subnet Expansion & DSCP QoS
-- **Multi-NIC & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2` distributes stream $i$ round-robin across each interface/IP pair (`target_idx = i % len(hosts)`), automatically binding each group of streams to the NUMA node of its respective PCIe adapter.
+- **Multi-NIC & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2` distributes stream $i$ round-robin across each interface/IP pair, automatically binding each group of streams to the NUMA node of its respective PCIe adapter.
 - **Hardware QoS & RoCEv2 Coexistence (`--dscp`)**: Passing `--dscp EF,CS3,AF21,CS0` translates symbolic DiffServ codepoints into `-Y <local_tos>,<remote_tos>` socket options on each stream, enabling validation of IEEE 802.1Qbb Priority Flow Control (PFC) and Enhanced Transmission Selection (ETS) bandwidth guarantees under congestion.
 
 ---
@@ -285,13 +285,13 @@ flowchart LR
 
 | Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G | Automated Remediation |
 | :--- | :--- | :--- | :--- |
-| **`AA-002`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops | Clear `xps_rxqs` (`echo 0 > xps_rxqs`) and map `xps_cpus` 1:1 |
-| **`AA-003`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100% | Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
-| **`AA-005`** | `tx_ring = 2048` on E-core 4-core shared-L2 modules | Descriptor working set evicts payload lines from the 4 MB shared L2 cache | Set `ethtool -G <iface> tx 512 rx 2048` on E-core platforms |
-| **`AA-007`** | `generic-receive-offload (GRO) = off` on 100G–800G TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse) | Enable `ethtool -K <iface> gro on tso on gso on` |
-| **`AA-010`** | IOMMU strict translation (`iommu=pt` missing from `/proc/cmdline`) | Per-packet IOTLB invalidation overhead reduces 200G throughput by 25%–40% | Boot kernel with `intel_iommu=on iommu=pt` |
-| **`AA-011`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200G+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200G/400G line rate | Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
-| **`AA-021`** | Cross-NUMA app/NIC placement (`app_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35% | Pin `netperf` and `netserver` to `nic_numa` cores |
+| **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput | Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
+| **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops | Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
+| **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100% | Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
+| **`AA-015`** | `tx_ring < 512` (default `256`) at 100G–200G line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core) | Set `ethtool -G <iface> tx 512 rx 4096` on E-core (`tx 2048` on P-core) |
+| **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35% | Pin NIC IRQs, `netperf`, and `netserver` to `nic_numa` cores |
+| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200G+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200G/400G line rate | Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
+| **`AA-019`** | `generic-receive-offload (GRO) = off` on 100G–800G TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse) | Enable `ethtool -K <iface> gro on tso on gso on` |
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification
 Even when all static configuration rules pass, thermal throttling, turbo frequency transients, or ARP/route cache warming can skew early runs. `netperf-preflight --warmup-runs 5` executes 5 short baseline iterations $(\{x_1, x_2, x_3, x_4, x_5\})$ and computes the sample Coefficient of Variation:
@@ -301,7 +301,7 @@ $$\text{CV} = \frac{s}{\bar{x}} \times 100\% = \frac{\sqrt{\frac{1}{n-1}\sum_{i=
 If $\text{CV} \ge 5.0\%$ or $\bar{x}$ falls below `--min-gbps`, the pre-flight gate halts the qualification pipeline before hours of unstable sweep data are collected. Additionally, `--lp-state <lp.json>` compares the Device Under Test (DUT) against the Link Partner (LP) to catch mismatched MTUs, asymmetric link speeds, or an untuned link partner blocking saturation.
 
 ### 6.3 Zero-Tolerance Kernel & Ethtool Fault Gate (`U1`–`U13`)
-Implemented in [`netperf_report.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_report.py) and integrated into [`netperf-multi --check-kmsg`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-multi), the fault monitor snapshots `dmesg -T` and `ethtool -S <iface>` before and after every benchmark run. Any new occurrence of signatures **`U1` through `U13`**—including `DMAR: [DMA Read/Write]`, `Malicious Driver Detection (MDD)`, `NETDEV WATCHDOG ... transmit queue timed out`, `Kernel Oops/BUG/Call Trace`, PCIe AER errors, or unexpected link-down resets—immediately marks the run as **`FAIL`** and exits with non-zero status (`2`).
+Implemented in [`netperf_report.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_report.py) and integrated into [`netperf-multi --check-kmsg`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-multi), the fault monitor snapshots `dmesg -T` and `ethtool -S <iface>` before and after every benchmark run. Any new occurrence of signatures **`U1` through `U13`**—including `DMAR: [DMA Read/Write]`, `Malicious Driver Detection (MDD)`, `NETDEV WATCHDOG ... transmit queue timed out`, `Kernel Oops/BUG/Call Trace`, PCIe AER errors, or unexpected link-down resets—immediately marks the run as **`FAIL`** and exits with non-zero status.
 
 ---
 
@@ -318,15 +318,15 @@ The following four empirical case studies illustrate the concrete capabilities a
 Running 16 parallel legacy `netperf` instances against a single `netserver` on port `12865` with default driver rings (`tx_ring = 2048, rx_ring = 2048`) and linear core pinning (`cores 0..15`):
 - **Observed Result**: Mean throughput plateaued at **128.4 Gbps** with high run-to-run instability ($\text{CV} = 14.2\%$).
 - **Root Cause Diagnosed by `netperf-preflight`**:
-  1. `AA-001` / `AA-020`: Application threads on cores `0..15` collided directly with NIC RSS softirq cores `0..15`, and all 16 streams shared port `12865`.
-  2. `AA-005` / `AA-018`: Linear core assignment packed 4 streams onto each 4-core shared L2 cache module while `tx_ring = 2048` overflowed the 4 MB L2 cache.
+  1. `AA-016` / `AA-022`: Application threads on cores `0..15` collided directly with NIC RSS softirq cores `0..15`, and all 16 streams shared port `12865`.
+  2. `AA-015` / `AA-021`: Linear core assignment packed 4 streams onto each 4-core shared L2 cache module while `tx_ring = 2048` overflowed the 4 MB L2 cache.
 
 #### Modernized Netperf v3.0 Workflow
 ```bash
 # 1. Start lockless per-core netserver pool on remote host (skipping IRQ cores 0..15, striding L2 modules)
 ./dev/tools/netserver-manager -i eth0 --action start -n 32 --base-port 18600
 
-# 2. Apply cwf-ecore BKM (tx_ring=512, rx_ring=2048, adaptive coalescing, NUMA-local IRQ pinning)
+# 2. Apply cwf-ecore BKM (tx_ring=512, rx_ring=4096, deterministic coalescing, NUMA-local IRQ pinning)
 sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 # 3. Audit environment and run 5-iteration warmup stability gate
@@ -334,8 +334,8 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 # 4. Execute 16-stream TX benchmark with L2-module striding, zero-copy (-Z), and kernel fault monitoring
 ./dev/tools/netperf-multi -H 192.168.10.2 -i eth0 -n 16 --direction tx \
-    --bkm cwf-ecore --per-core-netserver --base-port 18600 \
-    --check-kmsg -o results_200g_ecore.json -- -m 131072 -l 30
+    --bkm cwf-ecore --per-core-netserver --base-port 18600 -l 30 \
+    --check-kmsg -o json --export results_200g_ecore.json -- -m 131072 -Z
 ```
 
 #### Empirical Comparison (16 Streams, MTU 9000, 200GbE)
@@ -345,7 +345,7 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 | **1. Legacy Baseline** | Linear `0..15` (collides w/ IRQ) | `2048 / 2048` | `128.42 ± 11.30 Gbps` | `14.21%` | `99.4%` (`peak_cpu_id=3`) | 0 faults (`rx_missed=48,210`) |
 | **2. Per-Core Pool Only** | Linear `16..31` (4 cores/L2 mod) | `2048 / 2048` | `161.85 ± 4.12 Gbps` | `4.10%` | `88.7%` (`peak_cpu_id=18`) | 0 faults (`rx_missed=1,120`) |
 | **3. + `spread_l2` Stride** | `spread_l2` `16,20,24..76` (1/mod) | `2048 / 2048` | `181.10 ± 1.95 Gbps` | `1.74%` | `76.2%` (`peak_cpu_id=24`) | 0 faults (`rx_missed=0`) |
-| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 2048`** | **`192.64 ± 0.96 Gbps`** | **`0.80%`** | **`61.8%` (`peak_cpu_id=20`)** | **0 faults (`PASS`)** |
+| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 4096`** | **`192.64 ± 0.96 Gbps`** | **`0.80%`** | **`61.8%` (`peak_cpu_id=20`)** | **0 faults (`PASS`)** |
 
 > **Key Takeaway**: Combining per-core `netserver` isolation, `spread_l2` 1-core-per-L2-module striding, `tx_ring = 512`, and `-Z` zero-copy increased throughput by **+64.2 Gbps (+50.0%)** while reducing run-to-run variance from **14.21% down to 0.80%** and lowering active CPU utilization by **37.6 percentage points**.
 
@@ -384,7 +384,7 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 # Or invoke netperf-multi directly for 48 streams (16 streams per 200G NIC)
 ./dev/tools/netperf-multi -H 192.168.10..12.2 -i ens7np0,ens23np0,ens27np0 \
     -n 48 --direction bx --per-core-netserver --base-port 18600 \
-    --check-kmsg -o multiport_bx.json -- -m 131072 -l 30
+    -l 30 --check-kmsg -o json --export multiport_bx.json -- -m 131072
 ```
 
 #### Empirical Multi-Port Scaling Results (3 × 200GbE = 600 Gbps Wire Capacity)
@@ -411,34 +411,28 @@ Outliers are automatically flagged using Tukey's Interquartile Range (IQR) fence
 #### Automated Baseline vs. Candidate Comparison (`netperf-aggregate`)
 ```bash
 # Compare candidate run against baseline (automatically treats latency/CPU reductions as improvements)
-./dev/tools/netperf-aggregate --compare baseline_rr.json candidate_rr.json
+./dev/tools/netperf-aggregate --compare baseline_rr.json candidate_rr.json -o comparison.json
 ```
 
 ```json
 {
-  "THROUGHPUT": {
-    "baseline": 184210.5,
-    "current": 192640.2,
-    "diff": 8429.7,
-    "diff_pct": 4.58,
-    "lower_is_better": false,
-    "improved": true
-  },
-  "RT_LATENCY": {
-    "baseline": 14.82,
-    "current": 11.40,
-    "diff": -3.42,
-    "diff_pct": -23.08,
-    "lower_is_better": true,
-    "improved": true
-  },
-  "P99_LATENCY": {
-    "baseline": 42.0,
-    "current": 27.0,
-    "diff": -15.0,
-    "diff_pct": -35.71,
-    "lower_is_better": true,
-    "improved": true
+  "differences": {
+    "throughput": {
+      "baseline_mean": 184210.5,
+      "current_mean": 192640.2,
+      "absolute_diff": 8429.7,
+      "percent_diff": 4.58,
+      "is_improvement": true,
+      "is_regression": false
+    },
+    "latency": {
+      "baseline_mean": 14.82,
+      "current_mean": 11.40,
+      "absolute_diff": -3.42,
+      "percent_diff": -23.08,
+      "is_improvement": true,
+      "is_regression": false
+    }
   }
 }
 ```

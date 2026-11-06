@@ -736,6 +736,8 @@ class TopologyAnalyzer:
         if topo.uarch == "ecore":
             if mtu <= 1500 and num_flows >= 16:
                 return "sequential"
+            return "spread_l2"
+        if topo.uarch == "pcore":
             return "spread_step2"
         return "sequential"
 
@@ -855,23 +857,18 @@ class TopologyAnalyzer:
                 app_layout = "sequential"
                 irq_layout = "compact"
                 rec_flows = 16
-            elif num_flows <= 6:
-                rx_ring, tx_ring = 512, 512
-                app_layout = "spread_step2"
-                irq_layout = "compact"
-                rec_flows = 8
             else:
-                rx_ring, tx_ring = 4096, 4096
-                app_layout = "spread_step2"
+                rx_ring, tx_ring = 4096, 512
+                app_layout = "spread_l2"
                 irq_layout = "compact"
-                rec_flows = 8
+                rec_flows = 16 if num_flows >= 8 else 8
         else:
             # P-core (GNR) or generic
-            rx_ring = 2048 if num_flows <= 6 else 4096
-            tx_ring = 2048 if num_flows <= 6 else 4096
-            app_layout = "sequential"
+            rx_ring = 4096
+            tx_ring = 2048
+            app_layout = "spread_step2" if topo.uarch == "pcore" else "sequential"
             irq_layout = "sequential"
-            rec_flows = 4 if mtu >= 9000 else 16
+            rec_flows = 8 if mtu >= 9000 else 16
 
         return {
             'uarch': topo.uarch,

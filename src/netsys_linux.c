@@ -29,6 +29,7 @@
 #include <errno.h>
 #endif
 
+#if defined(__linux)
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -203,3 +204,14 @@ main(int argc, char *argv[]) {
 }
 
 #endif
+
+#else /* !defined(__linux) */
+#include <string.h>
+
+void
+find_system_info(char **system_model, char **cpu_model, int *cpu_frequency) {
+  if (system_model) *system_model = strdup("N/A");
+  if (cpu_model) *cpu_model = strdup("N/A");
+  if (cpu_frequency) *cpu_frequency = -1;
+}
+#endif /* defined(__linux) */

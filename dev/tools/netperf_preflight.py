@@ -722,6 +722,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("-i", "--interface", required=True, help="Target network interface (e.g. ens801f0np0)")
     parser.add_argument("--json", action="store_true", help="Output JSON report")
     parser.add_argument("--list-rules", action="store_true", help="List all 24 E835 anti-affinity rules")
+    parser.add_argument("-H", "--host", help="Optional Load Partner IP for warmup stability gate")
+    parser.add_argument("--streams", type=int, default=16, help="Streams for warmup gate (default: 16)")
+    parser.add_argument("--warmup-runs", type=int, default=0, help="Number of warmup gate iterations (default: 0)")
+    parser.add_argument("--min-gbps", type=float, default=85.0, help="Minimum throughput (Gbps) for warmup gate (default: 85.0)")
+    parser.add_argument("--lp-state", metavar="FILE", help="Compare DUT state against Load Partner pre-flight JSON file")
+    parser.add_argument("--save-state", metavar="FILE", help="Save collected live state JSON to FILE")
     args = parser.parse_args(argv)
 
     if args.list_rules:
@@ -734,6 +740,50 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     checker = PreflightChecker(interface=args.interface)
     report = checker.run_all()
+    if args.save_state:
+        Path(args.save_state).write_text(json.dumps(report.active_features, indent=2), encoding="utf-8")
+    if args.lp_state and Path(args.lp_state).exists():
+        lp_data = json.loads(Path(args.lp_state).read_text(encoding="utf-8"))
+        lp_feat = lp_data.get("active_features", lp_data)
+        dut_feat = report.active_features
+        mismatches = [
+            f"{k}: DUT={dut_feat.get(k)} vs LP={lp_feat.get(k)}"
+            for k in ("mtu", "tx_ring", "rx_ring", "link_speed_mbps")
+            if k in dut_feat and k in lp_feat and dut_feat.get(k) != lp_feat.get(k)
+        ]
+        if mismatches:
+            report.findings.append(CheckFinding(
+                "LP-SYMMETRY", "dut_lp_symmetry", "WARN",
+                f"DUT vs LP state mismatch: {', '.join(mismatches)}",
+                remediation="Align MTU, ring buffers, and link speed identically on DUT and LP.",
+            ))
+            report.warn_count += 1
+        else:
+            report.findings.append(CheckFinding(
+                "LP-SYMMETRY", "dut_lp_symmetry", "PASS",
+                "DUT and LP interface parameters (MTU, rings, link speed) are symmetric.",
+            ))
+    if args.warmup_runs > 0 and args.host:
+        samples: List[float] = []
+        for _ in range(args.warmup_runs):
+            rc, out, _ = checker._runner([
+                "netperf-multi", "-H", args.host, "-i", args.interface,
+                "-n", str(args.streams), "-l", "5", "-o", "json", "--no-aggregate",
+            ])
+            if rc == 0 and out.strip():
+                try:
+                    data = json.loads(out)
+                    agg = data.get("aggregated", {})
+                    val = float(agg.get("THROUGHPUT", agg.get("throughput", 0.0)))
+                    samples.append(val / 1000.0 if val > 1000.0 else val)
+                except Exception:
+                    pass
+        if samples:
+            w_finding = checker.evaluate_warmup_stability(samples, min_mean_gbps=args.min_gbps)
+            report.findings.append(w_finding)
+            if w_finding.severity == "FAIL":
+                report.fail_count += 1
+                report.passed = False
     if args.json:
         print(json.dumps(report.to_dict(), indent=2))
     else:

@@ -25,6 +25,7 @@
 #include <config.h>
 #endif
 
+#if defined(__linux)
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -208,6 +209,29 @@ find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_r
 
   close(s);
 }
+
+#else /* !defined(__linux) */
+#include <string.h>
+
+void
+find_driver_info(char *ifname, char *driver, char *version, char *firmware, char *bus, int len) {
+  (void)ifname;
+  if (len < 32) return;
+  strncpy(driver, "N/A", len); driver[len - 1] = 0;
+  strncpy(version, "N/A", len); version[len - 1] = 0;
+  strncpy(firmware, "N/A", len); firmware[len - 1] = 0;
+  strncpy(bus, "N/A", len); bus[len - 1] = 0;
+}
+
+void
+find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_ring, int *combined_channels) {
+  (void)ifname;
+  if (link_speed_mbps) *link_speed_mbps = -1;
+  if (rx_ring) *rx_ring = -1;
+  if (tx_ring) *tx_ring = -1;
+  if (combined_channels) *combined_channels = -1;
+}
+#endif /* defined(__linux) */
 
 #if defined(NETPERF_STANDALONE_DEBUG)
 int

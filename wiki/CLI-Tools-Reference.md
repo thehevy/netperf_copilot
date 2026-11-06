@@ -138,7 +138,7 @@ Manages multi-host test inventories (`hosts.yaml`), deploys/starts per-core `net
 
 - **`netperf-monitor`**: Live ANSI terminal dashboard with sparklines and ETA progress bars.
   ```bash
-  ./dev/tools/netperf-monitor -H 192.168.10.2 -l 60 -- -d send
+  ./dev/tools/netperf-monitor -d 60 -H 192.168.10.2 -- -d send
   ./dev/tools/netperf-monitor --follow test.log
   ```
 - **`netperf_stats.py`**: Calculates mean, median, standard deviation, CV%, 95%/99% confidence intervals, IQR/Z-score outliers, and ASCII histograms/boxplots.

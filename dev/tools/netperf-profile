@@ -728,6 +728,8 @@ Examples:
                         help='Show commands without execution')
     parser.add_argument('--netperf', dest='netperf_path', default='netperf',
                         help='Path to netperf binary')
+    parser.add_argument('-o', '--export', '--save-results', dest='save_results', metavar='FILE',
+                        help='Export profile execution results to JSON file')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose output')
     parser.add_argument('--version', action='version', version='%(prog)s 2.0.0')
@@ -782,6 +784,12 @@ Examples:
         verbose=args.verbose
     )
     success = runner.run()
+    if getattr(args, 'save_results', None):
+        Path(args.save_results).write_text(json.dumps({
+            'profile': profile.get('name'),
+            'host': args.host or '127.0.0.1',
+            'results': runner.results,
+        }, indent=2), encoding='utf-8')
     return 0 if success else 1
 
 

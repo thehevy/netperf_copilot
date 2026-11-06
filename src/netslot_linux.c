@@ -22,6 +22,7 @@
 */
 
 #define _XOPEN_SOURCE 500
+#if defined(__linux)
 #include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -274,3 +275,22 @@ find_interface_ids(char *interface_name, int *vendor, int *device, int *sub_vend
   *sub_dev = get_val_from_file(sysfile);
 
 }
+
+#else /* !defined(__linux) */
+#include <string.h>
+
+char *
+find_interface_slot(char *interface_name) {
+  (void)interface_name;
+  return strdup("N/A");
+}
+
+void
+find_interface_ids(char *interface_name, int *vendor, int *device, int *sub_vend, int *sub_dev) {
+  (void)interface_name;
+  if (vendor) *vendor = 0;
+  if (device) *device = 0;
+  if (sub_vend) *sub_vend = 0;
+  if (sub_dev) *sub_dev = 0;
+}
+#endif /* defined(__linux) */

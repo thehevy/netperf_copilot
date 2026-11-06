@@ -41,7 +41,7 @@ This fork modernizes netperf with several key improvements while maintaining ful
 
 - **netperf-multi** - Parallel test execution (2-16 instances)
 - **netperf_stats.py** - Statistical analysis with CI and outliers
-- **netperf-profile** - 10 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless, jitter, lossy, mixed-workload)
+- **netperf-profile** - 15 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless, jitter, lossy, mixed-workload, plus 5 high-speed 200G–600G/OCP profiles)
 - **netperf-orchestrate** - Multi-host test coordination with YAML inventory
 - **netperf-monitor** - Real-time monitoring with terminal UI
 - **netperf-template** - Report generation in 5 formats (markdown, HTML, JSON, CSV, text)
@@ -234,7 +234,7 @@ This fork is **fully backward compatible** with upstream netperf:
 netperf/
 ├── src/              # Source code
 ├── doc/              # Documentation
-├── wiki/             # Comprehensive Project Wiki (8 guides & references)
+├── wiki/             # Comprehensive Project Wiki (9 guides & references)
 ├── dev/              # Development tools and advanced features
 │   ├── catalog/      # Output presets, config analysis
 │   ├── docs/         # Developer documentation (Phase 1-3 guides)
@@ -307,7 +307,7 @@ Parallel test execution across multiple instances:
 
 ```bash
 # Run 4 parallel tests
-netperf-multi -n 4 -H remotehost -- -d send -l 10
+netperf-multi -n 4 -l 10 -H remotehost -- -d send
 
 # With custom netperf binary
 netperf-multi -n 8 --netperf ./build/src/netperf -H remotehost
@@ -356,7 +356,7 @@ Real-time monitoring with terminal UI:
 
 ```bash
 # Monitor ongoing tests
-netperf-monitor -H remotehost -l 60 --refresh 0.5 -- -d send
+netperf-monitor -H remotehost -d 60 --refresh 0.5 -- -d send
 
 # Follow an existing log file
 netperf-monitor --follow test.log
@@ -397,7 +397,7 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 
 - ✅ Multi-instance parallel execution (netperf-multi)
 - ✅ Statistical analysis with CI (netperf_stats.py)
-- ✅ Test profiles system (10 built-in profiles)
+- ✅ Test profiles system (15 built-in profiles)
 - ✅ Multi-host orchestration (netperf-orchestrate)
 - ✅ Real-time monitoring TUI (netperf-monitor)
 - ✅ Report generation engine (netperf-template)

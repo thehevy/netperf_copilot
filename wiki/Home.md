@@ -80,5 +80,5 @@ flowchart TD
 # 5. Run 16-stream bidirectional (16 TX + 16 RX) 200GbE test with dmesg fault gate
 ./dev/tools/netperf-multi -H 192.168.10.2 -i eth0 -t OMNI \
     --direction bx -n 16 -l 30 --affinity --per-core-netserver \
-    --base-port 18600 --check-kmsg -o bx_16flows.json -- -m 65536 -D
+    --base-port 18600 --check-kmsg -o json --export bx_16flows.json -- -m 65536 -D
 ```

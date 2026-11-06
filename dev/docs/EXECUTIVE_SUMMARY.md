@@ -88,4 +88,4 @@ flowchart LR
 | **Workload Profiles (15)** | [`dev/profiles/*.yaml`](../../dev/profiles/) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
 | **Output Presets (6)** | [`dev/catalog/output-presets/*.out`](../../dev/catalog/output-presets/) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
 | **Verification Suite** | [`dev/tests/test_modernization.py`](../../dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
-| **Project Wiki (8 Guides)** | [`wiki/`](../../wiki/Home.md) | Complete user, architect, and qualification operator documentation |
+| **Project Wiki (9 Guides)** | [`wiki/`](../../wiki/Home.md) | Complete user, architect, and qualification operator documentation |

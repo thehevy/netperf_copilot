@@ -979,7 +979,9 @@ Examples:
                         help='Enable topology-aware non-IRQ CPU affinity')
     parser.add_argument('--layout', choices=['auto', 'spread_step2', 'spread_l2', 'sequential'],
                         default='auto',
-                        help='Core placement strategy (default: auto -> spread_step2 on E-core, sequential on P-core)')
+                        help='Core placement strategy (default: auto -> spread_l2 on E-core, spread_step2 on P-core)')
+    parser.add_argument('--bkm', choices=['auto', 'cwf-ecore', 'gnr-pcore', 'mtu1500'],
+                        help='Optional BKM preset selector (auto, cwf-ecore, gnr-pcore, mtu1500)')
     parser.add_argument('--start-cpu', type=int, default=0,
                         help='Minimum starting CPU on DUT (default: auto non-IRQ pool)')
     parser.add_argument('--lp-start-cpu', type=int,
@@ -1022,6 +1024,17 @@ Examples:
 
     if args.instances < 1:
         parser.error("Number of instances must be at least 1")
+
+    if getattr(args, 'bkm', None):
+        bkm_layout_map = {
+            'cwf-ecore': 'spread_l2',
+            'gnr-pcore': 'spread_step2',
+            'mtu1500': 'sequential',
+        }
+        if args.layout == 'auto' and args.bkm in bkm_layout_map:
+            args.layout = bkm_layout_map[args.bkm]
+        if args.bkm == 'mtu1500' and args.mtu == 9022:
+            args.mtu = 1500
 
     netperf_path = args.netperf_path or find_netperf()
 

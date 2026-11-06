@@ -562,6 +562,54 @@ class TestNetperfModernization(unittest.TestCase):
         inv = netperf_orchestrate.HostInventory.from_yaml(hosts_yaml)
         self.assertEqual(len(inv.hosts), 5)
 
+    def test_step7_post_update_audit_fixes(self) -> None:
+        """Verify all C linkage, OMNI active CPU selectors, BKM alignment, and CLI flag fixes."""
+        makefile_am = (SRC_DIR / "Makefile.am").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("netdrv_ethtool.c netslot_linux.c netsys_linux.c", makefile_am)
+        self.assertIn("netserver_LDADD = missing/libcompat.a", makefile_am)
+        self.assertNotIn("libcompat.ap", makefile_am)
+
+        bsd_h = (SRC_DIR / "nettest_bsd.h").read_text(encoding="utf-8", errors="ignore")
+        self.assertIn("active_cpu_util;", bsd_h)
+        self.assertIn("active_cpu_count;", bsd_h)
+        self.assertIn("#define OMNI_RESULTS_CONV_CUTOFF 29", bsd_h)
+
+        omni_c = (SRC_DIR / "nettest_omni.c").read_text(encoding="utf-8", errors="ignore")
+        for sel in ("LOCAL_CPU_ACTIVE_UTIL", "LOCAL_CPU_ACTIVE_COUNT", "REMOTE_CPU_ACTIVE_UTIL", "REMOTE_CPU_ACTIVE_COUNT"):
+            self.assertIn(sel, omni_c)
+
+        cpu_out = (REPO_ROOT / "dev" / "catalog" / "output-presets" / "cpu.out").read_text(encoding="utf-8")
+        self.assertIn("LOCAL_CPU_ACTIVE_UTIL", cpu_out)
+        self.assertIn("REMOTE_CPU_ACTIVE_UTIL", cpu_out)
+
+        # Verify TopologyAnalyzer BKM & layout alignment
+        cwf_topo = TopologyAnalyzer.from_topology_snapshot(CWF_288_ECORE_SNAPSHOT)
+        gnr_topo = TopologyAnalyzer.from_topology_snapshot(GNR_PCORE_SMT_SNAPSHOT)
+        self.assertEqual(TopologyAnalyzer.select_layout_strategy(cwf_topo, "auto", num_flows=8, mtu=9000), "spread_l2")
+        self.assertEqual(TopologyAnalyzer.select_layout_strategy(gnr_topo, "auto", num_flows=8, mtu=9000), "spread_step2")
+        self.assertEqual(TopologyAnalyzer.get_bkm_parameters(cwf_topo)["tx_ring"], 512)
+        self.assertEqual(TopologyAnalyzer.get_bkm_parameters(gnr_topo)["tx_ring"], 2048)
+
+        # Verify QualificationCatalog per-core ports and ring-coalesce pre_commands
+        cat = QualificationCatalog(host="192.168.10.2", interface="ens801f0np0", topology=cwf_topo, base_port=18600)
+        loc_cases = cat.build_suite("core-locality")
+        for lc in loc_cases:
+            core = lc.parameters["local_cpu"]
+            p_idx = lc.command.index("-p")
+            self.assertEqual(lc.command[p_idx + 1], str(18600 + core))
+
+        matrix_cases = cat.build_suite("ring-coalesce-matrix")
+        self.assertEqual(len(matrix_cases[0].pre_commands), 2)
+        self.assertEqual(matrix_cases[0].pre_commands[0][:3], ["ethtool", "-G", "ens801f0np0"])
+
+        # Verify NetserverPoolManager custom binary path and CLI --action / -n flags
+        from netserver_manager import main as ns_main
+        mgr = NetserverPoolManager(topology=cwf_topo, base_port=18600, netserver_path="/opt/netperf/netserver")
+        spec = mgr.plan_pool(topo=cwf_topo, count=4)
+        self.assertIn("/opt/netperf/netserver -p", spec.instances[0].command)
+        rc = ns_main(["--action", "plan", "-n", "4", "--netserver", "/opt/netperf/netserver"])
+        self.assertEqual(rc, 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
