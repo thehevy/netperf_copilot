@@ -70,13 +70,30 @@ SUPPORTED_MERMAID_TYPES = (
 
 
 def _split_table_row(line: str) -> List[str]:
-    """Split a Markdown table row `| a | b |` into raw cell strings (preserving inner spaces), respecting escaped `\\|`."""
+    r"""Split a Markdown table row `| a | b |` into raw cell strings, respecting escaped `\|` and pipes inside inline backticks `` `...` ``."""
     s = line.strip()
     if s.startswith("|"):
         s = s[1:]
     if s.endswith("|") and not s.endswith(r"\|"):
         s = s[:-1]
-    return re.split(r"(?<!\\)\|", s)
+    cells: List[str] = []
+    cur: List[str] = []
+    in_tick = False
+    i = 0
+    n = len(s)
+    while i < n:
+        ch = s[i]
+        if ch == "`" and (i == 0 or s[i - 1] != "\\"):
+            in_tick = not in_tick
+            cur.append(ch)
+        elif ch == "|" and not in_tick and (i == 0 or s[i - 1] != "\\"):
+            cells.append("".join(cur))
+            cur = []
+        else:
+            cur.append(ch)
+        i += 1
+    cells.append("".join(cur))
+    return cells
 
 
 def _is_separator_row(cells: List[str]) -> bool:
@@ -146,7 +163,20 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
             return f"[{human}]({url})"
         return m.group(0)
 
+    while re.search(r"\]\(\[[^\]]*\]\(([^)]+)\)\)", updated):
+        updated = re.sub(r"\]\(\[[^\]]*\]\(([^)]+)\)\)", r"](\1)", updated)
+        fixes.append("Repaired nested markdown link wrapper")
+
     updated = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _shorten_link_label, updated)
+
+    protected_links: List[str] = []
+
+    def _save_link(m: re.Match[str]) -> str:
+        idx = len(protected_links)
+        protected_links.append(m.group(0))
+        return f"@@LINK_{idx}@@"
+
+    updated = re.sub(r"\[[^\]]+\]\([^)]+\)", _save_link, updated)
 
     def _unwrap_or_break_backticks(m: re.Match[str]) -> str:
         inner = m.group(1)
@@ -207,16 +237,7 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
         fixes.append(f"Converted bare URL '{url[:28]}...' -> '[{lbl}](...)'")
         return f"{prefix}[{lbl}]({url}){trailing}"
 
-    updated = re.sub(r'(^|[\s(>])(https?://[^\s)<>"]+)', _linkify_bare_url, updated)
-
-    protected_links: List[str] = []
-
-    def _save_link(m: re.Match[str]) -> str:
-        idx = len(protected_links)
-        protected_links.append(m.group(0))
-        return f"@@LINK_{idx}@@"
-
-    temp = re.sub(r"\[[^\]]+\]\([^)]+\)", _save_link, updated)
+    temp = re.sub(r'(^|[\s(>])(https?://[^\s)<>"]+)', _linkify_bare_url, updated)
     parts = temp.split("<br>")
     new_parts: List[str] = []
     for part in parts:
@@ -332,7 +353,14 @@ def validate_and_fix_markdown_text(
             while i < n:
                 cur_s = lines[i].strip()
                 if cur_s.startswith("|") and cur_s.endswith("|") and len(cur_s) > 2:
-                    tbl_lines.append((i + 1, lines[i]))
+                    cur_ln = lines[i]
+                    if auto_fix and "columbiaville" in cur_ln.lower() and not any(
+                        kw in cur_ln.lower()
+                        for kw in ("prohibited", "codename", "incorrect", "never", "instead of", "resolver", "columbiaville ->")
+                    ):
+                        cur_ln = re.sub(r"\bColumbiaville-2\b", "Intel® Ethernet Controller E835", cur_ln, flags=re.IGNORECASE)
+                        cur_ln = re.sub(r"\bColumbiaville\b", "Intel® Ethernet Controller E835", cur_ln, flags=re.IGNORECASE)
+                    tbl_lines.append((i + 1, cur_ln))
                     i += 1
                 else:
                     break
