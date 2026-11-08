@@ -218,7 +218,7 @@ flowchart TB
 | --- | --- | --- |
 | **SMT Threads per Core** | `1` (No SMT) | `2` (2-way SMT; sibling threads filtered) |
 | **L2 Cache Organization** | Shared 4 MB L2 per **4-core module** | Private 2 MB L2 per **single physical core** |
-| **Optimal Core Stride Strategy** | **`spread_l2`** (`[16, 20, 24, 28, ...]`, 1 core/module first) | **`spread_step2`** (Physical cores only, step-2 stride) |
+| **Optimal Core Stride Strategy** | **`spread_l2** ([16, 20, 24, 28, ...]`, 1 core/module first) | **`spread_step2`** (Physical cores only, step-2 stride) |
 | **Optimal TX / RX Ring Descriptors** | **`TX = 512`, `RX = 4096`** (prevents 4 MB L2 eviction) | **`TX = 2048`, `RX = 4096`** (maximizes deep-pipeline burst) |
 | **Interrupt Coalescing** | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` |
 

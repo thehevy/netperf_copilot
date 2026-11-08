@@ -22,15 +22,15 @@ Netperf supports four primary output formats:
 
 | Feature | KEYVAL | CSV | JSON | HUMAN |
 | --- | --- | --- | --- | --- |
-| Default | ✓ |  |  |  |
+| Default | ✓ | — | — | — |
 | Headers | No | Yes | Yes (metadata) | Yes |
-| Parseable | ✓ | ✓ | ✓ |  |
-| Structured |  |  | ✓ |  |
-| Metadata |  |  | ✓ |  |
-| Append-friendly | ✓ | ✓ |  |  |
-| Excel-compatible |  | ✓ |  |  |
-| Machine-readable | ✓ | ✓ | ✓ |  |
-| Human-readable | ✓ |  |  | ✓ |
+| Parseable | ✓ | ✓ | ✓ | — |
+| Structured | — | — | ✓ | — |
+| Metadata | — | — | ✓ | — |
+| Append-friendly | ✓ | ✓ | — | — |
+| Excel-compatible | — | ✓ | — | — |
+| Machine-readable | ✓ | ✓ | ✓ | — |
+| Human-readable | ✓ | — | — | ✓ |
 
 ---
 

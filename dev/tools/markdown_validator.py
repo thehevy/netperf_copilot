@@ -69,9 +69,16 @@ SUPPORTED_MERMAID_TYPES = (
 )
 
 
+def _sanitize_table_line(line: str) -> str:
+    """Repair truncated backticks in link labels (e.g. `(`...]`) and stray trailing `|  |` cells."""
+    s = re.sub(r"\(`\.\.\.\]", "...]", line)
+    s = re.sub(r"`([^`|]*?)\.\.\.\]", r"\1...]", s)
+    return s
+
+
 def _split_table_row(line: str) -> List[str]:
     r"""Split a Markdown table row `| a | b |` into raw cell strings, respecting escaped `\|` and pipes inside inline backticks `` `...` ``."""
-    s = line.strip()
+    s = _sanitize_table_line(line).strip()
     if s.startswith("|"):
         s = s[1:]
     if s.endswith("|") and not s.endswith(r"\|"):
@@ -256,6 +263,11 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
     for idx, lnk in enumerate(protected_links):
         temp = temp.replace(f"@@LINK_{idx}@@", lnk)
 
+    if temp.count("`") % 2 == 1:
+        temp = temp.replace("`", "")
+    if not temp.strip():
+        temp = "—"
+
     return temp, fixes
 
 
@@ -368,6 +380,7 @@ def validate_and_fix_markdown_text(
             parsed_rows: List[Tuple[int, List[str], bool]] = []
             has_sep = False
             for line_no, raw_ln in tbl_lines:
+                raw_ln = _sanitize_table_line(raw_ln)
                 raw_cells = _split_table_row(raw_ln)
                 is_sep = _is_separator_row(raw_cells)
                 if is_sep:
@@ -375,7 +388,8 @@ def validate_and_fix_markdown_text(
                 parsed_rows.append((line_no, raw_cells, is_sep))
 
             data_rows_only: List[List[str]] = []
-            for line_no, raw_cells, is_sep in parsed_rows:
+            header_cols = len(parsed_rows[0][1]) if parsed_rows else 0
+            for line_no, raw_cells, is_sep in (parsed_rows if has_sep else []):
                 stripped_cells = [c.strip() for c in raw_cells]
                 if is_sep:
                     if any(c != "---" for c in stripped_cells) or any(rc != " --- " for rc in raw_cells):
@@ -407,7 +421,7 @@ def validate_and_fix_markdown_text(
                                 "message": f"Table row has {len(stripped_cells)} columns (max allowed is {max_cols} to prevent horizontal scrolling).",
                             }
                         )
-                    eff_limit = max_token_len if len(stripped_cells) >= 3 else 68
+                    eff_limit = max_token_len if min(header_cols, max_cols) >= 3 else 68
                     for c in stripped_cells:
                         for tok in _extract_unbroken_tokens(c):
                             if len(tok) > eff_limit:
