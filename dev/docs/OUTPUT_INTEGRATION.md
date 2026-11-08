@@ -2,7 +2,7 @@
 
 Guide for integrating netperf with monitoring, logging, and analysis systems.
 
-**Version:** 2.7.1-fork (Phase 2)  
+**Version:** 2.7.1-fork (Phase 2)
 **Last Updated:** 2026-01-30
 
 ---
@@ -10,7 +10,7 @@ Guide for integrating netperf with monitoring, logging, and analysis systems.
 ## Quick Integration Matrix
 
 | System | Format | Method | Difficulty |
-|--------|--------|--------|------------|
+| --- | --- | --- | --- |
 | Prometheus | JSON/Template | Push Gateway / Textfile Collector | Easy |
 | Grafana | JSON | Via Prometheus or JSON API | Easy |
 | ELK Stack | JSON | Filebeat → Logstash → Elasticsearch | Medium |
@@ -224,7 +224,7 @@ output.logstash:
   hosts: ["logstash.local:5044"]
 ```
 
-### Logstash Configuration  
+### Logstash Configuration
 
 ```ruby
 # logstash-netperf.conf

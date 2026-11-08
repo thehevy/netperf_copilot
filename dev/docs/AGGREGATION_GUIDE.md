@@ -2,7 +2,7 @@
 
 Complete guide to using the `netperf-aggregate` tool for result analysis.
 
-**Version:** 1.0.0  
+**Version:** 1.0.0
 **Last Updated:** 2026-01-30
 
 ---
@@ -63,7 +63,7 @@ netperf-aggregate [options] file [file ...]
 ### Options
 
 | Option | Description |
-|--------|-------------|
+| --- | --- |
 | `-h, --help` | Show help message |
 | `-o, --output FILE` | Output file (default: stdout or auto-named) |
 | `--stats` | Calculate and display statistics |
@@ -247,7 +247,7 @@ Supported formats:
 ### Calculated Metrics
 
 | Statistic | Description | Formula |
-|-----------|-------------|---------|
+| --- | --- | --- |
 | **count** | Number of samples | n |
 | **mean** | Average value | Σx / n |
 | **median** | Middle value | x[n/2] |
@@ -278,7 +278,7 @@ Automatically tracked from netperf output:
 When using `--compare`, changes are classified as:
 
 | Change | Threshold | Status |
-|--------|-----------|--------|
+| --- | --- | --- |
 | > +5% | Increase > 5% | ✓ IMPROVEMENT |
 | -5% to +5% | Within ±5% | → STABLE |
 | < -5% | Decrease > 5% | ⚠ REGRESSION |

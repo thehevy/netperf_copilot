@@ -304,7 +304,7 @@ netperf -H host  # Uses keyval output automatically
 ## Quick Reference
 
 | Goal | Command |
-|------|---------|
+| --- | --- |
 | Legacy compatible | `netperf -H host -t TCP_STREAM` |
 | Easy parsing | `netperf -H host -o keyval` |
 | JSON output | `netperf -H host -- -J` |

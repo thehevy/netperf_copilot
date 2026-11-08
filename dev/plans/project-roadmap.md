@@ -921,7 +921,7 @@ Next Steps:
 ## Implementation Priority Matrix
 
 | Phase | Feature | Impact | Complexity | Priority |
-|-------|---------|--------|------------|----------|
+| --- | --- | --- | --- | --- |
 | 1 | OMNI default + intervals | High | Low | P0 |
 | 2 | JSON/CSV output | High | Medium | P0 |
 | 3 | Multi-instance testing | High | High | P1 |
@@ -1038,6 +1038,6 @@ Next Steps:
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2026-01-30  
+**Document Version:** 1.0
+**Last Updated:** 2026-01-30
 **Status:** Draft for Review

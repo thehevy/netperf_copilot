@@ -219,12 +219,12 @@ This fork is **fully backward compatible** with upstream netperf:
 
 ## 📊 Output Formats Comparison
 
-| Format              | Flag     | Use Case                 | Example                      |
-| ------------------- | -------- | ------------------------ | ---------------------------- |
-| **Keyval** (default) | None    | Scripting, grep-friendly | `THROUGHPUT=54623.45`        |
-| **JSON**            | `-- -J`  | Modern tools, APIs       | `{"THROUGHPUT": 54623.45}`   |
-| **CSV**             | `-- -o`  | Spreadsheets, analysis   | `54623.45,1.00,TCP`          |
-| **Columnar**        | `-- -O`  | Human reading            | Traditional table format     |
+| Format | Flag | Use Case | Example |
+| --- | --- | --- | --- |
+| **Keyval** (default) | None | Scripting, grep-friendly | `THROUGHPUT=54623.45` |
+| **JSON** | `-- -J` | Modern tools, APIs | `{"THROUGHPUT": 54623.45}` |
+| **CSV** | `-- -o` | Spreadsheets, analysis | `54623.45,1.00,TCP` |
+| **Columnar** | `-- -O` | Human reading | Traditional table format |
 
 ## 🛠️ Development
 

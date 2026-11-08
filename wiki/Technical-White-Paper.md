@@ -2,8 +2,8 @@
 
 **A Technical White Paper on the Netperf v3.0 Modernization Project**
 
-**Document Type**: Technical Architecture & Performance Engineering White Paper  
-**Project**: Netperf v3.0 Modernization (`https://github.com/thehevy/netperf_copilot`)  
+**Document Type**: Technical Architecture & Performance Engineering White Paper
+**Project**: Netperf v3.0 Modernization (`https://github.com/thehevy/netperf_copilot`)
 **Scope**: Core C Engine (`src/`), Silicon-Aware Topology & Daemon Orchestration (`dev/tools/`), Automated BKM Tuning, Hardware Fault Gating, and Empirical Qualification Results
 
 ---
@@ -215,7 +215,7 @@ flowchart TB
    On P-core processors with 2-way SMT, pinning two high-rate TCP streams to sibling threads `(cpu_0, cpu_128)` halves per-stream instruction retirement and L1/L2 bandwidth. `netperf_topology.py` parses `thread_siblings_list`, filters out secondary SMT threads, and strides across physical cores (`spread_step2`) with **`tx_ring = 2048`**, **`rx_ring = 4096`**, and **`rx_usecs = 10, tx_usecs = 20`**.
 
 | Architectural Dimension | High-Density E-Core (`cwf-ecore`) | High-Frequency P-Core (`gnr-pcore`) |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | **SMT Threads per Core** | `1` (No SMT) | `2` (2-way SMT; sibling threads filtered) |
 | **L2 Cache Organization** | Shared 4 MB L2 per **4-core module** | Private 2 MB L2 per **single physical core** |
 | **Optimal Core Stride Strategy** | **`spread_l2`** (`[16, 20, 24, 28, ...]`, 1 core/module first) | **`spread_step2`** (Physical cores only, step-2 stride) |
@@ -284,7 +284,7 @@ flowchart LR
 [`netperf-preflight`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_preflight.py) programmatically audits the live system state against 24 documented hardware/OS anti-affinity rules before any benchmark begins. Key high-severity rules include:
 
 | Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G | Automated Remediation |
-| :--- | :--- | :--- | :--- |
+| --- | --- | --- | --- |
 | **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput | Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
 | **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops | Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
 | **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100% | Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
@@ -340,12 +340,12 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 #### Empirical Comparison (16 Streams, MTU 9000, 200GbE)
 
-| Configuration | Core Allocation | TX / RX Ring | Aggregate Throughput (Mean ± 95% CI) | Run-to-Run CV | Active Core Util (`active_cpu_util`) | `dmesg` / `ethtool` Faults |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **1. Legacy Baseline** | Linear `0..15` (collides w/ IRQ) | `2048 / 2048` | `128.42 ± 11.30 Gbps` | `14.21%` | `99.4%` (`peak_cpu_id=3`) | 0 faults (`rx_missed=48,210`) |
-| **2. Per-Core Pool Only** | Linear `16..31` (4 cores/L2 mod) | `2048 / 2048` | `161.85 ± 4.12 Gbps` | `4.10%` | `88.7%` (`peak_cpu_id=18`) | 0 faults (`rx_missed=1,120`) |
-| **3. + `spread_l2` Stride** | `spread_l2` `16,20,24..76` (1/mod) | `2048 / 2048` | `181.10 ± 1.95 Gbps` | `1.74%` | `76.2%` (`peak_cpu_id=24`) | 0 faults (`rx_missed=0`) |
-| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 4096`** | **`192.64 ± 0.96 Gbps`** | **`0.80%`** | **`61.8%` (`peak_cpu_id=20`)** | **0 faults (`PASS`)** |
+| Configuration | Core Allocation | TX / RX Ring | Aggregate Throughput (Mean ± 95% CI) | Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults |
+| --- | --- | --- | --- | --- |
+| **1. Legacy Baseline** | Linear `0..15` (collides w/ IRQ) | `2048 / 2048` | `128.42 ± 11.30 Gbps` | **Run-to-Run CV**: `14.21%`<br>**Active Core Util (`active_cpu_util`)**: `99.4%` (`peak_cpu_id=3`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=48,210`) |
+| **2. Per-Core Pool Only** | Linear `16..31` (4 cores/L2 mod) | `2048 / 2048` | `161.85 ± 4.12 Gbps` | **Run-to-Run CV**: `4.10%`<br>**Active Core Util (`active_cpu_util`)**: `88.7%` (`peak_cpu_id=18`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=1,120`) |
+| **3. + `spread_l2` Stride** | `spread_l2` `16,20,24..76` (1/mod) | `2048 / 2048` | `181.10 ± 1.95 Gbps` | **Run-to-Run CV**: `1.74%`<br>**Active Core Util (`active_cpu_util`)**: `76.2%` (`peak_cpu_id=24`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=0`) |
+| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 4096`** | **`192.64 ± 0.96 Gbps`** | **Run-to-Run CV**: **`0.80%`**<br>**Active Core Util (`active_cpu_util`)**: **`61.8%` (`peak_cpu_id=20`)**<br>**`dmesg` / `ethtool` Faults**: **0 faults (`PASS`)** |
 
 > **Key Takeaway**: Combining per-core `netserver` isolation, `spread_l2` 1-core-per-L2-module striding, `tx_ring = 512`, and `-Z` zero-copy increased throughput by **+64.2 Gbps (+50.0%)** while reducing run-to-run variance from **14.21% down to 0.80%** and lowering active CPU utilization by **37.6 percentage points**.
 
@@ -362,12 +362,12 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 #### Single-Stream Locality Results (`qual_locality/dashboard.md`)
 
-| Test ID | Placement Zone | Client Core (`-T`) | Relative to Queue-0 IRQ Core (`CPU 0`) | Single-Stream Throughput | `active_cpu_util` | Efficiency (`Gbps / %CPU`) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`LOC-SAME-CORE`** | Exact Same Core | `-T 0,0` | Collides with Queue-0 hardirq/softirq on `CPU 0` | `26.40 Gbps` | `100.0%` | `0.264 Gbps/%` |
-| **`LOC-SAME-L2`** | L2 Module Sibling | `-T 1,1` | Shares 4 MB L2 cache with `CPU 0` (`CPUs 0–3`) | `41.85 Gbps` | `84.2%` | `0.497 Gbps/%` |
-| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16` | Dedicated L2 module on NIC local `NUMA 0` | **`46.24 Gbps`** | **`78.5%`** | **`0.589 Gbps/%`** |
-| **`LOC-CROSS-NUMA`** | Remote Socket NUMA | `-T 144,144` | Crosses inter-socket interconnect (`NUMA 1`) | `31.12 Gbps` | `94.6%` | `0.329 Gbps/%` |
+| Test ID | Placement Zone | Client Core (`-T`) | Relative to Queue-0 IRQ Core (`CPU 0`) | Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`) |
+| --- | --- | --- | --- | --- |
+| **`LOC-SAME-CORE`** | Exact Same Core | `-T 0,0` | Collides with Queue-0 hardirq/softirq on `CPU 0` | **Single-Stream Throughput**: `26.40 Gbps`<br>**`active_cpu_util`**: `100.0%`<br>**Efficiency (`Gbps / %CPU`)**: `0.264 Gbps/%` |
+| **`LOC-SAME-L2`** | L2 Module Sibling | `-T 1,1` | Shares 4 MB L2 cache with `CPU 0` (`CPUs 0–3`) | **Single-Stream Throughput**: `41.85 Gbps`<br>**`active_cpu_util`**: `84.2%`<br>**Efficiency (`Gbps / %CPU`)**: `0.497 Gbps/%` |
+| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16` | Dedicated L2 module on NIC local `NUMA 0` | **Single-Stream Throughput**: **`46.24 Gbps`**<br>**`active_cpu_util`**: **`78.5%`**<br>**Efficiency (`Gbps / %CPU`)**: **`0.589 Gbps/%`** |
+| **`LOC-CROSS-NUMA`** | Remote Socket NUMA | `-T 144,144` | Crosses inter-socket interconnect (`NUMA 1`) | **Single-Stream Throughput**: `31.12 Gbps`<br>**`active_cpu_util`**: `94.6%`<br>**Efficiency (`Gbps / %CPU`)**: `0.329 Gbps/%` |
 
 > **Key Takeaway**: Disjoint local-NUMA L2 placement (`LOC-LOCAL-NUMA`) delivers **+75.1% higher single-stream throughput** than colliding on the IRQ core (`LOC-SAME-CORE`) and **+48.6% higher throughput** than cross-NUMA placement (`LOC-CROSS-NUMA`).
 
@@ -389,12 +389,12 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 #### Empirical Multi-Port Scaling Results (3 × 200GbE = 600 Gbps Wire Capacity)
 
-| Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) | Port 1 (`ens23np0`) | Port 2 (`ens27np0`) | Aggregate Throughput | Line-Rate Efficiency |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps` | `190.4 Gbps` | `189.6 Gbps` | **`571.8 Gbps`** | **95.3% of 600G** |
-| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps` | `189.8 Gbps` | `188.7 Gbps` | **`569.4 Gbps`** | **94.9% of 600G** |
-| **Sequential `bx-seq`** | `48 TX` then `48 RX` | `191.5 / 190.6 Gbps` | `190.1 / 189.4 Gbps` | `189.2 / 188.5 Gbps` | **`570.8G TX / 568.5G RX`** | **95.0% Unidirectional** |
-| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | `172.4G TX + 168.9G RX` | `170.8G TX + 167.2G RX` | `169.5G TX + 166.1G RX` | **`1,014.9 Gbps` Total** | **84.6% of 1.2 Tbps Full-Duplex** |
+| Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) | Port 1 (`ens23np0`) | Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency |
+| --- | --- | --- | --- | --- |
+| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps` | `190.4 Gbps` | **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600G** |
+| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps` | `189.8 Gbps` | **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600G** |
+| **Sequential `bx-seq`** | `48 TX` then `48 RX` | `191.5 / 190.6 Gbps` | `190.1 / 189.4 Gbps` | **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8G TX / 568.5G RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
+| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | `172.4G TX + 168.9G RX` | `170.8G TX + 167.2G RX` | **Port 2 (`ens27np0`)**: `169.5G TX + 166.1G RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
 
 ---
 

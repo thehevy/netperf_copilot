@@ -6,10 +6,10 @@ Earlier work on `netperf_copilot` completed **Phases 1–3** of the original 7-p
 
 ### 1.1 Completed Foundation (Phases 1–3)
 | Layer | Completed Enhancements | Key Files |
-| :--- | :--- | :--- |
-| **Build & Compiler** | Enabled `--enable-demo=yes` (interval reporting), `--enable-histogram=yes`, and `--enable-omni=yes` by default; created `-O3 -march=native -flto` build automation. | [`configure.ac`](../../configure.ac), [`dev/scripts/configure-optimized.sh`](../scripts/configure-optimized.sh) |
+| --- | --- | --- |
+| **Build & Compiler** | Enabled `--enable-demo=yes` (interval reporting), `--enable-histogram=yes`, and `--enable-omni=yes` by default; created `-O3 -march=native -flto` build automation. | [`configure.ac`](../../configure.ac), [`configure-optimized.sh`](../scripts/configure-optimized.sh) |
 | **C Engine (`src/`)** | Raised `MAXCPUS` to `2048`; changed default OMNI output selector to `NETPERF_OUTPUT_KEYVAL`; added global `-M` shortcut for `OMNI` mode while preserving `TCP_STREAM` backwards compatibility; implemented `-- -J [file]` JSON output (`print_omni_json`) and RFC 4180 CSV escaping (`print_omni_csv`). | [`src/netlib.h`](../../src/netlib.h), [`src/netlib.c`](../../src/netlib.c), [`src/netsh.c`](../../src/netsh.c), [`src/nettest_omni.c`](../../src/nettest_omni.c) |
-| **Python Tooling** | Built multi-instance launcher (`netperf-multi`), statistical analyzer (`netperf_stats.py`), YAML profile runner (`netperf-profile`), SSH multi-host orchestrator (`netperf-orchestrate`), real-time TUI (`netperf-monitor`), template generator (`netperf-template`), and aggregator (`netperf-aggregate`). | [`dev/tools/netperf-multi`](../tools/netperf-multi), [`dev/tools/netperf-profile`](../tools/netperf-profile), [`dev/tools/netperf-orchestrate`](../tools/netperf-orchestrate) |
+| **Python Tooling** | Built multi-instance launcher (`netperf-multi`), statistical analyzer (`netperf_stats.py`), YAML profile runner (`netperf-profile`), SSH multi-host orchestrator (`netperf-orchestrate`), real-time TUI (`netperf-monitor`), template generator (`netperf-template`), and aggregator (`netperf-aggregate`). | [`dev/tools/netperf-multi`](../tools/netperf-multi), [`netperf-profile`](../tools/netperf-profile), [`netperf-orchestrate`](../tools/netperf-orchestrate) |
 
 ### 1.2 Architectural Gaps Identified for 100G–800G NICs & Modern Multi-Core Platforms
 

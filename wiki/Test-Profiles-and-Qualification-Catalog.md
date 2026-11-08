@@ -16,7 +16,7 @@ Run any profile with:
 ### High-Speed 200G–600G & OCP Qualification Profiles (v2.0)
 
 | Profile Name | Target Scenario | Streams & Direction | Key Settings |
-| :--- | :--- | :--- | :--- |
+| --- | --- | --- | --- |
 | **`e835-200g-cwf-ecore`** | Intel E835 200GbE on Xeon 6 Clearwater Forest / Sierra Forest E-Core (`Xeon E-Core`) | 1, 8, 16, 32 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_l2`, `per_core_netserver: true`, `tx_ring: 512`, `message_size: 65536` |
 | **`e835-200g-gnr-pcore`** | Intel E835 200GbE on Xeon 6 Granite Rapids P-Core (`Xeon P-Core`/`Xeon P-Core`) | 1, 8, 16 TX; 16 RX; 16 BX | `mtu: 9000`, `layout: spread_step2`, `per_core_netserver: true`, `tx_ring: 2048`, `nodelay: true` |
 | **`e835-3x200g-multiport`** | Aggregate 3x200GbE (600GbE Total) Multi-NIC / Multi-NUMA | 48 TX (16/NIC), 48 RX (16/NIC), 24 BX | `interfaces: "ens7np0,ens23np0,ens27np0"`, `layout: spread_l2`, `per_core_netserver: true` |
@@ -26,7 +26,7 @@ Run any profile with:
 ### General-Purpose Network Profiles
 
 | Profile Name | Category | Description |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | **`baseline`** | `baseline` | Quick 30s baseline: 1-flow TCP Send, TCP Recv, TCP RR (64B), and UDP Send (1472B) |
 | **`throughput`** | `throughput` | 4-stream TCP Upload/Download (256KB socket, 64KB message) and 2-stream UDP |
 | **`latency`** | `latency` | 1B, 64B, and 1KB TCP/UDP request-response latency characterization |

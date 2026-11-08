@@ -201,5 +201,5 @@ npx markdownlint file.md
 
 ---
 
-**Maintained By**: Documentation Enforcer Agent  
+**Maintained By**: Documentation Enforcer Agent
 **Last Updated**: January 31, 2026

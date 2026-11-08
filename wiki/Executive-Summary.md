@@ -1,7 +1,7 @@
 # Executive Summary: Netperf Modernization Project (v3.0)
 
-**Project Repository**: `https://github.com/thehevy/netperf_copilot`  
-**Base Upstream Version**: Netperf 2.7.0 / 2.7.1 (MIT License)  
+**Project Repository**: `https://github.com/thehevy/netperf_copilot`
+**Base Upstream Version**: Netperf 2.7.0 / 2.7.1 (MIT License)
 **Modernized Release**: Netperf v3.0 (Phases 1–7 Complete)
 
 ---
@@ -67,7 +67,7 @@ flowchart LR
 ## 3. Quantified Engineering Impact: Before vs. After
 
 | Capability / Metric | Legacy `netperf` 2.7.0 | Modernized `netperf` v3.0 | Impact / Improvement |
-| :--- | :--- | :--- | :--- |
+| --- | --- | --- | --- |
 | **Max Socket Message Size** | `1 MB` (`1,048,576` B) | **`4 MB` (`4,194,304` B) + `-Z` (`MSG_ZEROCOPY`)** | **4x** larger DMA bursts; eliminates user-space copy tax |
 | **Max Monitored CPU Cores** | `256` cores (global average only) | **`2048` cores (`active_cpu_util` + `peak_cpu_id`)** | **8x** core scaling; pinpoints single-core saturation |
 | **Ethtool Link Speed Ceiling** | `65,535 Mbps` (`ETHTOOL_GSET` 16-bit) | **`800,000 Mbps` (`ETHTOOL_GLINKSETTINGS` 32-bit)** | Full 100G / 200G / 400G / 800G visibility |
@@ -82,10 +82,10 @@ flowchart LR
 ## 4. Deliverable Inventory
 
 | Component | Path | Purpose |
-| :--- | :--- | :--- |
-| **Core Binaries** | [`src/netperf`](https://github.com/thehevy/netperf_copilot/blob/master/src/netperf.c), [`src/netserver`](https://github.com/thehevy/netperf_copilot/blob/master/src/netserver.c), [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c) | Modernized C benchmark engine with `-M`, `-Z`, 4 MB buffers, 2048-core telemetry, and JSON/CSV/Preset output |
-| **Production CLI Tools (11)** | [`dev/tools/`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/) | `netperf-multi`, `netserver-manager`, `netperf-preflight`, `netperf-tuner`, `netperf-catalog`, `netperf-profile`, `netperf-orchestrate`, `netperf-monitor`, `netperf_stats.py`, `netperf-aggregate`, `netperf-template` |
-| **Workload Profiles (15)** | [`dev/profiles/*.yaml`](https://github.com/thehevy/netperf_copilot/blob/master/dev/profiles/) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
-| **Output Presets (6)** | [`dev/catalog/output-presets/*.out`](https://github.com/thehevy/netperf_copilot/blob/master/dev/catalog/output-presets/) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
-| **Verification Suite** | [`dev/tests/test_modernization.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
+| --- | --- | --- |
+| **Core Binaries** | [`src/netperf`]([netperf.c]([netperf.c]([netperf.c](https://github.com/thehevy/netperf_copilot/blob/master/src/netperf.c)))), [`src/netserver`]([netserver.c]([netserver.c]([netserver.c](https://github.com/thehevy/netperf_copilot/blob/master/src/netserver.c)))), [`src/nettest_omni.c`]([nettest_omni.c]([nettest_omni.c]([nettest_omni.c](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c)))) | Modernized C benchmark engine with `-M`, `-Z`, 4 MB buffers, 2048-core telemetry, and JSON/CSV/Preset output |
+| **Production CLI Tools (11)** | [`dev/tools/`]([tools]([tools]([tools](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/)))) | `netperf-multi`, `netserver-manager`, `netperf-preflight`, `netperf-tuner`, `netperf-catalog`, `netperf-profile`, `netperf-orchestrate`, `netperf-monitor`, `netperf_stats.py`, `netperf-aggregate`, `netperf-template` |
+| **Workload Profiles (15)** | [`dev/profiles/*.yaml`]([profiles]([profiles]([profiles](https://github.com/thehevy/netperf_copilot/blob/master/dev/profiles/)))) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
+| **Output Presets (6)** | [`*.out`]([output-presets]([output-presets]([output-presets](https://github.com/thehevy/netperf_copilot/blob/master/dev/catalog/output-presets/)))) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
+| **Verification Suite** | [`test_modernization.py`]([test_modernization.py]([test_modernization.py]([test_modernization.py](https://github.com/thehevy/netperf_copilot/blob/master/dev/tests/test_modernization.py)))) | 18 deterministic unit & architectural verification tests + live integration suites |
 | **Project Wiki (9 Guides)** | [`wiki/`](Home.md) | Complete user, architect, and qualification operator documentation |

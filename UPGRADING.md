@@ -450,7 +450,7 @@ netperf -H host -M -l 300 -D -1
 ## Compatibility Matrix
 
 | Feature | Upstream | This Fork | Compatible? |
-|---------|----------|-----------|-------------|
+| --- | --- | --- | --- |
 | Command-line options | ✓ | ✓ | ✅ Yes |
 | Test names | ✓ | ✓ | ✅ Yes |
 | Network protocol | v2.7 | v2.7 | ✅ Yes |

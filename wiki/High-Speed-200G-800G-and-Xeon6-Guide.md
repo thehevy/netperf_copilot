@@ -9,7 +9,7 @@ Achieving deterministic line rate at **200GbE (189–192 Gbps TCP goodput)**, **
 `netperf_topology.py` automatically detects whether the host CPU is an **Intel Xeon 6 P-Core** (Granite Rapids `Xeon P-Core`/`Xeon P-Core`, or Sapphire/Emerald Rapids) or an **Intel Xeon 6 E-Core** (Clearwater Forest `Xeon E-Core` 288-core / Sierra Forest `6780E` 144-core) and applies the optimal core layout:
 
 | Platform / Microarchitecture | Core Architecture | Optimal Layout Strategy | Optimal `ice` TX Ring | Stream Sweet Spot (200GbE) |
-| :--- | :--- | :--- | :---: | :---: |
+| --- | --- | --- | --- | --- |
 | **Xeon 6 Clearwater Forest / Sierra Forest** (`Xeon E-Core`, `6780E`) | E-Core (No SMT, 4 cores share 4 MB L2 module) | `spread_l2` (1–2 cores per 4-core L2 module before filling siblings) | **512** (`rx 4096`) | **16 streams** (~35 Gbps/flow, ~189.4 Gbps aggregate) |
 | **Xeon 6 Granite Rapids** (`Xeon P-Core`, `Xeon P-Core`) | P-Core (2-way SMT, dedicated 2 MB L2 per core) | `spread_step2` (physical cores only, filtering SMT siblings >= 128) | **2048** (`rx 4096`) | **8–16 streams** (~52 Gbps/flow, ~191.2 Gbps aggregate) |
 

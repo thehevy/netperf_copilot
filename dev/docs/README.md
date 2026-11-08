@@ -31,7 +31,7 @@ This directory contains comprehensive documentation for the modernized netperf f
 ### By Task
 
 | What do you want to do? | Read this |
-|-------------------------|-----------|
+| --- | --- |
 | Get started quickly | [README.md](../../README.md) |
 | Migrate from upstream | [UPGRADING.md](../../UPGRADING.md) |
 | Configure build options | [BUILD_CONFIGURATION.md](BUILD_CONFIGURATION.md) |
@@ -117,7 +117,7 @@ This directory contains comprehensive documentation for the modernized netperf f
 All Phase 1 features have minimal performance impact:
 
 | Feature | Throughput Impact | Notes |
-|---------|------------------|-------|
+| --- | --- | --- |
 | OMNI default | 0% | Same performance as classic tests |
 | JSON output | 0% | Only formats existing data |
 | Key-value output | 0% | Minimal formatting overhead |
@@ -235,6 +235,6 @@ See [phase-1-progress.md](../plans/phase-1-progress.md) for detailed roadmap.
 
 ---
 
-**Last Updated**: 2026-01-30  
-**Documentation Version**: Phase 1 Complete  
+**Last Updated**: 2026-01-30
+**Documentation Version**: Phase 1 Complete
 **Project Status**: Production Ready

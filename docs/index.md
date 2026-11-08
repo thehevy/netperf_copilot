@@ -137,9 +137,9 @@ netperf-template -t markdown-report results.json
 
 ## 📊 Performance
 
-**Integration Testing**: 100% pass rate (11/11 tests)  
-**Performance Validated**: 19-52 Gbps throughput  
-**Test Server**: Live datacenter infrastructure  
+**Integration Testing**: 100% pass rate (11/11 tests)
+**Performance Validated**: 19-52 Gbps throughput
+**Test Server**: Live datacenter infrastructure
 **Profiles Available**: 10 built-in scenarios
 
 ---
@@ -147,7 +147,7 @@ netperf-template -t markdown-report results.json
 ## 🔧 Tools Overview
 
 | Tool | Purpose | Status |
-|------|---------|--------|
+| --- | --- | --- |
 | **netperf-multi** | Parallel execution (2-16 instances) | ✅ Production |
 | **netperf_stats.py** | Statistical analysis with CI | ✅ Production |
 | **netperf-profile** | Pre-configured test profiles | ✅ Production |
@@ -256,9 +256,9 @@ netperf-multi -n 4 -H host -- -M -d send -l 30 | netperf_stats.py -
 
 ## 🗺️ Roadmap
 
-**Phase 1** ✅ Complete - Modern defaults and output formats  
-**Phase 2** ✅ Complete - Enhanced output and templates  
-**Phase 3** ✅ Complete - Advanced tools and orchestration  
+**Phase 1** ✅ Complete - Modern defaults and output formats
+**Phase 2** ✅ Complete - Enhanced output and templates
+**Phase 3** ✅ Complete - Advanced tools and orchestration
 **Phase 4** 🔜 Planned - Enterprise features (web dashboard, database, regression detection)
 
 ---

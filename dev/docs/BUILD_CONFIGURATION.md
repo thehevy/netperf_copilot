@@ -313,7 +313,7 @@ This script builds netperf with various configurations and compares throughput a
 Based on internal testing on Linux x86_64:
 
 | Option | Throughput Impact | CPU Impact | Notes |
-|--------|------------------|------------|-------|
+| --- | --- | --- | --- |
 | histogram | -5% to -15% | Minimal | Per-op timing overhead |
 | dirty | -20% to -40% | Minimal | Forces cache misses |
 | demo | -0% to -2% | Minimal | I/O for interim results |

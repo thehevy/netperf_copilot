@@ -4,9 +4,9 @@
 
 This phase focuses on changing netperf defaults to be more useful out-of-the-box while maintaining backward compatibility.
 
-**Duration:** 2 weeks  
-**Risk:** Low  
-**Dependencies:** None  
+**Duration:** 2 weeks
+**Risk:** Low
+**Dependencies:** None
 
 ---
 
@@ -193,7 +193,7 @@ make clean && make
 diff results-no-demo.txt results-with-demo.txt
 ```
 
-**Expected:** Minimal impact (<1% overhead)  
+**Expected:** Minimal impact (<1% overhead)
 **If overhead >2%:** Consider leaving as opt-in
 
 #### Testing Checklist
@@ -212,7 +212,7 @@ diff results-no-demo.txt results-with-demo.txt
 Create: `dev/docs/analysis/configure-options-analysis.md`
 
 | Option | Current Default | Recommended | Reason | Performance Impact |
-|--------|----------------|-------------|--------|-------------------|
+| --- | --- | --- | --- | --- |
 | --enable-demo | no | **yes** | Useful by default | <1% |
 | --enable-omni | yes | yes | Core feature | N/A |
 | --enable-histogram | no | no | 5-10% overhead | High |
@@ -549,6 +549,6 @@ git checkout -b feature/optimized-build
 
 ---
 
-**Document Version:** 1.0  
-**Status:** Ready for Implementation  
+**Document Version:** 1.0
+**Status:** Ready for Implementation
 **Last Updated:** 2026-01-30

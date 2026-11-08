@@ -2,9 +2,9 @@
 
 Technical implementation details for Phase 2: Output Format Enhancement.
 
-**Phase:** 2  
-**Status:** Complete  
-**Version:** 2.7.1-fork  
+**Phase:** 2
+**Status:** Complete
+**Version:** 2.7.1-fork
 **Completion Date:** 2026-01-30
 
 ---
@@ -594,7 +594,7 @@ class ReportGenerator:
 Measured on Intel Xeon, 10-second test:
 
 | Format | Phase 1 | Phase 2 | Overhead |
-|--------|---------|---------|----------|
+| --- | --- | --- | --- |
 | KEYVAL | 15 μs | 15 μs | 0% |
 | CSV | 20 μs | 35 μs | +75% (escaping) |
 | JSON | 25 μs | 45 μs | +80% (metadata) |
@@ -605,7 +605,7 @@ Measured on Intel Xeon, 10-second test:
 ### Aggregation Tool Performance
 
 | Files | Total Size | Processing Time |
-|-------|------------|-----------------|
+| --- | --- | --- |
 | 10 | 100 KB | 0.15s |
 | 100 | 1 MB | 0.8s |
 | 1000 | 10 MB | 6.5s |

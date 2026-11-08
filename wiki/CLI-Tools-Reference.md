@@ -13,7 +13,7 @@ Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topo
 ```
 
 | Flag | Description |
-| :--- | :--- |
+| --- | --- |
 | `-H`, `--host` | Single IP, comma-separated list (`10.0.1.2,10.0.2.2`), or octet range (`192.168.10..17.74`) |
 | `-n`, `--instances` | Number of streams per port/direction (or total streams distributed across `-i` interfaces) |
 | `-t`, `--test` | Test type: `OMNI` (recommended for 100G+), `TCP_STREAM`, `TCP_MAERTS`, `TCP_RR`, `UDP_STREAM` |

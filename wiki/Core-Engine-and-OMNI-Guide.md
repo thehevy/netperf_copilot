@@ -89,7 +89,7 @@ netperf -H 192.168.10.2 -M -l 10 -- -d stream -O
 You can pass a preset name directly to `-k`, `-J`, `-o`, or `-O` without needing the full file path or `.out` suffix:
 
 | Preset Name | File | Description |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | `default` | `default.out` | Balanced set of 20 throughput, socket, MSS, CPU, and transport fields (loaded automatically by `-M`) |
 | `minimal` | `minimal.out` | Core throughput, units, elapsed time, protocol, and direction (5 fields) |
 | `throughput` | `throughput.out` | Bandwidth, socket buffers, message size, MSS, and byte/send counters |

@@ -4,8 +4,8 @@
 
 Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP, DLPI, and Unix Domain socket performance. It operates in a client-server model where `netperf` (client) connects to `netserver` (daemon) to conduct performance tests and measure throughput, latency, and CPU utilization.
 
-**License**: MIT (Hewlett Packard Enterprise Development LP)  
-**Version**: 2.7.1  
+**License**: MIT (Hewlett Packard Enterprise Development LP)
+**Version**: 2.7.1
 **Language**: C (ANSI C with platform-specific extensions)
 
 ## Architecture
@@ -43,7 +43,7 @@ Netperf implements platform-specific CPU measurement via pluggable modules selec
 
 - **netcpu_procstat.c**: Linux `/proc/stat` (default for Linux)
 - **netcpu_pstat.c / pstatnew.c**: HP-UX `pstat()` interface
-- **netcpu_perfstat.c**: AIX `perfstat()` interface  
+- **netcpu_perfstat.c**: AIX `perfstat()` interface
 - **netcpu_kstat.c / kstat10.c**: Solaris `kstat` interface
 - **netcpu_sysctl.c**: BSD/MacOS `sysctl()` interface
 - **netcpu_osx.c**: MacOS X `host_info()` interface
@@ -186,7 +186,7 @@ Usage controlled by `cpu_binding_requested` global variable.
 ## Key Files Reference
 
 | File | Purpose |
-|------|---------|
+| --- | --- |
 | [src/nettest_omni.c](../src/nettest_omni.c) | Modern unified test framework (7699 lines) |
 | [src/netlib.c](../src/netlib.c) | Core networking utilities (5002 lines) |
 | [src/netserver.c](../src/netserver.c) | Server daemon implementation (1561 lines) |

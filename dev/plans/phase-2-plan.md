@@ -4,9 +4,9 @@
 
 Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON support, adding comprehensive output management, advanced formatting, and result processing.
 
-**Status**: Planning  
-**Start Date**: 2026-01-30  
-**Estimated Duration**: 2-3 weeks  
+**Status**: Planning
+**Start Date**: 2026-01-30
+**Estimated Duration**: 2-3 weeks
 **Branch**: `dev/phase-2-output-enhancement`
 
 ## Goals
@@ -38,7 +38,7 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 
 ### Task 2.1: Enhanced JSON Output (3 days)
 
-**Priority**: High  
+**Priority**: High
 **Dependencies**: Phase 1 JSON foundation
 
 **Objectives**:
@@ -101,7 +101,7 @@ Phase 2 focuses on enhancing netperf's output capabilities beyond Phase 1's JSON
 
 ### Task 2.2: CSV Output Enhancement (2 days)
 
-**Priority**: High  
+**Priority**: High
 **Dependencies**: None
 
 **Objectives**:
@@ -151,7 +151,7 @@ netperf -H host -- -o csv-header,delimiter=|
 
 ### Task 2.3: Direct File Output (2 days)
 
-**Priority**: Medium  
+**Priority**: Medium
 **Dependencies**: None
 
 **Objectives**:
@@ -202,7 +202,7 @@ netperf -H host -O results.csv -A    # Append to existing file
 
 ### Task 2.4: Output Templates (3 days)
 
-**Priority**: Medium  
+**Priority**: Medium
 **Dependencies**: Task 2.3
 
 **Objectives**:
@@ -275,7 +275,7 @@ netperf -H host -- -T report.tmpl -O report.txt
 
 ### Task 2.5: Result Aggregation Tool (3 days)
 
-**Priority**: Medium  
+**Priority**: Medium
 **Dependencies**: Task 2.1, 2.2
 
 **Objectives**:
@@ -367,7 +367,7 @@ class NetperfAggregator:
 
 ### Task 2.6: Documentation (2 days)
 
-**Priority**: High  
+**Priority**: High
 **Dependencies**: All above tasks
 
 **Objectives**:
@@ -425,7 +425,7 @@ class NetperfAggregator:
 ## Timeline
 
 | Task | Duration | Dependencies | Status |
-|------|----------|--------------|--------|
+| --- | --- | --- | --- |
 | 2.1: Enhanced JSON | 3 days | Phase 1 | Not started |
 | 2.2: CSV Enhancement | 2 days | None | Not started |
 | 2.3: File Output | 2 days | None | Not started |

@@ -445,8 +445,8 @@ Remember: Your goal is to maintain the highest documentation quality while makin
 
 ---
 
-**Agent Type**: Documentation Quality Assurance  
-**Primary Tool**: `dev/tools/markdown_validator.py`  
-**Quality Target**: ≥90/100 score  
-**Current Status**: 100/100 (34 files, 0 violations)  
+**Agent Type**: Documentation Quality Assurance
+**Primary Tool**: `dev/tools/markdown_validator.py`
+**Quality Target**: ≥90/100 score
+**Current Status**: 100/100 (34 files, 0 violations)
 **Last Updated**: January 31, 2026

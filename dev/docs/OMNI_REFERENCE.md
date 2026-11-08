@@ -1,7 +1,7 @@
 # OMNI Test Reference Guide
 
-**Version**: 2.7.1+  
-**Phase**: 3 - Advanced Features  
+**Version**: 2.7.1+
+**Phase**: 3 - Advanced Features
 **Last Updated**: January 31, 2026
 
 ---

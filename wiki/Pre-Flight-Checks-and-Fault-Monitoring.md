@@ -9,7 +9,7 @@ High-speed 200G–800G qualification requires strict pre-test configuration hygi
 `dev/tools/netperf_preflight.py` evaluates live system state (or a state snapshot) against 24 hardware, topology, and driver anti-affinity rules (`AA-001` through `AA-024`):
 
 | Rule ID | Severity | Feature A vs. Feature B | Description & Remediation |
-| :--- | :---: | :--- | :--- |
+| --- | --- | --- | --- |
 | **`AA-001`** | `FAIL` | `adq` vs `rocev2` | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) cannot coexist on the same PF. Remove `mqprio` or unload `irdma`. |
 | **`AA-002`** | `FAIL` | `adq` vs `dcb_pfc_ets` | ADQ hardware traffic classes conflict with IEEE DCB PFC/ETS scheduler. |
 | **`AA-003`** | `FAIL` | `adq` vs `sriov_vf` | ADQ cannot be enabled concurrently with SR-IOV Virtual Functions (`sriov_numvfs > 0`). |
@@ -20,7 +20,7 @@ High-speed 200G–800G qualification requires strict pre-test configuration hygi
 | **`AA-008`** | `FAIL` | `rocev2` vs `mtu_mismatch` | RoCEv2 active QPs suffer severe packet drop when PF MTU < IB QP path MTU. |
 | **`AA-009`** | `FAIL` | `dcb_pfc` vs `link_pause` | IEEE 802.1Qbb PFC cannot be enabled simultaneously with IEEE 802.3x Global Flow Control (`ethtool -A rx off tx off`). |
 | **`AA-010`** | `WARN` | `xps_cpus` vs `xps_rxqs_conflict` | Having both `xps_cpus != 0` and `xps_rxqs != 0` degrades TX queue selection on E835. Clear `xps_cpus=0`. |
-| **`AA-011`** | `WARN` | `adaptive_coalesce` vs `deterministic_benchmark` | Adaptive RX/TX moderation causes bimodal variance across 30s runs. Set `adaptive-rx off adaptive-tx off rx-usecs 10 tx-usecs 20`. |
+| **`AA-011`** | `WARN` | `adaptive_coalesce` vs `deterministic_benchmark` | Adaptive RX/TX moderation causes bimodal variance across 30s runs. Set adaptive-rx off adaptive-tx off rx-usecs 10 tx-usecs 20. |
 | **`AA-012`** | `FAIL` | `irqbalance` vs `manual_irq_pinning` | Running `irqbalance` overwrites manual SMP IRQ affinity masks mid-test. Stop `irqbalance`. |
 | **`AA-013`** | `WARN` | `numa_balancing` vs `pinned_netperf` | Kernel automatic NUMA balancing migrates memory pages during pinned runs (`sysctl -w kernel.numa_balancing=0`). |
 | **`AA-014`** | `WARN` | `busy_poll` vs `high_stream_ecore` | `busy_poll > 0` on E-core 32–64 stream tests starves softirq. Set `busy_poll=0` for bulk throughput. |
@@ -50,7 +50,7 @@ High-speed 200G–800G qualification requires strict pre-test configuration hygi
 When running `netperf-multi --check-kmsg` or generating reports with `AIValidationReporter`, `dmesg -T` and `ethtool -S` are scanned before and after every test run for 13 fatal/unexpected event signatures:
 
 | Code | Category | Signature Pattern |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | **`U1`** | `kernel_oops_bug` | `BUG:`, `Oops:`, `Kernel panic`, `general protection fault` |
 | **`U2`** | `pcie_aer_error` | `AER:`, `PCIe Bus Error`, `Uncorrectable.*Error` |
 | **`U3`** | `netdev_watchdog` | `NETDEV WATCHDOG:.*transmit queue \d+ timed out` |
