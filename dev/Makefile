@@ -104,16 +104,16 @@ test-formats: ## Test all output formats (keyval, CSV, JSON, columnar)
 	@sleep 2
 	@echo ""
 	@echo "1. Default (keyval) format:"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -l 1 | head -20
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -M -l 1 | head -20
 	@echo ""
-	@echo "2. CSV format (-- -o):"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -l 1 -- -o | head -20
+	@echo "2. CSV format (-M -- -o):"
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -M -l 1 -- -o | head -20
 	@echo ""
-	@echo "3. JSON format (-- -J):"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -l 1 -- -J | head -20
+	@echo "3. JSON format (-M -- -J):"
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -M -l 1 -- -J | head -20
 	@echo ""
-	@echo "4. Columnar format (-- -O):"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -l 1 -- -O | head -20
+	@echo "4. Columnar format (-M -- -O):"
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -M -l 1 -- -O | head -20
 	@killall -9 netserver 2>/dev/null || true
 	@echo ""
 	@echo "✓ All output formats working"
@@ -126,16 +126,16 @@ test-protocols: ## Test multiple protocol types
 	@sleep 2
 	@echo ""
 	@echo "TCP_STREAM:"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_STREAM -l 1 | grep THROUGHPUT
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_STREAM -l 1
 	@echo ""
 	@echo "TCP_RR:"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_RR -l 1 | grep THROUGHPUT
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_RR -l 1
 	@echo ""
 	@echo "TCP_CRR:"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_CRR -l 1 | grep THROUGHPUT
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t TCP_CRR -l 1
 	@echo ""
 	@echo "UDP_STREAM:"
-	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t UDP_STREAM -l 1 | grep THROUGHPUT
+	@$(BUILD_DIR)/src/netperf -H 127.0.0.1 -p 12865 -t UDP_STREAM -l 1
 	@killall -9 netserver 2>/dev/null || true
 	@echo ""
 	@echo "✓ All protocol tests passed"

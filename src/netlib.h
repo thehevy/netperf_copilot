@@ -44,7 +44,7 @@
 #define         MAXTIMES        4       /* how many times may we loop   */
                                         /* to calibrate                 */
 #define         MAXCPUS         2048    /* how many CPU's can we track */
-#define         MAXMESSAGESIZE  65536
+#define         MAXMESSAGESIZE  4194304
 #define         MAXALIGNMENT    16384
 #define         MAXOFFSET        4096
 #define         DATABUFFERLEN   MAXMESSAGESIZE+MAXALIGNMENT+MAXOFFSET
@@ -362,6 +362,8 @@ struct cpu_stats_struct {
   /* mandatory */
   float peak_cpu_util;
   int   peak_cpu_id;  /* ID of most loaded CPU */
+  float active_cpu_util; /* average utilization across active CPUs (>= 5%) */
+  int   active_cpu_count; /* count of active CPUs (>= 5%) */
 };
 
 /* +*+ SAF  Sorry about the hacks with errno; NT made me do it :(

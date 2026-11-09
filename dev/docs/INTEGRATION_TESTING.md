@@ -1,14 +1,24 @@
 # Phase 3 Integration Testing Report
 
-**Date**: January 31, 2026  
-**Server**: 192.168.18.2  
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-INTEGRATION-TES` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Phase 3 Integration Testing Report under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+**Date**: January 31, 2026
+**Server**: 192.168.18.2
 **Status**: ✅ Integration Testing Complete
 
 ---
 
 ## Executive Summary
 
-Phase 3 tools have been integration tested against a live netperf server at 192.168.18.2. All major tools are operational and working as designed. Basic connectivity, parallel execution, statistical analysis, profile validation, and report generation all functioned correctly.
+Phase 3 tools have been integration tested against a live netperf server at 192.168.18.2. All major tools are
+operational and working as designed. Basic connectivity, parallel execution, statistical analysis, profile validation,
+and report generation all functioned correctly.
 
 ## Test Environment
 
@@ -27,7 +37,7 @@ Phase 3 tools have been integration tested against a live netperf server at 192.
 
 ### ✅ Test 2: Basic OMNI Test (TCP Send)
 
-- **Status**: PASSED  
+- **Status**: PASSED
 - **Result**: Successfully measured throughput (19-52 Gbps observed)
 - **Command**: `netperf -H 192.168.18.2 -- -d send -l 10`
 - **Output Format**: KEYVAL (THROUGHPUT=value)
@@ -192,7 +202,7 @@ All Phase 3 tools are fully functional and production-ready.
 ## Tool Validation Matrix
 
 | Tool | Basic | Advanced | Integration | Status |
-|------|-------|----------|-------------|--------|
+| --- | --- | --- | --- | --- |
 | netperf-multi | ✅ | ✅ | ✅ | Production Ready |
 | netperf_stats.py | ✅ | ✅ | ✅ | Production Ready |
 | netperf-profile | ✅ | ✅ | ✅ | Production Ready |
@@ -212,7 +222,8 @@ All Phase 3 tools are fully functional and production-ready.
 
 ### Summary
 
-Phase 3 tools have successfully passed integration testing with a live netperf server. All core functionality is working as designed, and the tools are ready for production use.
+Phase 3 tools have successfully passed integration testing with a live netperf server. All core functionality is working
+as designed, and the tools are ready for production use.
 
 ### Key Achievements
 
@@ -255,9 +266,9 @@ Phase 3 tools have successfully passed integration testing with a live netperf s
 
 ## Test Results Summary
 
-**Total Tests**: 11  
-**Passed**: 11  
-**Failed**: 0  
+**Total Tests**: 11
+**Passed**: 11
+**Failed**: 0
 **Success Rate**: 100%
 
 ### Test Execution Time
@@ -317,6 +328,20 @@ echo "9000 9100 9200 9300" | tr ' ' '\n' | python3 /opt/netperf/dev/tools/netper
 
 ---
 
-**Report Generated**: January 31, 2026  
-**Author**: Netperf Modernization Project - Phase 3  
+**Report Generated**: January 31, 2026
+**Author**: Netperf Modernization Project - Phase 3
 **Version**: 1.0
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/INTEGRATION_TESTING.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-INTEGRATION-TES`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

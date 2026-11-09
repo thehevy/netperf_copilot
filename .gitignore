@@ -23,3 +23,7 @@ Makefile
 /dev/reports/*.pdf
 /dev/reports/*.csv
 /dev/reports/tmp/
+
+# Python cache
+__pycache__/
+*.py[cod]

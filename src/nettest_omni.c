@@ -383,6 +383,7 @@ int legacy = 0;
 int implicit_direction = 0;
 int explicit_data_address = 0;
 int want_defer_accept = 0;
+static int use_zerocopy = 0;
 
 uint64_t      trans_completed = 0;
 int64_t       units_remaining;
@@ -581,12 +582,16 @@ enum netperf_output_name {
   LOCAL_CPU_COUNT,
   LOCAL_CPU_PEAK_UTIL,
   LOCAL_CPU_PEAK_ID,
+  LOCAL_CPU_ACTIVE_UTIL,
+  LOCAL_CPU_ACTIVE_COUNT,
   LOCAL_CPU_MODEL,
   LOCAL_CPU_FREQUENCY,
   REMOTE_CPU_BIND,
   REMOTE_CPU_COUNT,
   REMOTE_CPU_PEAK_UTIL,
   REMOTE_CPU_PEAK_ID,
+  REMOTE_CPU_ACTIVE_UTIL,
+  REMOTE_CPU_ACTIVE_COUNT,
   REMOTE_CPU_MODEL,
   REMOTE_CPU_FREQUENCY,
   SOURCE_PORT,
@@ -1211,6 +1216,10 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "LOCAL_CPU_PEAK_UTIL";
   case LOCAL_CPU_PEAK_ID:
     return "LOCAL_CPU_PEAK_ID";
+  case LOCAL_CPU_ACTIVE_UTIL:
+    return "LOCAL_CPU_ACTIVE_UTIL";
+  case LOCAL_CPU_ACTIVE_COUNT:
+    return "LOCAL_CPU_ACTIVE_COUNT";
   case   LOCAL_NODELAY:
     return "LOCAL_NODELAY";
   case   LOCAL_CORK:
@@ -1287,6 +1296,10 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "REMOTE_CPU_PEAK_UTIL";
   case REMOTE_CPU_PEAK_ID:
     return "REMOTE_CPU_PEAK_ID";
+  case REMOTE_CPU_ACTIVE_UTIL:
+    return "REMOTE_CPU_ACTIVE_UTIL";
+  case REMOTE_CPU_ACTIVE_COUNT:
+    return "REMOTE_CPU_ACTIVE_COUNT";
   case   REMOTE_NODELAY:
     return "REMOTE_NODELAY";
   case   REMOTE_CORK:
@@ -1618,6 +1631,25 @@ parse_output_selection_file(char *selection_file) {
   int line,column;
 
   selections = fopen(selection_file,"r");
+  if (!selections && strchr(selection_file, '/') == NULL) {
+    const char *preset_dirs[] = {
+      "./dev/catalog/output-presets",
+      "../dev/catalog/output-presets",
+      "/usr/share/netperf/output-presets",
+      "/usr/local/share/netperf/output-presets",
+      NULL
+    };
+    char candidate[256];
+    int d;
+    for (d = 0; preset_dirs[d] != NULL && !selections; d++) {
+      snprintf(candidate, sizeof(candidate), "%s/%s", preset_dirs[d], selection_file);
+      selections = fopen(candidate, "r");
+      if (!selections && strstr(selection_file, ".out") == NULL) {
+        snprintf(candidate, sizeof(candidate), "%s/%s.out", preset_dirs[d], selection_file);
+        selections = fopen(candidate, "r");
+      }
+    }
+  }
   if (!selections) {
     fprintf(where,
 	    "Could not open output selection file '%s' errno %d\n",
@@ -2140,6 +2172,13 @@ print_omni_init_list() {
   set_output_elt(LOCAL_CPU_PEAK_ID, "Local", "Peak", "Per CPU", "ID", "%d",
 		 &lib_local_cpu_stats.peak_cpu_id, 1, 0, NETPERF_TYPE_INT32);
 
+  set_output_elt(LOCAL_CPU_ACTIVE_UTIL, "Local", "Active", "CPU", "Util %",
+		 "%.2f", &lib_local_cpu_stats.active_cpu_util, 1, 0,
+                 NETPERF_TYPE_FLOAT);
+
+  set_output_elt(LOCAL_CPU_ACTIVE_COUNT, "Local", "Active", "CPU", "Count", "%d",
+		 &lib_local_cpu_stats.active_cpu_count, 1, 0, NETPERF_TYPE_INT32);
+
   set_output_elt(LOCAL_CPU_BIND, "Local", "CPU", "Bind", "", "%d",
 		 &local_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
 
@@ -2261,6 +2300,13 @@ print_omni_init_list() {
 
   set_output_elt(REMOTE_CPU_PEAK_ID, "Remote", "Peak", "Per CPU", "ID", "%d",
 		 &lib_remote_cpu_stats.peak_cpu_id, 1, 0, NETPERF_TYPE_INT32);
+
+  set_output_elt(REMOTE_CPU_ACTIVE_UTIL, "Remote", "Active", "CPU", "Util %",
+		 "%.2f", &lib_remote_cpu_stats.active_cpu_util, 1, 0,
+                 NETPERF_TYPE_FLOAT);
+
+  set_output_elt(REMOTE_CPU_ACTIVE_COUNT, "Remote", "Active", "CPU", "Count", "%d",
+		 &lib_remote_cpu_stats.active_cpu_count, 1, 0, NETPERF_TYPE_INT32);
 
   set_output_elt(REMOTE_CPU_BIND, "Remote", "CPU", "Bind", "", "%d",
 		 &remote_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
@@ -2540,6 +2586,7 @@ print_omni_init() {
          legacy set_output_list_by_test() if not found */
       const char *default_preset_paths[] = {
         "./dev/catalog/output-presets/default.out",
+        "../dev/catalog/output-presets/default.out",
         "/usr/share/netperf/output-presets/default.out",
         "/usr/local/share/netperf/output-presets/default.out",
         NULL
@@ -2836,6 +2883,53 @@ print_omni_keyword()
   fflush(where);
 }
 
+/* Escape string for RFC 8259 JSON, stripping outer quotes if already added by format "\"%s\"" */
+static void
+json_escape_string(char *dest, size_t dest_size, const char *src)
+{
+  size_t i = 0, j = 0, len;
+  if (!dest || dest_size == 0) return;
+  if (!src) {
+    dest[0] = '\0';
+    return;
+  }
+  len = strlen(src);
+  if (len >= 2 && src[0] == '"' && src[len - 1] == '"') {
+    src++;
+    len -= 2;
+  }
+  while (j < len && i < dest_size - 1) {
+    unsigned char ch = (unsigned char)src[j++];
+    if (ch == '"' || ch == '\\') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = (char)ch;
+    } else if (ch == '\n') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 'n';
+    } else if (ch == '\r') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 'r';
+    } else if (ch == '\t') {
+      if (i + 2 >= dest_size) break;
+      dest[i++] = '\\';
+      dest[i++] = 't';
+    } else if (ch >= 0x20) {
+      dest[i++] = (char)ch;
+    }
+  }
+  dest[i] = '\0';
+}
+
+#if defined(__linux)
+extern void find_driver_ext_info(char *ifname, int *link_speed_mbps, int *rx_ring, int *tx_ring, int *combined_channels);
+extern void find_interface_pcie_info(char *interface_name, int *numa_node, char *link_speed, char *link_width, int len);
+extern char *find_interface_slot(char *interface_name);
+extern void find_system_info(char **system_model, char **cpu_model, int *cpu_frequency);
+#endif
+
 void
 print_omni_json()
 {
@@ -2843,6 +2937,7 @@ print_omni_json()
 
   int i,j;
   char tmpval[1024];
+  char escaped[2048];
   char hostname[256];
   int vallen;
   int first_item;
@@ -2870,7 +2965,64 @@ print_omni_json()
   fprintf(where, "  \"metadata\": {\n");
   fprintf(where, "    \"netperf_version\": \"%s\",\n", netperf_version);
   fprintf(where, "    \"timestamp\": \"%s\",\n", timestamp);
-  fprintf(where, "    \"hostname\": \"%s\"", hostname);
+  fprintf(where, "    \"hostname\": \"%s\",\n", hostname);
+  fprintf(where, "    \"zerocopy_enabled\": %s,\n", use_zerocopy ? "true" : "false");
+  fprintf(where, "    \"local_active_cpu_util\": %.2f,\n", lib_local_cpu_stats.active_cpu_util);
+  fprintf(where, "    \"local_active_cpu_count\": %d,\n", lib_local_cpu_stats.active_cpu_count);
+  fprintf(where, "    \"remote_active_cpu_util\": %.2f,\n", lib_remote_cpu_stats.active_cpu_util);
+  fprintf(where, "    \"remote_active_cpu_count\": %d,\n", lib_remote_cpu_stats.active_cpu_count);
+  fprintf(where, "    \"local_softirq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_swintr);
+  fprintf(where, "    \"local_irq_pct\": %.2f", lib_local_cpu_stats.cpu_irq);
+
+#if defined(__linux)
+  {
+    char *sys_model = NULL;
+    char *cpu_model = NULL;
+    int cpu_freq_mhz = -1;
+    char *env_if = getenv("NETPERF_INTERFACE");
+    find_system_info(&sys_model, &cpu_model, &cpu_freq_mhz);
+    if (sys_model) {
+      json_escape_string(escaped, sizeof(escaped), sys_model);
+      fprintf(where, ",\n    \"system_model\": \"%s\"", escaped);
+      free(sys_model);
+    }
+    if (cpu_model) {
+      json_escape_string(escaped, sizeof(escaped), cpu_model);
+      fprintf(where, ",\n    \"cpu_model\": \"%s\"", escaped);
+      free(cpu_model);
+    }
+    if (cpu_freq_mhz > 0) {
+      fprintf(where, ",\n    \"cpu_frequency_mhz\": %d", cpu_freq_mhz);
+    }
+    if (env_if && env_if[0] != '\0') {
+      int link_mbps = -1, rx_r = -1, tx_r = -1, comb_ch = -1;
+      int nic_numa = -1;
+      char pcie_speed[32], pcie_width[32];
+      char *slot_str = NULL;
+      find_driver_ext_info(env_if, &link_mbps, &rx_r, &tx_r, &comb_ch);
+      if (link_mbps > 0) fprintf(where, ",\n    \"nic_link_speed_mbps\": %d", link_mbps);
+      if (rx_r > 0) fprintf(where, ",\n    \"nic_rx_ring\": %d", rx_r);
+      if (tx_r > 0) fprintf(where, ",\n    \"nic_tx_ring\": %d", tx_r);
+      if (comb_ch > 0) fprintf(where, ",\n    \"nic_combined_channels\": %d", comb_ch);
+      find_interface_pcie_info(env_if, &nic_numa, pcie_speed, pcie_width, sizeof(pcie_speed));
+      if (nic_numa >= 0) fprintf(where, ",\n    \"nic_numa_node\": %d", nic_numa);
+      if (strcmp(pcie_speed, "N/A") != 0) {
+        json_escape_string(escaped, sizeof(escaped), pcie_speed);
+        fprintf(where, ",\n    \"nic_pcie_speed\": \"%s\"", escaped);
+      }
+      if (strcmp(pcie_width, "N/A") != 0) {
+        json_escape_string(escaped, sizeof(escaped), pcie_width);
+        fprintf(where, ",\n    \"nic_pcie_width\": \"x%s\"", escaped);
+      }
+      slot_str = find_interface_slot(env_if);
+      if (slot_str) {
+        json_escape_string(escaped, sizeof(escaped), slot_str);
+        fprintf(where, ",\n    \"nic_slot\": \"%s\"", escaped);
+        free(slot_str);
+      }
+    }
+  }
+#endif
   
 #ifndef WIN32
   if (uname(&uname_info) == 0) {
@@ -2914,15 +3066,30 @@ print_omni_json()
 
 	/* Determine if value should be quoted based on type */
 	if (netperf_output_source[output_list[i][j]].output_type == NETPERF_TYPE_CHAR) {
+	  json_escape_string(escaped, sizeof(escaped), tmpval);
 	  fprintf(where,
 		  "    \"%s\": \"%s\"",
 		  netperf_output_enum_to_str(output_list[i][j]),
-		  tmpval);
+		  escaped);
 	} else {
-	  fprintf(where,
-		  "    \"%s\": %s",
-		  netperf_output_enum_to_str(output_list[i][j]),
-		  tmpval);
+	  if (strcasecmp(tmpval, "nan") == 0 || strcasecmp(tmpval, "-nan") == 0 ||
+	      strcasecmp(tmpval, "inf") == 0 || strcasecmp(tmpval, "-inf") == 0 ||
+	      tmpval[0] == '\0') {
+	    fprintf(where,
+		    "    \"%s\": null",
+		    netperf_output_enum_to_str(output_list[i][j]));
+	  } else if (strncasecmp(tmpval, "0x", 2) == 0) {
+	    json_escape_string(escaped, sizeof(escaped), tmpval);
+	    fprintf(where,
+		    "    \"%s\": \"%s\"",
+		    netperf_output_enum_to_str(output_list[i][j]),
+		    escaped);
+	  } else {
+	    fprintf(where,
+		    "    \"%s\": %s",
+		    netperf_output_enum_to_str(output_list[i][j]),
+		    tmpval);
+	  }
 	}
       }
     }
@@ -3195,10 +3362,39 @@ int send_pktinfo(SOCKET data_socket, char *buffer, int len, struct sockaddr *des
 }
 
 
+static void
+drain_zerocopy_completions(SOCKET s)
+{
+#if defined(__linux) && defined(MSG_ERRQUEUE)
+  char cbuf[128];
+  struct msghdr msg;
+  if (!use_zerocopy || s == INVALID_SOCKET) return;
+  memset(&msg, 0, sizeof(msg));
+  msg.msg_control = cbuf;
+  msg.msg_controllen = sizeof(cbuf);
+  while (recvmsg(s, &msg, MSG_ERRQUEUE | MSG_DONTWAIT) >= 0) {
+    msg.msg_controllen = sizeof(cbuf);
+  }
+#else
+  (void)s;
+#endif
+}
+
 int
 send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send, struct sockaddr *destination, int destlen, int protocol) {
 
   int len;
+  int send_flags = 0;
+  static unsigned int zc_send_counter = 0;
+
+#if defined(MSG_ZEROCOPY)
+  if (use_zerocopy) {
+    send_flags |= MSG_ZEROCOPY;
+    if ((++zc_send_counter & 0x1F) == 0) {
+      drain_zerocopy_completions(data_socket);
+    }
+  }
+#endif
 
   /* if the user has supplied a destination, we use sendto, otherwise
      we use send.  we ass-u-me blocking operations always, so no need
@@ -3229,9 +3425,9 @@ send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send
 		   send_ring->buffer_ptr,
 		   bytes_to_send,
 #if defined(MSG_FASTOPEN)
-		   (use_fastopen && protocol == IPPROTO_TCP) ? MSG_FASTOPEN : 0,
+		   send_flags | ((use_fastopen && protocol == IPPROTO_TCP) ? MSG_FASTOPEN : 0),
 #else
-		   0,
+		   send_flags,
 #endif
 		   destination,
 		   destlen);
@@ -3242,7 +3438,14 @@ send_data(SOCKET data_socket, struct ring_elt *send_ring, uint32_t bytes_to_send
       len = send(data_socket,
 		 send_ring->buffer_ptr,
 		 bytes_to_send,
+#if defined(MSG_ZEROCOPY)
+		 (use_zerocopy ? MSG_ZEROCOPY : 0));
+#else
 		 0);
+#endif
+      if (len < 0 && use_zerocopy && (errno == ENOBUFS || errno == ENOMEM)) {
+	drain_zerocopy_completions(data_socket);
+      }
     }
     else {
 #ifndef WIN32
@@ -3914,6 +4117,13 @@ omni_create_data_socket(struct addrinfo *res)
 
   temp_socket = create_data_socket(res);
 
+#ifdef SO_ZEROCOPY
+  if (temp_socket != SOCKET_ERROR && use_zerocopy) {
+    int one = 1;
+    setsockopt(temp_socket, SOL_SOCKET, SO_ZEROCOPY, (char *)&one, sizeof(one));
+  }
+#endif
+
   if (temp_socket != SOCKET_ERROR) {
     if (local_cong_control_req[0] != '\0') {
       set_transport_cong_control(temp_socket,
@@ -4137,7 +4347,7 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 		     protocol,
 		     0);
 
-  if ( print_headers ) {
+  if ( print_headers && (netperf_output_mode != JSON) ) {
     print_top_test_header(header_str,local_res,remote_res);
   }
 
@@ -5030,6 +5240,8 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	lib_remote_cpu_stats.cpu_swintr = omni_result->cpu_percent_swintr;
 	lib_remote_cpu_stats.peak_cpu_util = omni_result->peak_cpu_util;
 	lib_remote_cpu_stats.peak_cpu_id = omni_result->peak_cpu_id;
+	lib_remote_cpu_stats.active_cpu_util = omni_result->active_cpu_util;
+	lib_remote_cpu_stats.active_cpu_count = omni_result->active_cpu_count;
 	/* why?  because some stacks want to be clever and autotune their
 	   socket buffer sizes, which means that if we accept the defaults,
 	   the size we get from getsockopt() at the beginning of a
@@ -6123,6 +6335,8 @@ recv_omni()
     omni_results->cpu_percent_swintr  = lib_local_cpu_stats.cpu_swintr;
     omni_results->peak_cpu_util       = lib_local_cpu_stats.peak_cpu_util;
     omni_results->peak_cpu_id         = lib_local_cpu_stats.peak_cpu_id;
+    omni_results->active_cpu_util     = lib_local_cpu_stats.active_cpu_util;
+    omni_results->active_cpu_count    = lib_local_cpu_stats.active_cpu_count;
   }
 
 #if defined(WANT_INTERVALS)
@@ -7346,6 +7560,7 @@ OMNI and Migrated BSD Sockets Test Options:\n\
     -T protocol       Explicitly set data connection protocol. Default is\n\
                       implicit based on other settings\n\
     -u uuid           Use the supplied string as the UUID for this test.\n\
+    -Z                Enable SO_ZEROCOPY / MSG_ZEROCOPY on data socket\n\
     -4                Use AF_INET (eg IPv4) on both ends of the data conn\n\
     -6                Use AF_INET6 (eg IPv6) on both ends of the data conn\n\
 \n\
@@ -7371,7 +7586,7 @@ scan_omni_args(int argc, char *argv[])
 
 {
 
-#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:46"
+#define OMNI_ARGS "aBb:cCd:De:fFgG:hH:i:Ij:JkK:l:L:m:M:nNoOp:P:q:r:R:s:S:t:T:u:UVw:W:Z46"
 
   extern char	*optarg;	  /* pointer to option string	*/
 
@@ -7791,6 +8006,13 @@ scan_omni_args(int argc, char *argv[])
       /* both send and receive "widths" but for now */
       /* it is just the sending *_STREAM. */
       send_width = convert(optarg);
+      break;
+    case 'Z' :
+#if defined(SO_ZEROCOPY) && defined(MSG_ZEROCOPY)
+      use_zerocopy = 1;
+#else
+      printf("WARNING: SO_ZEROCOPY / MSG_ZEROCOPY not available on this platform!\n");
+#endif
       break;
     case 'V' :
       /* we want to do copy avoidance and will set */

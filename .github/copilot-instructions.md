@@ -2,10 +2,12 @@
 
 ## Project Overview
 
-Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP, DLPI, and Unix Domain socket performance. It operates in a client-server model where `netperf` (client) connects to `netserver` (daemon) to conduct performance tests and measure throughput, latency, and CPU utilization.
+Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP, DLPI, and Unix Domain socket
+performance. It operates in a client-server model where `netperf` (client) connects to `netserver` (daemon) to conduct
+performance tests and measure throughput, latency, and CPU utilization.
 
-**License**: MIT (Hewlett Packard Enterprise Development LP)  
-**Version**: 2.7.1  
+**License**: MIT (Hewlett Packard Enterprise Development LP)
+**Version**: 2.7.1
 **Language**: C (ANSI C with platform-specific extensions)
 
 ## Architecture
@@ -14,7 +16,8 @@ Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP,
 
 - **netperf** ([src/netperf.c](../src/netperf.c)): Client-side test initiator and results reporter
 - **netserver** ([src/netserver.c](../src/netserver.c)): Server-side daemon handling test requests
-- **netlib** ([src/netlib.c](../src/netlib.c), [src/netlib.h](../src/netlib.h)): Shared library with common utilities (control protocol, CPU measurement, statistics)
+- **netlib** ([src/netlib.c](../src/netlib.c), [src/netlib.h](../src/netlib.h) ): Shared library with common utilities
+  (control protocol, CPU measurement, statistics)
 - **netsh** ([src/netsh.c](../src/netsh.c)): Command-line parsing and test dispatching
 
 ### Test Framework Architecture
@@ -23,8 +26,11 @@ Netperf is a network performance benchmarking tool for measuring TCP, UDP, SCTP,
 
 The codebase contains two test architectures:
 
-- **Classic tests**: Original implementations in `nettest_bsd.c`, `nettest_unix.c`, `nettest_dlpi.c`, `nettest_xti.c`, `nettest_sctp.c`, `nettest_sdp.c`
-- **OMNI tests** ([src/nettest_omni.c](../src/nettest_omni.c)): Modern unified framework that can emulate all classic tests with extensible output formatting. OMNI is the preferred test type (7699 lines, single file handling multiple protocols/patterns).
+- **Classic tests**: Original implementations in `nettest_bsd.c` , `nettest_unix.c` , `nettest_dlpi.c` , `nettest_xti.c`
+  , `nettest_sctp.c` , `nettest_sdp.c`
+- **OMNI tests** ([src/nettest_omni.c](../src/nettest_omni.c)): Modern unified framework that can emulate all classic
+  tests with extensible output formatting. OMNI is the preferred test type (7699 lines, single file handling multiple
+  protocols/patterns).
 
 When `WANT_MIGRATION` is defined, classic test names (TCP_STREAM, TCP_RR, etc.) automatically map to OMNI equivalents.
 
@@ -39,22 +45,25 @@ When `WANT_MIGRATION` is defined, classic test names (TCP_STREAM, TCP_RR, etc.) 
 
 #### CPU Utilization Measurement (netcpu_*.c)
 
-Netperf implements platform-specific CPU measurement via pluggable modules selected at **configure time** via `--enable-cpuutil=<method>`:
+Netperf implements platform-specific CPU measurement via pluggable modules selected at **configure time** via
+`--enable-cpuutil=<method>` :
 
 - **netcpu_procstat.c**: Linux `/proc/stat` (default for Linux)
 - **netcpu_pstat.c / pstatnew.c**: HP-UX `pstat()` interface
-- **netcpu_perfstat.c**: AIX `perfstat()` interface  
+- **netcpu_perfstat.c**: AIX `perfstat()` interface
 - **netcpu_kstat.c / kstat10.c**: Solaris `kstat` interface
 - **netcpu_sysctl.c**: BSD/MacOS `sysctl()` interface
 - **netcpu_osx.c**: MacOS X `host_info()` interface
 - **netcpu_looper.c**: Portable soaker processes (fallback for systems without native counters)
 - **netcpu_none.c**: Stub implementation (no CPU measurement)
 
-The Makefile uses `USE_CPU_SOURCE=netcpu_@NETCPU_SOURCE@.c` to select the appropriate implementation. All modules implement the same interface defined in [src/netcpu.h](../src/netcpu.h).
+The Makefile uses `USE_CPU_SOURCE=netcpu_@NETCPU_SOURCE@.c` to select the appropriate implementation. All modules
+implement the same interface defined in [src/netcpu.h](../src/netcpu.h) .
 
 #### Other Platform Modules
 
-Similar pattern for: `netsys_*.c` (system info), `netdrv_*.c` (driver stats), `netsec_*.c` (security contexts), `netslot_*.c` (slot affinity), `netfirewall_*.c` (firewall rules).
+Similar pattern for: `netsys_*.c` (system info), `netdrv_*.c` (driver stats), `netsec_*.c` (security contexts),
+`netslot_*.c` (slot affinity), `netfirewall_*.c` (firewall rules).
 
 ## Build System (GNU Autotools)
 
@@ -114,7 +123,8 @@ Example from [src/nettest_omni.c](../src/nettest_omni.c):
 
 ### Control Protocol Pattern
 
-Client-server communication uses a request-response pattern with predefined message types in [src/netlib.h](../src/netlib.h):
+Client-server communication uses a request-response pattern with predefined message types in
+[src/netlib.h](../src/netlib.h) :
 
 ```c
 #define DO_TCP_STREAM           10
@@ -186,7 +196,7 @@ Usage controlled by `cpu_binding_requested` global variable.
 ## Key Files Reference
 
 | File | Purpose |
-|------|---------|
+| --- | --- |
 | [src/nettest_omni.c](../src/nettest_omni.c) | Modern unified test framework (7699 lines) |
 | [src/netlib.c](../src/netlib.c) | Core networking utilities (5002 lines) |
 | [src/netserver.c](../src/netserver.c) | Server daemon implementation (1561 lines) |
@@ -208,3 +218,5 @@ Usage controlled by `cpu_binding_requested` global variable.
 - **CPU measurement is compile-time selected** - cannot be changed at runtime
 - **Statistics and confidence intervals** are complex - see [src/netlib.c](../src/netlib.c) around line 4700
 - **Windows support exists** but is secondary - primary development targets Unix-like systems
+
+---

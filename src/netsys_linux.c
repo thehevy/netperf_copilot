@@ -29,10 +29,32 @@
 #include <errno.h>
 #endif
 
+#if defined(__linux)
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+
+static int
+read_first_line(const char *path, char *buf, size_t buflen) {
+  FILE *f;
+  size_t len;
+
+  if (buf == NULL || buflen == 0) return -1;
+  buf[0] = '\0';
+  f = fopen(path, "r");
+  if (f == NULL) return -1;
+  if (fgets(buf, (int)buflen, f) == NULL) {
+    fclose(f);
+    return -1;
+  }
+  fclose(f);
+  len = strlen(buf);
+  while (len > 0 && (buf[len - 1] == '\n' || buf[len - 1] == '\r' || buf[len - 1] == ' ')) {
+    buf[--len] = '\0';
+  }
+  return (len > 0) ? 0 : -1;
+}
 
 static void
 find_cpu_model(char **cpu_model) {
@@ -80,24 +102,35 @@ find_cpu_freq() {
 
   proccpu = fopen("/proc/cpuinfo","r");
 
-  if (NULL == proccpu) {
-    return -1;
+  if (NULL != proccpu) {
+    do {
+      cret = fgets(linebuf,256,proccpu);
+      if (NULL != cret) {
+        char *target;
+        if (strstr(linebuf,"cpu MHz") != NULL) {
+	  target = strtok(linebuf,":");
+	  target = strtok(NULL,":");
+	  if (target != NULL) {
+	    fclose(proccpu);
+	    return rint(strtod(target+1,NULL));
+	  }
+	  break;
+        }
+      }
+    } while (!feof(proccpu));
+    fclose(proccpu);
   }
 
-  do {
-    cret = fgets(linebuf,256,proccpu);
-    if (NULL != cret) {
-      char *target;
-      /* OK, so does it start with "model name" ? */
-      if (strstr(linebuf,"cpu MHz") != NULL) {
-	target = strtok(linebuf,":");
-	target = strtok(NULL,":");
-	fclose(proccpu);
-	return rint(strtod(target+1,NULL));
-      }
+  /* Fallback to sysfs cpufreq (kHz -> MHz) on modern kernels/architectures */
+  if (read_first_line("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq", linebuf, sizeof(linebuf)) == 0 ||
+      read_first_line("/sys/devices/system/cpu/cpu0/cpufreq/base_frequency", linebuf, sizeof(linebuf)) == 0 ||
+      read_first_line("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", linebuf, sizeof(linebuf)) == 0) {
+    long khz = strtol(linebuf, NULL, 10);
+    if (khz > 0) {
+      return (int)(khz / 1000);
     }
-  } while (!feof(proccpu));
-  fclose(proccpu);
+  }
+
   return -1;
 }
 
@@ -122,9 +155,22 @@ find_system_model(char **system_model) {
     *system_model = strdup("SMBIOSGetSystemModel");
 
 #else
-  /* we do not even have the library so there isn't much to do here
-     unless someone wants to teach netperf how to find and parse
-     SMBIOS all by its lonesome. raj 2008-03-13 */
+  /* Read Linux DMI sysfs directly instead of requiring libsmbios */
+  char vendor[128];
+  char product[128];
+  char combined[260];
+
+  if (read_first_line("/sys/class/dmi/id/product_name", product, sizeof(product)) == 0) {
+    if (read_first_line("/sys/class/dmi/id/sys_vendor", vendor, sizeof(vendor)) == 0 &&
+        strstr(product, vendor) == NULL) {
+      snprintf(combined, sizeof(combined), "%s %s", vendor, product);
+      *system_model = strdup(combined);
+    } else {
+      *system_model = strdup(product);
+    }
+    return;
+  }
+
   *system_model = strdup("Teach Me SMBIOS");
 #endif
   return;
@@ -158,3 +204,14 @@ main(int argc, char *argv[]) {
 }
 
 #endif
+
+#else /* !defined(__linux) */
+#include <string.h>
+
+void
+find_system_info(char **system_model, char **cpu_model, int *cpu_frequency) {
+  if (system_model) *system_model = strdup("N/A");
+  if (cpu_model) *cpu_model = strdup("N/A");
+  if (cpu_frequency) *cpu_frequency = -1;
+}
+#endif /* defined(__linux) */

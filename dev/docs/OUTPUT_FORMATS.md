@@ -1,8 +1,16 @@
 # Netperf Output Formats Reference
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-OUTPUT-FORMATS` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Output Formats Reference under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Complete reference for all output formats supported by netperf.
 
-**Version:** 2.7.1-fork (Phase 2)  
+**Version:** 2.7.1-fork (Phase 2)
 **Last Updated:** 2026-01-30
 
 ---
@@ -21,16 +29,16 @@ Netperf supports four primary output formats:
 ## Format Comparison
 
 | Feature | KEYVAL | CSV | JSON | HUMAN |
-|---------|--------|-----|------|-------|
-| Default | ✓ | | | |
+| --- | --- | --- | --- | --- |
+| Default | ✓ | — | — | — |
 | Headers | No | Yes | Yes (metadata) | Yes |
-| Parseable | ✓ | ✓ | ✓ | |
-| Structured | | | ✓ | |
-| Metadata | | | ✓ | |
-| Append-friendly | ✓ | ✓ | | |
-| Excel-compatible | | ✓ | | |
-| Machine-readable | ✓ | ✓ | ✓ | |
-| Human-readable | ✓ | | | ✓ |
+| Parseable | ✓ | ✓ | ✓ | — |
+| Structured | — | — | ✓ | — |
+| Metadata | — | — | ✓ | — |
+| Append-friendly | ✓ | ✓ | — | — |
+| Excel-compatible | — | ✓ | — | — |
+| Machine-readable | ✓ | ✓ | ✓ | — |
+| Human-readable | ✓ | — | — | ✓ |
 
 ---
 
@@ -323,7 +331,7 @@ netperf -H host -- -k /path/to/preset.txt -o csv   # CSV with preset
 ### Common Fields
 
 | Field | Type | Description | Units |
-|-------|------|-------------|-------|
+| --- | --- | --- | --- |
 | THROUGHPUT | float | Network throughput | 10^6bits/s |
 | THROUGHPUT_UNITS | string | Units for throughput | varies |
 | ELAPSED_TIME | float | Test duration | seconds |
@@ -358,7 +366,7 @@ netperf -H host -- -k /path/to/preset.txt -o csv   # CSV with preset
 When using interval reporting (`-D`), additional fields:
 
 | Field | Type | Description |
-|-------|------|-------------|
+| --- | --- | --- |
 | INTERVAL_ID | int | Interval number |
 | INTERVAL_THROUGHPUT | float | Throughput for this interval |
 | INTERVAL_DURATION | float | Actual interval duration |
@@ -378,7 +386,7 @@ Located in `dev/catalog/output-presets/`:
 2. **default.txt** - Standard metrics (active by default)
 3. **verbose.txt** - All available metrics
 4. **latency.txt** - Latency-focused metrics
-5. **throughput.txt** - Throughput-focused metrics  
+5. **throughput.txt** - Throughput-focused metrics
 6. **cpu.txt** - CPU utilization focused
 
 ### Using Presets
@@ -496,7 +504,7 @@ netperf-aggregate results_*.json --stats --report markdown -o summary.md
 
 ### CSV Headers Appearing Multiple Times
 
-**Problem:** Headers appear in output multiple times  
+**Problem:** Headers appear in output multiple times
 **Solution:** Headers are printed only on first call. If running in a loop, they appear once per process.
 
 ```bash
@@ -513,7 +521,7 @@ done
 
 ### JSON Parsing Errors
 
-**Problem:** JSON parsing fails  
+**Problem:** JSON parsing fails
 **Cause:** Likely output mixed with debug/error messages
 
 **Solution:**
@@ -528,7 +536,7 @@ netperf -H host -d 0 -- -J > results.json
 
 ### KEYVAL Parsing Issues
 
-**Problem:** Values contain `=` character  
+**Problem:** Values contain `=` character
 **Solution:** Split on first `=` only
 
 ```bash
@@ -548,3 +556,17 @@ value="${line#*=}"
 - [PHASE2_FEATURES.md](PHASE2_FEATURES.md) - Phase 2 technical details
 - [README.md](../README.md) - Main documentation
 - [netperf man page](netperf.man) - Complete options reference
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/OUTPUT_FORMATS.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-OUTPUT-FORMATS`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

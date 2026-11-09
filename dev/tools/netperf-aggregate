@@ -249,7 +249,9 @@ class StatisticsCalculator:
 
 class ResultComparator:
     """Compare two sets of results"""
-    
+
+    LOWER_IS_BETTER_METRICS = {'latency', 'local_cpu', 'remote_cpu'}
+
     @staticmethod
     def compare(baseline: List[NetperfResult], current: List[NetperfResult]) -> Dict[str, Any]:
         """Compare baseline vs current results"""
@@ -272,13 +274,21 @@ class ResultComparator:
                 else:
                     pct_change = 0
                 
+                lower_is_better = metric in ResultComparator.LOWER_IS_BETTER_METRICS
+                if lower_is_better:
+                    is_regression = pct_change > 5
+                    is_improvement = pct_change < -5
+                else:
+                    is_regression = pct_change < -5
+                    is_improvement = pct_change > 5
+                
                 comparison['differences'][metric] = {
                     'baseline_mean': baseline_mean,
                     'current_mean': current_mean,
                     'absolute_change': current_mean - baseline_mean,
                     'percent_change': pct_change,
-                    'is_regression': pct_change < -5,  # >5% decrease is regression
-                    'is_improvement': pct_change > 5,   # >5% increase is improvement
+                    'is_regression': is_regression,
+                    'is_improvement': is_improvement,
                 }
         
         return comparison
@@ -399,7 +409,13 @@ Examples:
     # Parse all input files
     all_results = []
     for file_pattern in args.files:
-        for filepath in Path('.').glob(file_pattern):
+        direct_path = Path(file_pattern)
+        if direct_path.exists():
+            matched_files = [direct_path]
+        else:
+            import glob
+            matched_files = [Path(p) for p in glob.glob(file_pattern)]
+        for filepath in matched_files:
             results = ResultParser.parse_file(filepath)
             all_results.extend(results)
     

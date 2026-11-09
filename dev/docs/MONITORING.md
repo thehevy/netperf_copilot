@@ -1,8 +1,17 @@
 # Real-Time Monitoring Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-MONITORING` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Real-Time Monitoring Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 ## Overview
 
-`netperf-monitor` provides real-time visualization of netperf tests with a terminal-based dashboard showing live metrics, progress tracking, and statistical analysis.
+`netperf-monitor` provides real-time visualization of netperf tests with a terminal-based dashboard showing live
+metrics, progress tracking, and statistical analysis.
 
 ## Features
 
@@ -280,14 +289,14 @@ export TERM=xterm-256color
 
 **Problem**: Monitor shows progress bar but no metrics update.
 
-**Solution**: Ensure `--demo-mode` is passed to netperf:
+**Solution**: Ensure `-M -D 0.5` is passed to netperf:
 
 ```bash
-# The monitor automatically adds --demo-mode
-./dev/tools/netperf-monitor -H server -- -d send -l 60
+# The monitor automatically adds -M -D 0.5
+./dev/tools/netperf-monitor -H server -l 60 -- -d send
 
-# But if calling netperf directly, add it manually
-netperf -H server --demo-mode -- -d send -l 60
+# If calling netperf directly, pass -M -D 0.5 before --
+netperf -H server -M -D 0.5 -l 60 -- -d send
 ```
 
 ### Display Flickers
@@ -478,3 +487,17 @@ Stream to InfluxDB:
 - netperf-multi(1) - Multi-instance test runner
 - netperf-profile(1) - Profile-based test execution
 - netperf-orchestrate(1) - Remote test orchestration
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/MONITORING.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-MONITORING`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

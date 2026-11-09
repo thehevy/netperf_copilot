@@ -1,8 +1,17 @@
 # Remote Test Orchestration Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-ORCHESTRATION` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Remote Test Orchestration Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 ## Overview
 
-`netperf-orchestrate` coordinates netperf tests across multiple remote hosts using SSH-based execution. It automatically deploys netserver, manages processes, and collects results from distributed test infrastructure.
+`netperf-orchestrate` coordinates netperf tests across multiple remote hosts using SSH-based execution. It automatically
+deploys netserver, manages processes, and collects results from distributed test infrastructure.
 
 ## Features
 
@@ -506,3 +515,17 @@ See `dev/examples/` for complete working examples:
 - [phase-3-plan.md](../plans/phase-3-plan.md) - Phase 3 implementation plan
 - netperf-multi(1) - Multi-instance test runner
 - netperf-profile(1) - Profile-based test execution
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/ORCHESTRATION.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-ORCHESTRATION`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

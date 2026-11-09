@@ -1,14 +1,23 @@
 # OMNI Test Reference Guide
 
-**Version**: 2.7.1+  
-**Phase**: 3 - Advanced Features  
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-OMNI-REFERENCE` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for OMNI Test Reference Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+**Version**: 2.7.1+
+**Phase**: 3 - Advanced Features
 **Last Updated**: January 31, 2026
 
 ---
 
 ## Overview
 
-OMNI is the modern unified test framework in netperf that replaces the classic TCP_STREAM, TCP_RR, UDP_STREAM, etc. tests with a single flexible test type that can emulate all patterns.
+OMNI is the modern unified test framework in netperf that replaces the classic TCP_STREAM, TCP_RR, UDP_STREAM, etc.
+tests with a single flexible test type that can emulate all patterns.
 
 **Why OMNI?**
 
@@ -839,3 +848,17 @@ netperf-multi -H <host> -n <N> -- <omni-options>
 ---
 
 **End of OMNI Reference Guide**
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/OMNI_REFERENCE.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-OMNI-REFERENCE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

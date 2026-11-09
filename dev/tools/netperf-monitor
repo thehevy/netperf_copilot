@@ -18,7 +18,7 @@ Features:
 - Multi-test monitoring dashboard
 
 Usage:
-    netperf-monitor -H server -- -d send -l 60
+    netperf-monitor -d 60 -H server -- -d send
     netperf-monitor --follow test.log
     netperf-monitor --dashboard tests.json
     netperf-monitor --export-prometheus :9090
@@ -38,6 +38,7 @@ import json
 import threading
 from collections import deque
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 
 # ANSI terminal codes
@@ -384,16 +385,29 @@ class NetperfMonitor:
         monitor = TestMonitor(f"netperf -H {host}", duration)
         self.display.add_monitor(monitor)
         
-        # Build command with --demo-mode for interim results
+        # Build command with -M and -D 0.5 for interim results
         cmd = [self.netperf_path, '-H', host]
-        
-        # Add demo mode if not present
-        if '--' not in netperf_args:
-            netperf_args.append('--')
-        demo_idx = netperf_args.index('--')
-        netperf_args.insert(demo_idx, '--demo-mode')
-        
-        cmd.extend(netperf_args)
+        netperf_args = list(netperf_args)
+
+        if '--' in netperf_args:
+            sep_idx = netperf_args.index('--')
+            global_part = netperf_args[:sep_idx]
+            omni_part = netperf_args[sep_idx + 1:]
+        else:
+            global_part = []
+            omni_part = netperf_args
+
+        if '-M' not in global_part and '-t' not in global_part:
+            global_part.extend(['-M'])
+        if '-D' not in global_part:
+            global_part.extend(['-D', '0.5'])
+        if '-l' not in global_part and '-l' not in omni_part:
+            global_part.extend(['-l', str(duration)])
+
+        cmd.extend(global_part)
+        if omni_part:
+            cmd.append('--')
+            cmd.extend(omni_part)
         
         if self.verbose:
             print(f"Command: {' '.join(cmd)}", file=sys.stderr)
@@ -450,13 +464,57 @@ class NetperfMonitor:
             display_thread.join()
     
     def monitor_file(self, filepath: str):
-        """Monitor netperf output from file (follow mode)"""
-        print(f"Following file: {filepath}")
-        print("Press Ctrl+C to stop")
-        
-        # TODO: Implement file following with tail -f style
-        # Parse existing output format and update display
-        raise NotImplementedError("File monitoring not yet implemented")
+        """Monitor netperf output from file (parsing interim results, KEYVAL, or JSON)."""
+        path = Path(filepath)
+        if not path.exists():
+            raise FileNotFoundError(f"Log file not found: {filepath}")
+
+        monitor = TestMonitor(f"file:{path.name}", duration=60)
+        monitor.running = True
+        self.display.add_monitor(monitor)
+
+        content = path.read_text(encoding='utf-8', errors='ignore')
+        for raw_line in content.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if 'Interim result' in line:
+                parts = line.split()
+                if len(parts) >= 3:
+                    try:
+                        val = float(parts[2])
+                        monitor.update({'throughput': val})
+                    except ValueError:
+                        pass
+            elif '=' in line and not line.startswith('{'):
+                k, v = line.split('=', 1)
+                k = k.strip().upper()
+                try:
+                    fval = float(v.strip())
+                    if 'THROUGHPUT' in k:
+                        monitor.update({'throughput': fval})
+                    elif 'LATENCY' in k:
+                        monitor.update({'latency': fval})
+                    elif 'LOCAL_CPU' in k:
+                        monitor.update({'cpu_local': fval})
+                    elif 'REMOTE_CPU' in k:
+                        monitor.update({'cpu_remote': fval})
+                except ValueError:
+                    pass
+        if content.lstrip().startswith('{') or '\n{' in content:
+            try:
+                idx = content.find('{')
+                obj = json.loads(content[idx:])
+                res = obj.get('results', obj) if isinstance(obj, dict) else {}
+                if 'THROUGHPUT' in res or 'throughput' in res:
+                    monitor.update({'throughput': float(res.get('THROUGHPUT', res.get('throughput', 0.0)))})
+                if 'MEAN_LATENCY' in res or 'latency' in res:
+                    monitor.update({'latency': float(res.get('MEAN_LATENCY', res.get('latency', 0.0)))})
+            except Exception:
+                pass
+        monitor.running = False
+        monitor.completed = True
+        return monitor
     
     def dashboard(self, tests: List[Dict]):
         """Monitor multiple tests in dashboard view"""
@@ -474,7 +532,7 @@ def main():
         epilog="""
 Examples:
   # Monitor live test
-  %(prog)s -H 192.168.1.10 -- -d send -l 60
+  %(prog)s -d 60 -H 192.168.1.10 -- -d send
   
   # Follow log file
   %(prog)s --follow test.log
@@ -483,7 +541,7 @@ Examples:
   %(prog)s --dashboard tests.json
   
   # With custom netperf path
-  %(prog)s --netperf /usr/local/bin/netperf -H server -- -d send -l 30
+  %(prog)s --netperf /usr/local/bin/netperf -d 30 -H server -- -d send
 
 Output Metrics:
   - Real-time throughput (Mbps)

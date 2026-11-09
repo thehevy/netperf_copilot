@@ -1,6 +1,33 @@
 # Netperf - Modern Fork
 
-A modernized fork of the netperf network performance benchmarking tool with improved defaults, better output formats, and enhanced usability.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-README` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+A modernized fork of the `netperf` network performance benchmarking tool optimized for **Intel® Ethernet 800 Series**
+(**200GbE Ethernet Controller** / **200GbE Network Adapter**) across `100GbE`–`800GbE` fabrics and
+**Intel® Xeon® 6 Processor** architectures, with improved defaults, structured output formats, and automated
+qualification tooling.
+
+| Field | Value |
+| --- | --- |
+| **Repository** | https://github.com/thehe<wbr>vy/netperf_copilot |
+| **Wiki** | https://github.com/thehe<wbr>vy/netperf_copilot/wiki |
+| **Latest Commit** | `baefaf4` (`master`, Phases 1–7 Complete) |
+| **Primary Stack** | C (`src/netperf`, `src/netserver`) + Python 3 (`dev/tools/`, 0 external deps) |
+| **Validation Status** | `49/49` automated & live hardware checks passing (`0` `dmesg` faults) |
+
+### Quick Share Block
+
+```text
+Repo: https://github.com/thehevy/netperf_copilot
+Wiki: https://github.com/thehevy/netperf_copilot/wiki
+Clone: git clone https://github.com/thehevy/netperf_copilot.git
+```
 
 ## 🚀 Quick Start
 
@@ -41,7 +68,8 @@ This fork modernizes netperf with several key improvements while maintaining ful
 
 - **netperf-multi** - Parallel test execution (2-16 instances)
 - **netperf_stats.py** - Statistical analysis with CI and outliers
-- **netperf-profile** - 10 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless, jitter, lossy, mixed-workload)
+- **netperf-profile** - 15 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless,
+  jitter, lossy, mixed-workload, plus 5 high-speed 200G–600G/OCP profiles)
 - **netperf-orchestrate** - Multi-host test coordination with YAML inventory
 - **netperf-monitor** - Real-time monitoring with terminal UI
 - **netperf-template** - Report generation in 5 formats (markdown, HTML, JSON, CSV, text)
@@ -86,6 +114,10 @@ This fork modernizes netperf with several key improvements while maintaining ful
 
 ### Core Documentation
 
+- **[EXECUTIVE_SUMMARY.md](dev/docs/EXECUTIVE_SUMMARY.md)** - Executive summary & live hardware validation report
+- **[TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md)** - 10-page architecture & benchmark white paper
+- **[Architecture-and-Insights.md](wiki/Architecture-and-Insights.md)** - Core architecture & performance insights
+- **[Commit-Log-and-Roadmap.md](wiki/Commit-Log-and-Roadmap.md)** - Chronological commit log & engineering roadmap
 - **[BUILD_CONFIGURATION.md](dev/docs/BUILD_CONFIGURATION.md)** - Complete guide to configure options
 - **[UPGRADING.md](UPGRADING.md)** - Migration guide from upstream netperf
 - **[DOCUMENTATION_STANDARDS.md](dev/docs/DOCUMENTATION_STANDARDS.md)** - Markdown quality standards
@@ -177,8 +209,8 @@ netperf -H remotehost
 # Modern OMNI (requires -M flag)
 netperf -H remotehost -M
 
-# 10-second test with CSV output
-netperf -H remotehost -l 10 -- -o
+# 10-second OMNI test with CSV output
+netperf -H remotehost -M -l 10 -- -o
 
 # With CPU utilization measurement
 netperf -H remotehost -c -C
@@ -190,21 +222,21 @@ netperf -H remotehost -c -C
 # TCP request-response
 netperf -H remotehost -t TCP_RR
 
-# With JSON output
-netperf -H remotehost -t TCP_RR -- -J
+# OMNI request-response with JSON output
+netperf -H remotehost -M -- -d rr -J
 ```
 
 ### Using Output Presets
 
 ```bash
 # Minimal output (throughput only)
-netperf -H remotehost -- -k dev/catalog/output-presets/minimal.out
+netperf -H remotehost -M -- -k minimal
 
 # Verbose output (all fields)
-netperf -H remotehost -- -k dev/catalog/output-presets/verbose.out
+netperf -H remotehost -M -- -k verbose
 
 # Latency-focused output
-netperf -H remotehost -t TCP_RR -- -k dev/catalog/output-presets/latency.out
+netperf -H remotehost -M -- -d rr -k latency
 ```
 
 ## 🔄 Backward Compatibility
@@ -219,12 +251,12 @@ This fork is **fully backward compatible** with upstream netperf:
 
 ## 📊 Output Formats Comparison
 
-| Format              | Flag     | Use Case                 | Example                      |
-| ------------------- | -------- | ------------------------ | ---------------------------- |
-| **Keyval** (default) | None    | Scripting, grep-friendly | `THROUGHPUT=54623.45`        |
-| **JSON**            | `-- -J`  | Modern tools, APIs       | `{"THROUGHPUT": 54623.45}`   |
-| **CSV**             | `-- -o`  | Spreadsheets, analysis   | `54623.45,1.00,TCP`          |
-| **Columnar**        | `-- -O`  | Human reading            | Traditional table format     |
+| Format | Flag | Use Case | Example |
+| --- | --- | --- | --- |
+| **Keyval** (default) | None | Scripting, grep-friendly | `THROUGHPUT=54623.45` |
+| **JSON** | `-- -J` | Modern tools, APIs | `{"THROUGHPUT": 54623.45}` |
+| **CSV** | `-- -o` | Spreadsheets, analysis | `54623.45,1.00,TCP` |
+| **Columnar** | `-- -O` | Human reading | Traditional table format |
 
 ## 🛠️ Development
 
@@ -234,18 +266,34 @@ This fork is **fully backward compatible** with upstream netperf:
 netperf/
 ├── src/              # Source code
 ├── doc/              # Documentation
+├── wiki/             # Comprehensive Project Wiki (9 guides & references)
 ├── dev/              # Development tools and advanced features
 │   ├── catalog/      # Output presets, config analysis
 │   ├── docs/         # Developer documentation (Phase 1-3 guides)
 │   ├── examples/     # Usage examples and sample configs
 │   ├── plans/        # Project roadmap and progress tracking
-│   ├── profiles/     # Built-in test profiles (10 profiles)
+│   ├── profiles/     # Built-in test profiles (15 profiles)
 │   ├── scripts/      # Build and utility scripts
-│   ├── tests/        # Integration test suites
-│   ├── tools/        # Advanced tools (6 production tools)
+│   ├── tests/        # Integration & unit test suites
+│   ├── tools/        # Advanced tools (11 production tools)
 │   └── Makefile      # Convenience wrapper
 └── build/            # Build output (generated)
 ```
+
+## 📚 Project Wiki
+
+Comprehensive documentation is maintained in the [`wiki/`](wiki/Home.md) directory:
+
+- **[Wiki Home & Architecture Overview](wiki/Home.md)**
+- **[Executive Summary](wiki/Executive-Summary.md)** ([dev/docs/EXECUTIVE_SUMMARY.md](dev/docs/EXECUTIVE_SUMMARY.md))
+- **[Technical White Paper (100G–800G & Multi-Core Modernization)](wiki/Technical-White-Paper.md)**
+  ([dev/docs/TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md))
+- **[Getting Started & Installation](wiki/Getting-Started-and-Installation.md)**
+- **[Core Engine & OMNI Guide](wiki/Core-Engine-and-OMNI-Guide.md)**
+- **[High-Speed 200G–800G & Intel Xeon 6 Guide](wiki/High-Speed-200G-800G-and-Xeon6-Guide.md)**
+- **[CLI Tools Reference](wiki/CLI-Tools-Reference.md)**
+- **[Test Profiles & Qualification Catalog](wiki/Test-Profiles-and-Qualification-Catalog.md)**
+- **[Pre-Flight Checks & Fault Monitoring](wiki/Pre-Flight-Checks-and-Fault-Monitoring.md)**
 
 ### Build Configuration
 
@@ -292,7 +340,7 @@ Parallel test execution across multiple instances:
 
 ```bash
 # Run 4 parallel tests
-netperf-multi -n 4 -H remotehost -- -d send -l 10
+netperf-multi -n 4 -l 10 -H remotehost -- -d send
 
 # With custom netperf binary
 netperf-multi -n 8 --netperf ./build/src/netperf -H remotehost
@@ -304,10 +352,10 @@ Statistical analysis with confidence intervals and outlier detection:
 
 ```bash
 # Analyze multiple test runs
-for i in {1..20}; do netperf -H host; done | netperf_stats.py -
+for i in {1..20}; do netperf -H host -M -- -k THROUGHPUT | grep THROUGHPUT= | cut -d= -f2; done | netperf_stats.py -
 
-# Generate histogram
-netperf_stats.py results.txt --histogram histogram.png
+# Display ASCII histogram and boxplot
+netperf_stats.py results.txt
 ```
 
 ### netperf-profile
@@ -315,11 +363,11 @@ netperf_stats.py results.txt --histogram histogram.png
 Pre-configured test profiles for common scenarios:
 
 ```bash
-# Run baseline profile (10 built-in profiles)
+# Run baseline profile (15 built-in profiles)
 netperf-profile -p baseline -H remotehost
 
 # Custom profile with YAML
-netperf-profile -p my-profile.yaml -H remotehost --dry-run
+netperf-profile --profile-file my-profile.yaml -H remotehost --dry-run
 ```
 
 ### netperf-orchestrate
@@ -328,10 +376,11 @@ Multi-host test orchestration:
 
 ```bash
 # Run tests across multiple hosts
-netperf-orchestrate -i hosts.yaml -p throughput --parallel
+netperf-orchestrate --hosts hosts.yaml -- -d stream -l 30 -J
 
-# Generate inventory
-netperf-orchestrate --generate-inventory > hosts.yaml
+# Check connectivity and status
+netperf-orchestrate --hosts hosts.yaml --check
+netperf-orchestrate --hosts hosts.yaml --status
 ```
 
 ### netperf-monitor
@@ -340,10 +389,10 @@ Real-time monitoring with terminal UI:
 
 ```bash
 # Monitor ongoing tests
-netperf-monitor --host remotehost --interval 1
+netperf-monitor -H remotehost -d 60 --refresh 0.5 -- -d send
 
-# Demo mode
-netperf-monitor --demo
+# Follow an existing log file
+netperf-monitor --follow test.log
 ```
 
 ### netperf-template
@@ -381,13 +430,29 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 
 - ✅ Multi-instance parallel execution (netperf-multi)
 - ✅ Statistical analysis with CI (netperf_stats.py)
-- ✅ Test profiles system (10 built-in profiles)
+- ✅ Test profiles system (15 built-in profiles)
 - ✅ Multi-host orchestration (netperf-orchestrate)
 - ✅ Real-time monitoring TUI (netperf-monitor)
 - ✅ Report generation engine (netperf-template)
 - ✅ 100% integration testing validated
 
-**Phase 4 (Future)**: Enterprise Features
+**Phase 4-7 (COMPLETE)**: 100G–800G High-Speed & Intel Xeon 6 Platform Modernization
+
+- ✅ **Directional & Multi-Port Engine (`netperf-multi` v2.0)**: TX, RX, simultaneous bidirectional (`--direction bx`),
+  sequential BX (`bx-seq`), multi-NIC (`-i ens7np0,ens23np0,ens27np0`), multi-subnet (`-H 192.168.10..17.74`), DSCP/ToS
+  QoS (`--dscp EF,CS3,AF21,CS0`), and up to 512 streams
+- ✅ **Core C Engine Modernization (`src/`)**: `MAXMESSAGESIZE` raised to 4 MB, `-Z` (`SO_ZEROCOPY`/`MSG_ZEROCOPY`),
+  512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id` , sysfs PCIe Gen5/Gen6 link & DMI detection,
+  and `ETHTOOL_GLINKSETTINGS` (100G–800G)
+- ✅ **Xeon 6 Topology & Per-Core `netserver-manager` **: Automatic P-core (Multi-Core P-Core SMT filtering) vs E-core
+  (Shared-L2 E-Core 4-core L2 module `spread_l2` ) core allocation and per-core `netserver` pool
+  (`18600..18663`)
+- ✅ **Pre-Flight & Automated BKM Tuner (`netperf-preflight`, `netperf-tuner` )**: 24 200GbE feature anti-affinity rules
+  (`AA-001`..`AA-024`), background process isolation, 5-run warmup sanity gate (`CV < 5%`), `ice` BKM profiles
+  (`ecore`, `pcore` , `mtu1500` ), and A/B parameter sweep runner
+- ✅ **High-Speed Profiles, Qualification Catalog & AI Validation Reporting (`netperf-catalog`, `netperf_report.py` )**:
+  5 new 200G–600G/OCP YAML profiles, 4 qualification suites (`flow-scaling`, `core-locality` , `ring-coalesce-matrix` ,
+  `lag-failover-qos` ), and `U1` –`U13` kmsg/ethtool counter delta reporting
 
 - Web-based dashboard
 - Historical result database
@@ -398,4 +463,19 @@ See development plans in [dev/plans/](dev/plans/) for detailed progress.
 
 ---
 
-**BE SURE TO READ THE MANUAL** (see [doc/netperf.txt](doc/netperf.txt)) for comprehensive usage information, even though some sections reference older defaults.
+**BE SURE TO READ THE MANUAL** (see [doc/netperf.txt](doc/netperf.txt) ) for comprehensive usage information, even
+though some sections reference older defaults.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `README.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

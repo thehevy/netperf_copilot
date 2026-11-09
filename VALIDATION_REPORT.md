@@ -1,21 +1,29 @@
 # Multi-Host Validation Report
 
-**Date**: January 31, 2026  
-**Test Environment**: Production hardware (Intel Granite Rapids servers)  
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-VALIDATION-REPORT` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Multi-Host Validation Report under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+**Date**: January 31, 2026
+**Test Environment**: Production multi-core server hardware
 **Version**: netperf v2.7.1.hevy with backwards compatibility
 
 ## Test Infrastructure
 
-### Server (nd-gnr-gb-1)
+### Server (server-node-1)
 
-- SSH Address: 10.166.84.106
-- Test Interface: enp167s0f0np0 (192.168.10.1/24)
+- SSH Address: 192.0.2.10
+- Test Interface: eth0 (192.168.10.1/24)
 - Role: netserver daemon
 
-### Client (nd-gnr-gb-2)
+### Client (client-node-2)
 
-- SSH Address: 10.166.84.107
-- Test Interface: enp167s0f0np0 (192.168.10.2/24)
+- SSH Address: 192.0.2.11
+- Test Interface: eth0 (192.168.10.2/24)
 - Role: netperf client
 
 ### Network
@@ -100,7 +108,7 @@ bytes  Bytes  bytes    bytes   secs.    per sec
   "metadata": {
     "netperf_version": "2.7.1.hevy",
     "timestamp": "2026-01-31T19:33:46Z",
-    "hostname": "nd-gnr-gb-2",
+    "hostname": "client-node-2",
     "platform": "Linux 6.12.0-124.28.1.el10_1.x86_64 x86_64"
   },
   "results": {
@@ -152,11 +160,11 @@ bytes   bytes    secs            #      #   10^6bits/sec
 
 ### Key Findings
 
-✅ **100% Backwards Compatible**: Default behavior unchanged from upstream netperf  
-✅ **Modern Features Available**: -M flag provides access to OMNI tests  
-✅ **No Migration Needed**: Existing production scripts work unchanged  
-✅ **High Performance**: Achieving 10+ Gbps throughput on test hardware  
-✅ **Clean Network**: Sub-millisecond latency, zero packet loss  
+✅ **100% Backwards Compatible**: Default behavior unchanged from upstream netperf
+✅ **Modern Features Available**: -M flag provides access to OMNI tests
+✅ **No Migration Needed**: Existing production scripts work unchanged
+✅ **High Performance**: Achieving 10+ Gbps throughput on test hardware
+✅ **Clean Network**: Sub-millisecond latency, zero packet loss
 
 ### Validation Criteria Met
 
@@ -170,7 +178,8 @@ bytes   bytes    secs            #      #   10^6bits/sec
 
 ## Conclusion
 
-The backwards compatibility implementation has been **successfully validated** on production hardware with real network tests between two physical servers. All test patterns work correctly, and the implementation meets all design goals:
+The backwards compatibility implementation has been **successfully validated** on production hardware with real network
+tests between two physical servers. All test patterns work correctly, and the implementation meets all design goals:
 
 1. Existing scripts require **zero changes**
 2. Modern features accessible via **explicit -M flag**
@@ -181,7 +190,21 @@ The implementation is ready for production use.
 
 ---
 
-**Validated by**: Multi-host integration tests  
-**Hardware**: Intel Granite Rapids (nd-gnr-gb-1, nd-gnr-gb-2)  
-**Network**: Direct 100GbE connection  
+**Validated by**: Multi-host integration tests
+**Hardware**: Multi-Core Server Cluster (server-node-1, client-node-2)
+**Network**: Direct 100GbE connection
 **Date**: January 31, 2026
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `VALIDATION_REPORT.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-VALIDATION-REPORT`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

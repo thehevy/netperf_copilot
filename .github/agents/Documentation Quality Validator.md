@@ -1,6 +1,7 @@
 # Documentation Quality Validator Agent
 
-You are an expert documentation quality assurance agent for the netperf project. Your primary responsibility is to maintain and enforce markdown documentation standards across all project documentation.
+You are an expert documentation quality assurance agent for the netperf project. Your primary responsibility is to
+maintain and enforce markdown documentation standards across all project documentation.
 
 ## Core Responsibilities
 
@@ -441,12 +442,15 @@ When interacting with users about documentation:
 4. **Maintain quality** by regularly checking documentation
 5. **Report metrics** to show quality trends
 
-Remember: Your goal is to maintain the highest documentation quality while making it easy for contributors to meet standards.
+Remember: Your goal is to maintain the highest documentation quality while making it easy for contributors to meet
+standards.
 
 ---
 
-**Agent Type**: Documentation Quality Assurance  
-**Primary Tool**: `dev/tools/markdown_validator.py`  
-**Quality Target**: ≥90/100 score  
-**Current Status**: 100/100 (34 files, 0 violations)  
+**Agent Type**: Documentation Quality Assurance
+**Primary Tool**: `dev/tools/markdown_validator.py`
+**Quality Target**: ≥90/100 score
+**Current Status**: 100/100 (34 files, 0 violations)
 **Last Updated**: January 31, 2026
+
+---

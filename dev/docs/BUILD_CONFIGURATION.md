@@ -1,10 +1,21 @@
 # Netperf Build Configuration Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-BUILD-CONFIGURA` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Build Configuration Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 ## Overview
 
-Netperf uses GNU Autotools (autoconf/automake) for platform-portable builds. The `configure` script provides numerous options that control which tests are compiled, how CPU utilization is measured, and whether certain features that may affect benchmark results are enabled.
+Netperf uses GNU Autotools (autoconf/automake) for platform-portable builds. The `configure` script provides numerous
+options that control which tests are compiled, how CPU utilization is measured, and whether certain features that may
+affect benchmark results are enabled.
 
-This guide provides comprehensive documentation of all configuration options, their performance impact, and recommendations for different use cases.
+This guide provides comprehensive documentation of all configuration options, their performance impact, and
+recommendations for different use cases.
 
 ## Quick Start
 
@@ -313,7 +324,7 @@ This script builds netperf with various configurations and compares throughput a
 Based on internal testing on Linux x86_64:
 
 | Option | Throughput Impact | CPU Impact | Notes |
-|--------|------------------|------------|-------|
+| --- | --- | --- | --- |
 | histogram | -5% to -15% | Minimal | Per-op timing overhead |
 | dirty | -20% to -40% | Minimal | Forces cache misses |
 | demo | -0% to -2% | Minimal | I/O for interim results |
@@ -472,3 +483,17 @@ This enables:
 - ❌ No interval/spin overhead
 
 For specific needs, see the use-case recommendations above.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/BUILD_CONFIGURATION.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-BUILD-CONFIGURA`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

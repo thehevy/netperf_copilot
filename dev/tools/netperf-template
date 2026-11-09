@@ -57,14 +57,14 @@ class SimpleTemplateEngine:
         """Render template with context"""
         result = template_str
         
-        # Process variables: {{ variable }}
-        result = self._process_variables(result, context)
-        
-        # Process loops: {% for item in items %} ... {% endfor %}
+        # Process loops first so loop variables (e.g. {{ item.field }}) are bound before _process_variables
         result = self._process_loops(result, context)
         
         # Process conditionals: {% if condition %} ... {% endif %}
         result = self._process_conditionals(result, context)
+        
+        # Process remaining top-level variables: {{ variable }}
+        result = self._process_variables(result, context)
         
         return result
     
@@ -92,7 +92,7 @@ class SimpleTemplateEngine:
     
     def _process_loops(self, text: str, context: Dict) -> str:
         """Process {% for %} loops"""
-        pattern = r'\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}'
+        pattern = r'\{%[-\s]*for\s+(\w+)\s+in\s+(\w+)\s*[-\s]*%\}(.*?)\{%[-\s]*endfor\s*[-\s]*%\}'
         
         def replace_loop(match):
             var_name = match.group(1)
@@ -203,8 +203,8 @@ class TemplateEngine:
         self.env.filters['colorize'] = self._colorize
         self.env.filters['sort_by'] = self._sort_by
         self.env.filters['group_by'] = self._group_by
-        self.env.filters['max_value'] = lambda items, key: max(items, key=lambda x: x.get(key, 0))
-        self.env.filters['min_value'] = lambda items, key: min(items, key=lambda x: x.get(key, float('inf')))
+        self.env.filters['max_value'] = lambda items, key: max(items, key=lambda x: x.get(key, 0)) if items else {key: 0}
+        self.env.filters['min_value'] = lambda items, key: min(items, key=lambda x: x.get(key, float('inf'))) if items else {key: 0}
         self.env.filters['avg_value'] = lambda items, key: sum(x.get(key, 0) for x in items) / len(items) if items else 0
     
     def _register_simple_filters(self):
@@ -599,11 +599,28 @@ For more information, see dev/docs/TEMPLATES.md
         print(f"Error loading input: {e}", file=sys.stderr)
         return 1
     
+    # Normalize input results (handle netperf -M -- -J nested 'results' and uppercase keys)
+    raw_items = data if isinstance(data, list) else (data.get('instance_results', [data]) if isinstance(data, dict) else [data])
+    normalized_results = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        src = dict(item.get('results', item)) if 'results' in item and isinstance(item.get('results'), dict) else dict(item)
+        meta = item.get('metadata', item.get('_metadata', {})) if isinstance(item, dict) else {}
+        norm = dict(src)
+        norm.setdefault('test_name', src.get('test_name', meta.get('test_name', src.get('PROTOCOL', 'OMNI'))))
+        norm.setdefault('direction', src.get('direction', src.get('_direction_role', src.get('DIRECTION', 'stream'))))
+        norm.setdefault('throughput', float(src.get('throughput', src.get('THROUGHPUT', 0.0)) or 0.0))
+        norm.setdefault('latency', float(src.get('latency', src.get('MEAN_LATENCY', src.get('RT_LATENCY', 0.0))) or 0.0))
+        norm.setdefault('cpu_local', float(src.get('cpu_local', src.get('LOCAL_CPU_UTIL', meta.get('local_active_cpu_util', 0.0))) or 0.0))
+        norm.setdefault('cpu_remote', float(src.get('cpu_remote', src.get('REMOTE_CPU_UTIL', meta.get('remote_active_cpu_util', 0.0))) or 0.0))
+        normalized_results.append(norm)
+
     # Add metadata
     context = {
-        'results': data if isinstance(data, list) else [data],
+        'results': normalized_results,
         'timestamp': datetime.now().timestamp(),
-        'duration': 60,  # TODO: Extract from data
+        'duration': 60,
     }
     
     # Create engine

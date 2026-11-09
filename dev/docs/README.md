@@ -1,5 +1,13 @@
 # Netperf Fork Documentation Index
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-README` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Fork Documentation Index under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 This directory contains comprehensive documentation for the modernized netperf fork.
 
 ## 📚 Documentation Structure
@@ -31,7 +39,7 @@ This directory contains comprehensive documentation for the modernized netperf f
 ### By Task
 
 | What do you want to do? | Read this |
-|-------------------------|-----------|
+| --- | --- |
 | Get started quickly | [README.md](../../README.md) |
 | Migrate from upstream | [UPGRADING.md](../../UPGRADING.md) |
 | Configure build options | [BUILD_CONFIGURATION.md](BUILD_CONFIGURATION.md) |
@@ -75,9 +83,11 @@ This directory contains comprehensive documentation for the modernized netperf f
 
 ### Configuration
 
-- Configure options: [BUILD_CONFIGURATION.md § Options Reference](BUILD_CONFIGURATION.md#configuration-options-reference)
+- Configure options:
+  [BUILD_CONFIGURATION.md § Options Reference](BUILD_CONFIGURATION.md#configuration-options-reference)
 - Performance impact: [BUILD_CONFIGURATION.md § Performance Impact](BUILD_CONFIGURATION.md#performance-impact-testing)
-- Use-case recipes: [BUILD_CONFIGURATION.md § Recommendations](BUILD_CONFIGURATION.md#configuration-recommendations-by-use-case)
+- Use-case recipes:
+  [BUILD_CONFIGURATION.md § Recommendations](BUILD_CONFIGURATION.md#configuration-recommendations-by-use-case)
 
 ### Migration & Compatibility
 
@@ -117,7 +127,7 @@ This directory contains comprehensive documentation for the modernized netperf f
 All Phase 1 features have minimal performance impact:
 
 | Feature | Throughput Impact | Notes |
-|---------|------------------|-------|
+| --- | --- | --- |
 | OMNI default | 0% | Same performance as classic tests |
 | JSON output | 0% | Only formats existing data |
 | Key-value output | 0% | Minimal formatting overhead |
@@ -235,6 +245,20 @@ See [phase-1-progress.md](../plans/phase-1-progress.md) for detailed roadmap.
 
 ---
 
-**Last Updated**: 2026-01-30  
-**Documentation Version**: Phase 1 Complete  
+**Last Updated**: 2026-01-30
+**Documentation Version**: Phase 1 Complete
 **Project Status**: Production Ready
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/README.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

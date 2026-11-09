@@ -5,7 +5,16 @@ title: Netperf Modern Fork
 
 # Netperf - Modern Fork
 
-A modernized fork of the netperf network performance benchmarking tool with improved defaults, better output formats, and advanced testing capabilities.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DOCS-INDEX` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+A modernized fork of the netperf network performance benchmarking tool with improved defaults, better output formats,
+and advanced testing capabilities.
 
 **Current Version**: v3.0.0 | **License**: MIT | **Status**: Production Ready
 
@@ -137,9 +146,9 @@ netperf-template -t markdown-report results.json
 
 ## 📊 Performance
 
-**Integration Testing**: 100% pass rate (11/11 tests)  
-**Performance Validated**: 19-52 Gbps throughput  
-**Test Server**: Live datacenter infrastructure  
+**Integration Testing**: 100% pass rate (11/11 tests)
+**Performance Validated**: 19-52 Gbps throughput
+**Test Server**: Live datacenter infrastructure
 **Profiles Available**: 10 built-in scenarios
 
 ---
@@ -147,7 +156,7 @@ netperf-template -t markdown-report results.json
 ## 🔧 Tools Overview
 
 | Tool | Purpose | Status |
-|------|---------|--------|
+| --- | --- | --- |
 | **netperf-multi** | Parallel execution (2-16 instances) | ✅ Production |
 | **netperf_stats.py** | Statistical analysis with CI | ✅ Production |
 | **netperf-profile** | Pre-configured test profiles | ✅ Production |
@@ -256,9 +265,9 @@ netperf-multi -n 4 -H host -- -M -d send -l 30 | netperf_stats.py -
 
 ## 🗺️ Roadmap
 
-**Phase 1** ✅ Complete - Modern defaults and output formats  
-**Phase 2** ✅ Complete - Enhanced output and templates  
-**Phase 3** ✅ Complete - Advanced tools and orchestration  
+**Phase 1** ✅ Complete - Modern defaults and output formats
+**Phase 2** ✅ Complete - Enhanced output and templates
+**Phase 3** ✅ Complete - Advanced tools and orchestration
 **Phase 4** 🔜 Planned - Enterprise features (web dashboard, database, regression detection)
 
 ---
@@ -302,3 +311,17 @@ This fork maintains the original license while adding modernization and usabilit
 **⭐ Star this repository** if you find it useful!
 
 **Last Updated**: January 31, 2026 | **Version**: v3.0.0
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `docs/index.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DOCS-INDEX`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

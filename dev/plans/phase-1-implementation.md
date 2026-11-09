@@ -1,12 +1,21 @@
 # Phase 1: Core Defaults & Build Optimization - Implementation Plan
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-1-IMPLEM` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Phase 1: Core Defaults & Build Optimization - Implementation Plan under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 ## Overview
 
-This phase focuses on changing netperf defaults to be more useful out-of-the-box while maintaining backward compatibility.
+This phase focuses on changing netperf defaults to be more useful out-of-the-box while maintaining backward
+compatibility.
 
-**Duration:** 2 weeks  
-**Risk:** Low  
-**Dependencies:** None  
+**Duration:** 2 weeks
+**Risk:** Low
+**Dependencies:** None
 
 ---
 
@@ -193,7 +202,7 @@ make clean && make
 diff results-no-demo.txt results-with-demo.txt
 ```
 
-**Expected:** Minimal impact (<1% overhead)  
+**Expected:** Minimal impact (<1% overhead)
 **If overhead >2%:** Consider leaving as opt-in
 
 #### Testing Checklist
@@ -212,7 +221,7 @@ diff results-no-demo.txt results-with-demo.txt
 Create: `dev/docs/analysis/configure-options-analysis.md`
 
 | Option | Current Default | Recommended | Reason | Performance Impact |
-|--------|----------------|-------------|--------|-------------------|
+| --- | --- | --- | --- | --- |
 | --enable-demo | no | **yes** | Useful by default | <1% |
 | --enable-omni | yes | yes | Core feature | N/A |
 | --enable-histogram | no | no | 5-10% overhead | High |
@@ -549,6 +558,20 @@ git checkout -b feature/optimized-build
 
 ---
 
-**Document Version:** 1.0  
-**Status:** Ready for Implementation  
+**Document Version:** 1.0
+**Status:** Ready for Implementation
 **Last Updated:** 2026-01-30
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/plans/phase-1-implementation.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PHASE-1-IMPLEM`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

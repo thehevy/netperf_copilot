@@ -1,0 +1,68 @@
+name: 200g-pcore
+description: Intel 200GbE 200GbE Qualification Suite for Xeon 6 Multi-Core P-Core P-Core
+version: "2.0.0"
+category: 200g-qualification
+
+global:
+  duration: 30
+  output_format: json
+  mtu: 9000
+  layout: spread_step2
+  per_core_netserver: true
+  base_port: 18600
+  lp_start_cpu: 0
+
+platform_bkm:
+  arch_type: pcore
+  tx_ring: 2048
+  rx_ring: 4096
+  rx_usecs: 10
+  tx_usecs: 20
+  tx_scheduling_layers: 5
+  msix_vec_per_pf_max: 65
+
+tests:
+  - name: pcore_200g_tx_1flow
+    description: Single-stream TCP TX baseline (MTU 9000, physical core step-2)
+    direction: tx
+    protocol: tcp
+    instances: 1
+    message_size: 65536
+    cpu_affinity: true
+    nodelay: true
+
+  - name: pcore_200g_tx_8flows
+    description: 8-stream TCP TX scaling on Multi-Core P-Core P-Core
+    direction: tx
+    protocol: tcp
+    instances: 8
+    message_size: 65536
+    cpu_affinity: true
+    nodelay: true
+
+  - name: pcore_200g_tx_16flows
+    description: 16-stream TCP TX line-rate saturation (~191 Gbps target)
+    direction: tx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    nodelay: true
+
+  - name: pcore_200g_rx_16flows
+    description: 16-stream TCP RX (MAERTS) line-rate saturation (~191 Gbps target)
+    direction: rx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    nodelay: true
+
+  - name: pcore_200g_bx_16flows
+    description: Simultaneous bidirectional (16 TX + 16 RX on disjoint P-cores)
+    direction: bx
+    protocol: tcp
+    instances: 16
+    message_size: 65536
+    cpu_affinity: true
+    nodelay: true
