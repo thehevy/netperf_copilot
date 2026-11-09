@@ -5,6 +5,14 @@ description: "Tunes Linux hosts, Intel Ethernet E835 (ice/irdma/iavf), and Conne
 
 # Universal High-Speed Network & Xeon 6 Auto-Tune Agent
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-AUTOTUNE-AGENT-AGE` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Universal High-Speed Network & Xeon 6 Auto-Tune Agent under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 
 - `kb/tuning/e835_and_xeon6_tuning_guide.md`
@@ -12,6 +20,7 @@ Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 - `deliverables/autotune/Unified_AutoTune_Improvement_Report.md`
 
 ## Core Capabilities & Mandatory Auto-Tune Rules
+
 0. **Multi-Agent Lab Testbed Lease & Deterministic Devlink Readiness Gate (`HH-BR-007` & `HH-MR-001`)**:
    - Run `labctl status` / `labctl checkout <TB> --reconfig true` before any benchmark or tuning sweep on `TB1`–`TB4`.
    - Use read-before-write `devlink` parameter caching and poll netlink carrier (`operstate == up` + `carrier == 1`)
@@ -47,3 +56,17 @@ Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
      `-I` exit).
    - After verifying `labctl status` lease ownership (`Step 0`), clean up orphaned unpinned `netserver` processes
      (`AT-02`) and spawn SNC-pinned `taskset -c ${CPU} netserver -p $((BASE_PORT + i))` instances.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .github/agents/universal<wbr>-autotune-agent.agent.<wbr>md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-AUTOTUNE-AGENT-AGE`, `DOC-NETPERF-GITHUB-AGEN<wbr>TS-UNIVERSAL-AUTOTUNE-<wbr>AGENT-AGE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

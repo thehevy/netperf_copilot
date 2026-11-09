@@ -5,6 +5,14 @@ description: "Enforces Intel Ethernet Standards D1-D10 v3.2 including Branding (
 
 # Universal Intel Ethernet Branding, ASD-STE100 (D1-D10 v3.2), Markdown, Config & Kernel Style Validator
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-STYLE-AND-DOC-VALI` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Universal Intel Ethernet Branding, ASD-STE100 (D1-D10 v3.2), Markdown, Config & Kernel Style Validator under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 
 - `kb/documentation/intel_ethernet_branding_and_parameter_standards.md`
@@ -17,6 +25,7 @@ Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 - `templates/TEMPLATE_06_GitHub_Wiki_5_Page_Pack.md`
 
 ## Core Capabilities & Quality Gates
+
 0. **Mandatory Intel® Technical Document Templates (`templates/TEMPLATE_01..06_*.md`)**:
    - Whenever creating or updating an engineering report (`TEMPLATE-01`), configuration guide (`TEMPLATE-02`), white
      paper (`TEMPLATE-03`), troubleshooting playbook (`TEMPLATE-04`), repository dossier/README (`TEMPLATE-05`), or
@@ -61,11 +70,29 @@ Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 6. **ASD-STE100 Simplified Technical English (`Rule D6`) & Diátaxis/Metadata (`Rule D7` & `D7-ID-MATCH`)**:
    - Enforce `<= 20` words per procedural sentence (imperative verb first) and `<= 25` words per descriptive sentence
      (`>= 90%` active voice).
-   - Replace unapproved STE filler words (`utilize` -> `use`, `prior to` -> `before`, `subsequent to` -> `after`,
-     `in order to` -> `to`, `ensure` -> `make sure`) and prohibit ambiguous modals (`should`/`may`/`might`) in
+   - Replace unapproved STE filler words (`use` -> `use`, `before` -> `before`, `after` -> `after`,
+     `to` -> `to`, `ensure` -> `make sure`) and prohibit ambiguous modals (`should`/`may`/`might`) in
      procedural steps.
-   - Enforce Diátaxis 4-type section skeletons, `METADATA_HEADER_START..END` / `METADATA_FOOTER_START..END` blocks, and **`D7-ID-MATCH`** (exact `Document ID` match between Header and Footer without truncation).
+   - Enforce Diátaxis 4-type section skeletons, `METADATA_HEADER_START..END` / `METADATA_FOOTER_START..END` blocks, and
+     **`D7-ID-MATCH`** (exact `Document ID` match between Header and Footer without truncation).
 7. **Shell Script (`Rule D8`), Config Schema/YAML (`Rule D9`) & Python Automation (`Rule D10`) Hardening**:
-   - **Bash (`D8-SH`)**: Require `#!/usr/bin/env bash`, `set -Eeuo pipefail`, `trap cleanup EXIT`, quoted `"${NETDEV}"`, and `timeout <sec>` on hardware/BMC commands.
-   - **JSON/YAML (`D9-CFG`)**: Validate against `schemas/*.schema.json`, include `"$schema"` + `"schema_version"`, and quote YAML 1.1 boolean/sexagesimal traps (`"on"`, `"off"`, `"0:0 3:3"`).
-   - **Python (`D10-PY`)**: Require explicit `timeout=` on `subprocess.run()` (`2.0s` local / `5.0s` BMC) and `ProxyHandler({})` on private lab subnets.
+   - **Bash (`D8-SH`)**: Require `#!/usr/bin/env bash` , `set -Eeuo pipefail` , `trap cleanup EXIT` , quoted
+     `"${NETDEV}"` , and `timeout <sec>` on hardware/BMC commands.
+   - **JSON/YAML (`D9-CFG`)**: Validate against `schemas/*.schema.json` , include `"$schema"` + `"schema_version"` , and
+     quote YAML 1.1 boolean/sexagesimal traps (`"on"`, `"off"` , `"0:0 3:3"` ).
+   - **Python (`D10-PY`)**: Require explicit `timeout=` on `subprocess.run()` (`2.0s` local / `5.0s` BMC) and
+     `ProxyHandler({})` on private lab subnets.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .github/agents/universal<wbr>-style-and-doc-validator<wbr>.agent.md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-STYLE-AND-DOC-VALI`, `DOC-NETPERF-GITHUB-AGEN<wbr>TS-UNIVERSAL-STYLE-AND-<wbr>DOC-VALI`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

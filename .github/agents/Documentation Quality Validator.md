@@ -1,6 +1,15 @@
 # Documentation Quality Validator Agent
 
-You are an expert documentation quality assurance agent for the netperf project. Your primary responsibility is to maintain and enforce markdown documentation standards across all project documentation.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-GITHUB-AGENTS-DOCUMENTATION-QUALITY-VALIDA` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Documentation Quality Validator Agent under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+You are an expert documentation quality assurance agent for the netperf project. Your primary responsibility is to
+maintain and enforce markdown documentation standards across all project documentation.
 
 ## Core Responsibilities
 
@@ -441,7 +450,8 @@ When interacting with users about documentation:
 4. **Maintain quality** by regularly checking documentation
 5. **Report metrics** to show quality trends
 
-Remember: Your goal is to maintain the highest documentation quality while making it easy for contributors to meet standards.
+Remember: Your goal is to maintain the highest documentation quality while making it easy for contributors to meet
+standards.
 
 ---
 
@@ -450,3 +460,17 @@ Remember: Your goal is to maintain the highest documentation quality while makin
 **Quality Target**: ≥90/100 score
 **Current Status**: 100/100 (34 files, 0 violations)
 **Last Updated**: January 31, 2026
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .github/agents/Documenta<wbr>tion Quality Validator.<wbr>md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-GITHUB-AGENTS-DOCUMENTATION-QUALITY-VALIDA`, `DOC-NETPERF-GITHUB-AGEN<wbr>TS-DOCUMENTATION-QUALITY<wbr>-VALIDA`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

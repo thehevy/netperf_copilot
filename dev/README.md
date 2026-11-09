@@ -1,6 +1,15 @@
 # Development Directory
 
-This directory contains development work, documentation, and tooling that is separate from the core netperf project structure.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-README` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Development Directory under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+This directory contains development work, documentation, and tooling that is separate from the core netperf project
+structure.
 
 ## Structure
 
@@ -49,3 +58,17 @@ This keeps compiled binaries, object files, and build artifacts separate from th
 - The `build/` directory is git-ignored and can be safely deleted
 - All work in `dev/` is tracked but isolated from the core project
 - Original netperf structure remains clean and unchanged
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/README.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

@@ -1,10 +1,20 @@
 # Upgrading to the Modernized Netperf Fork
 
-This guide helps users migrate from upstream netperf to this modernized fork, covering what's changed, what stays the same, and how to adapt your workflows.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-UPGRADING` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Upgrading to the Modernized Netperf Fork under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+This guide helps users migrate from upstream netperf to this modernized fork, covering what's changed, what stays the
+same, and how to adapt your workflows.
 
 ## TL;DR - Quick Migration
 
-**Good news**: This fork is **100% backward compatible**. Your existing scripts and workflows will continue to work unchanged.
+**Good news**: This fork is **100% backward compatible**. Your existing scripts and workflows will continue to work
+unchanged.
 
 **Optional improvements**: You can opt into new features (JSON output, better defaults) when ready.
 
@@ -567,7 +577,8 @@ Or use the provided script:
 
 ### Demo/Interval Overhead
 
-Interim results add minimal overhead (~0-2% throughput impact) but provide better UX with OMNI mode. Disable for benchmarking:
+Interim results add minimal overhead (~0-2% throughput impact) but provide better UX with OMNI mode. Disable for
+benchmarking:
 
 ```bash
 # Using installed version
@@ -685,4 +696,19 @@ netperf -V  # Check version
 
 ---
 
-**Questions?** The fork maintains backward compatibility by design. If something doesn't work as expected with existing scripts, it's likely a bug - please report it.
+**Questions?** The fork maintains backward compatibility by design. If something doesn't work as expected with existing
+scripts, it's likely a bug - please report it.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `UPGRADING.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-UPGRADING`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

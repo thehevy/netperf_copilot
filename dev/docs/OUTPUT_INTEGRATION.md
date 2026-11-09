@@ -1,5 +1,13 @@
 # Netperf Output Integration Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-OUTPUT-INTEGRATION` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Output Integration Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Guide for integrating netperf with monitoring, logging, and analysis systems.
 
 **Version:** 2.7.1-fork (Phase 2)
@@ -618,3 +626,17 @@ if __name__ == '__main__':
 - [OUTPUT_FORMATS.md](OUTPUT_FORMATS.md) - Output format reference
 - [AGGREGATION_GUIDE.md](AGGREGATION_GUIDE.md) - Result aggregation
 - [PHASE2_FEATURES.md](PHASE2_FEATURES.md) - Technical details
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/OUTPUT_INTEGRATION.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-OUTPUT-INTEGRATION`, `DOC-NETPERF-DEV-DOCS-<wbr>OUTPUT-INTEGRATION`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

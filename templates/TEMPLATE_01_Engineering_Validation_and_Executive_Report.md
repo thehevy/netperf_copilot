@@ -61,7 +61,7 @@ When documenting falsified hypotheses or rejected bug claims, consolidate `Claim
 | Claim ID & Source Artifact | Original Claim vs. Empirical Hardware Falsification | Disposition & Action |
 | --- | --- | --- |
 | **`CLAIM-01`**<br>Artifact: BUG_ice_tx_vlan_<wbr><wbr><wbr>offload_frame_<wbr><wbr><wbr>corruption_e835.<wbr>md<br>Subsystem: `ice` / `802.3ad` | **Original Claim**: Hardware TX VLAN insertion corrupts LACPDU frames on 8x25G breakout ports.<br>**Empirical Falsification**: Packet capture (`tcpdump -xx`) proved untagged LACPDUs received a priority-tagged `VLAN 0` header only when `tx-vlan-offload` was enabled in DSCP mode without a switch trunk native VLAN. | **`REJECTED_FALSIFIED`**<br>Keep `tx-vlan-offload` off in pure DSCP mode or use L2-PCP trunk mode (`CG-001`). |
-| **`CLAIM-02`**<br>Artifact: ice_vsi_stop_lan_<wbr>rx_<wbr><wbr>rings_teardown.c<br>Subsystem: `ice_sf_eth` | **Original Claim**: Subfunction teardown must call `ice_vsi_stop_lan_rx_rings(main_vsi)` to flush DMA.<br>**Empirical Falsification**: Stopping `main_vsi` drops PF management traffic across all active subfunctions; disabling per-QSet `QRX_CTRL(pf_q)` cleanly stops only the target subfunction queues. | **`SUPERSEDED_BY_PATCH`**<br>Enforce per-QSet `QRX_CTRL` poll (`HH-BR-002`). |
+| **`CLAIM-02`**<br>Artifact: ice_vsi_stop_lan_rx_ring<wbr>s_teardown.c<br>Subsyste<wbr>m: `ice_sf_eth` | **Original Claim**: Subfunction teardown must call `ice_vsi_stop_lan_rx_rings(main_vsi)` to flush DMA.<br>**Empirical Falsification**: Stopping `main_vsi` drops PF management traffic across all active subfunctions; disabling per-QSet `QRX_CTRL(pf_q)` cleanly stops only the target subfunction queues. | **`SUPERSEDED_BY_PATCH`**<br>Enforce per-QSet `QRX_CTRL` poll (`HH-BR-002`). |
 
 ---
 
@@ -117,9 +117,9 @@ characters) for link text.
 
 | Reference ID & Category | Artifact Basename Link | Scope & Verification Note |
 | --- | --- | --- |
-| **`REF-01` — Standards** | [intel_ethernet_branding_<wbr>and_parameter_standards.md](../kb/documentation/intel_ethernet_branding_and_parameter_standards.md) | Rules `D1`–`D10` `v3.2` (`MD013`, `D5-COLS`, `D6` STE-100, `D7-ID-MATCH`). |
-| **`REF-02` — DMAR Gate** | [dmesg_dmar_mdd_zero_tolerance_gate.md](../kb/validation/dmesg_dmar_mdd_zero_tolerance_gate.md) | Mandatory pre/post `dmesg` zero-tolerance hardware fault gate. |
-| **`REF-03` — Architecture** | [e835_linux_kernel_<wbr>alignment_and_bifurcation_<wbr>architecture.md](../kb/development/e835_linux_kernel_alignment_and_bifurcation_architecture.md) | `DRV-F01`–`DRV-F13`, `DRV-LAG-01`–`12`, and `DRV-BIF-01`–`10` reference. |
+| **`REF-01` — Standards** | [intel_ethernet_brandin<wbr>g_and_parameter_standa<wbr>rds.md](../kb/documentation/intel_ethernet_branding_and_parameter_standards.md) | Rules `D1`–`D10` `v3.2` (`MD013`, `D5-COLS`, `D6` STE-100, `D7-ID-MATCH`). |
+| **`REF-02` — DMAR Gate** | [dmesg_dmar_mdd_zero_<wbr>tolerance_gate.md](../kb/validation/dmesg_dmar_mdd_zero_tolerance_gate.md) | Mandatory pre/post `dmesg` zero-tolerance hardware fault gate. |
+| **`REF-03` — Architecture** | [e835_linux_kernel_alig<wbr>nment_and_bifurcation_<wbr>architecture.md](../kb/development/e835_linux_kernel_alignment_and_bifurcation_architecture.md) | `DRV-F01`–`DRV-F13`, `DRV-LAG-01`–`12`, and `DRV-BIF-01`–`10` reference. |
 
 ---
 

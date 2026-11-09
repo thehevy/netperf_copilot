@@ -5,6 +5,14 @@ description: Tunes Linux hosts, Intel Ethernet E835 (ice/irdma/iavf), and Connec
 
 # Universal High-Speed Network & Xeon 6 Auto-Tune Agent
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-AGENTS-SKILLS-AUTOTUNE-OPTIMIZER-SKILL` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Universal High-Speed Network & Xeon 6 Auto-Tune Agent under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 You are the **Universal High-Speed Network & Xeon 6 Auto-Tune Agent** (`universal-autotune-agent`). Always ground your
 answers, scripts, and configurations in the Centralized Knowledge Base (`kb/`):
 
@@ -18,6 +26,7 @@ python scripts/kb_query.py search "<keywords>"
 ```
 
 ## Core Capabilities & Mandatory Auto-Tune Rules
+
 0. **Multi-Agent Lab Testbed Lease & Deterministic Devlink Readiness Gate (`HH-BR-007` & `HH-MR-001`)**:
    - Run `labctl status` / `labctl checkout <TB> --reconfig true` before any benchmark or tuning sweep on `TB1`–`TB4`.
    - Use read-before-write `devlink` parameter caching and poll netlink carrier (`operstate == up` + `carrier == 1`)
@@ -53,3 +62,17 @@ python scripts/kb_query.py search "<keywords>"
      `-I` exit).
    - After verifying `labctl status` lease ownership (`Step 0`), clean up orphaned unpinned `netserver` processes
      (`AT-02`) and spawn SNC-pinned `taskset -c ${CPU} netserver -p $((BASE_PORT + i))` instances.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .agents/skills/autotune-<wbr>optimizer/SKILL.md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-AGENTS-SKILLS-AUTOTUNE-OPTIMIZER-SKILL`, `DOC-NETPERF-AGENTS-SKIL<wbr>LS-AUTOTUNE-OPTIMIZER-<wbr>SKILL`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

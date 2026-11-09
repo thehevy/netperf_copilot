@@ -5,6 +5,14 @@ title: Quick Start Guide
 
 # Quick Start Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DOCS-QUICKSTART` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Quick Start Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Get up and running with netperf in minutes.
 
 [← Back to Documentation](index.html)
@@ -45,7 +53,8 @@ cd netperf_copilot
 
 **Congratulations!** You've run your first netperf test. 🎉
 
-**ℹ️ Default Format:** netperf defaults to **TCP_STREAM** with columnar output for 100% backwards compatibility. For modern OMNI test with keyval output, use the `-M` flag.
+**ℹ️ Default Format:** netperf defaults to **TCP_STREAM** with columnar output for 100% backwards compatibility. For
+modern OMNI test with keyval output, use the `-M` flag.
 
 ---
 
@@ -97,7 +106,8 @@ netperf -H remotehost -- -J
 netperf -H remotehost -- -O
 ```
 
-**Note:** The default has been keyval since v2.7.x. Legacy scripts expecting columnar format should use `-t TCP_STREAM`. See [Backwards Compatibility Guide](../dev/docs/BACKWARDS_COMPATIBILITY.html).
+**Note:** The default has been keyval since v2.7.x. Legacy scripts expecting columnar format should use `-t TCP_STREAM`
+. See [Backwards Compatibility Guide](../dev/docs/BACKWARDS_COMPATIBILITY.html) .
 
 ---
 
@@ -499,3 +509,17 @@ netperf -H host -t UDP_RR
 ---
 
 [← Back to Documentation](index.html)
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `docs/quickstart.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DOCS-QUICKSTART`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

@@ -69,7 +69,7 @@ python scripts/wiki_monitor_agent.py check --strict
 
 | Field | Value |
 | --- | --- |
-| **File Path** | `templates/<wbr>TEMPLATE_06_GitHub_Wiki_5_<wbr>Page_Pack.md` |
+| **File Path** | templates/<wbr>TEMPLATE_06_GitHub_Wiki_5_<wbr>Page_Pack.md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `GitHub Wiki Template`, `5-Page Wiki Pack`, `wiki_monitor_agent.py`, `Zero-Scroll 3-Column Wiki`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `HevyOne`, `wiki`, `dist/repo-wikis`, `markdown_validator.py` |

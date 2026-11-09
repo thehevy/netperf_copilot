@@ -26,7 +26,7 @@ files listed in Section 2 to match the authoritative hardware inventory in Secti
 | --- | --- |
 | **Repository** | `netperf_copilot` |
 | **Testbeds Referenced** | `TB1, TB2, TB3, TB4` |
-| **Files to Review / Update** | README.md, benchmarks/results/TESTBED_157_153_BENCHMARK_REPORT.md, wiki/ |
+| **Files to Review / Update** | README.md, benchmarks/results/TESTB<wbr>ED_157_153_BENCHMARK_REP<wbr>ORT.md, wiki/ |
 | **Required Remediation** | Update TB3 (198.18.84.157/.153) benchmark report headers from '288 E-cores / 256 threads' to '528 CPUs (2x264C/1T) on Xeon 6980E+ / 512 CPUs (2x128C/2T) on Xeon 6980P' with 5x E835-CC (19 ports). |
 
 ---
@@ -48,7 +48,7 @@ files listed in Section 2 to match the authoritative hardware inventory in Secti
 
 | Field | Value |
 | --- | --- |
-| **File Path** | `docs/TESTBED_INVENTORY_UPDATE_NOTICE.md` |
+| **File Path** | docs/TESTBED_INVENTORY_<wbr>UPDATE_NOTICE.md |
 | **Document ID** | `DOC-TESTBED-NOTICE-NETPERF-COPILOT` |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | netperf_copilot, Testbed Inventory Update, nsg_lab_tracker, TB1, TB2, TB3, TB4, TB5, E835-CC |

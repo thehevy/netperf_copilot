@@ -1,5 +1,13 @@
 # Phase 3: Advanced Features - Implementation Plan
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-3-PLAN` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Phase 3: Advanced Features - Implementation Plan under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 **Branch**: `dev/phase-3-advanced-features`
 **Status**: In Progress
 **Start Date**: January 31, 2026
@@ -7,7 +15,8 @@
 
 ## Overview
 
-Phase 3 adds advanced capabilities for production deployments, including multi-instance testing, enhanced statistics, performance profiles, remote orchestration, real-time monitoring, and advanced templating.
+Phase 3 adds advanced capabilities for production deployments, including multi-instance testing, enhanced statistics,
+performance profiles, remote orchestration, real-time monitoring, and advanced templating.
 
 ## Prerequisites
 
@@ -483,3 +492,17 @@ Phase 3 complete when:
 - Cloud provider integrations (AWS, GCP, Azure)
 - Terraform modules
 - CI/CD pipeline templates
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/plans/phase-3-plan.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PHASE-3-PLAN`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

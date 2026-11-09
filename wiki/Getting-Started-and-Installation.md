@@ -1,16 +1,27 @@
 # Getting Started and Installation
 
-This guide covers building the modernized `netperf` C engine (`src/`), configuring compile-time options, installing output presets, and setting up the Python CLI tool suite (`dev/tools/`).
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-WIKI-GETTING-STARTED-AND-INSTALLATION` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Getting Started and Installation under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+This guide covers building the modernized `netperf` C engine (`src/`), configuring compile-time options, installing
+output presets, and setting up the Python CLI tool suite (`dev/tools/`).
 
 ---
 
 ## 1. System Requirements
 
 ### Build Dependencies
+
 - **OS**: Linux (kernel 4.18+ recommended for `SO_ZEROCOPY` and `ETHTOOL_GLINKSETTINGS`), macOS, BSD, Solaris
 - **Compiler**: GCC 4.8+ or Clang 3.5+
 - **Autotools**: `autoconf`, `automake`, `make`
-- **Python**: Python 3.8+ (all tools in `dev/tools/` work out-of-the-box with the Python standard library; `pyyaml`, `jinja2`, `psutil`, and `paramiko` are optional enhancements)
+- **Python**: Python 3.8+ (all tools in `dev/tools/` work out-of-the-box with the Python standard library; `pyyaml` ,
+  `jinja2` , `psutil` , and `paramiko` are optional enhancements)
 
 ### Recommended Linux Packages for 100G–800G Testing
 ```bash
@@ -26,7 +37,8 @@ sudo apt-get install -y build-essential autoconf automake numactl ethtool iprout
 ## 2. Building From Source
 
 ### Option A: Automated Build Script (Recommended)
-The `dev/scripts/build.sh` wrapper supports `release`, `debug`, and `optimized` build profiles and builds out-of-tree in `./build/`:
+The `dev/scripts/build.sh` wrapper supports `release` , `debug` , and `optimized` build profiles and builds out-of-tree
+in `./build/` :
 
 ```bash
 # Optimized build (-O3 -march=native, OMNI, demo intervals, burst, histogram)
@@ -102,3 +114,17 @@ cd dev
 make test
 make test-formats
 ```
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | wiki/Getting-Started-and<wbr>-Installation.md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-GETTING-STARTED-AND-INSTALLATION`, `DOC-NETPERF-WIKI-GETTIN<wbr>G-STARTED-AND-INSTALLATI<wbr>ON`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

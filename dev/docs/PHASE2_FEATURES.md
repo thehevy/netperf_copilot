@@ -1,5 +1,13 @@
 # Phase 2 Features - Technical Documentation
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-PHASE2-FEATURES` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Phase 2 Features - Technical Documentation under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Technical implementation details for Phase 2: Output Format Enhancement.
 
 **Phase:** 2
@@ -622,3 +630,17 @@ Measured on Intel Xeon, 10-second test:
 - [AGGREGATION_GUIDE.md](AGGREGATION_GUIDE.md) - Aggregation tool
 - [phase-2-plan.md](../plans/phase-2-plan.md) - Original plan
 - [phase-2-progress.md](../plans/phase-2-progress.md) - Progress tracking
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/PHASE2_FEATURES.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-PHASE2-FEATURES`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

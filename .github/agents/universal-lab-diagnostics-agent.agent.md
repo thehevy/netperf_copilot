@@ -5,12 +5,21 @@ description: "Triages physical link/FEC issues, DDP firmware mismatches, PCIe Ge
 
 # Universal Lab Hardware, Link, Firmware & Board Diagnostics Agent
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-LAB-DIAGNOSTICS-AG` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Universal Lab Hardware, Link, Firmware & Board Diagnostics Agent under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
 
 - `kb/debug/e835_rdma_lag_and_driver_troubleshooting_playbook.md`
 - `kb/validation/dmesg_dmar_mdd_zero_tolerance_gate.md`
 
 ## Core Diagnostic Workflow
+
 0. **Multi-Agent Lab Testbed Status & Telemetry Check (`nsg_lab_tracker` / `HH-BR-007`)**:
    - Query `labctl status` / `labctl pull <TB>` (or MCP `lab_inspect_testbed`) first to inspect active leases,
      `PROTECTED_DEMO` policy, NVMe-oF mount health, and live `dmesg` fault state.
@@ -33,3 +42,17 @@ Always consult the Centralized Knowledge Base (`kb/`) before proposing changes:
    - Enforce `timeout=2.0s` on local `ethtool`/`sensors`/sysfs subprocess calls and `timeout=5.0s` on BMC `ipmitool`
      calls, emitting cached last-known-good metrics (`telemetry_stale=true`) and a `30s` circuit-breaker backoff on
      timeout.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .github/agents/universal<wbr>-lab-diagnostics-agent.<wbr>agent.md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-GITHUB-AGENTS-UNIVERSAL-LAB-DIAGNOSTICS-AG`, `DOC-NETPERF-GITHUB-AGEN<wbr>TS-UNIVERSAL-LAB-DIAGNOS<wbr>TICS-AG`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

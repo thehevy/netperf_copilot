@@ -86,7 +86,7 @@ Use a `3`-column table with short basename links (`<= 28` characters) to documen
 
 | Field | Value |
 | --- | --- |
-| **File Path** | `templates/<wbr>TEMPLATE_05_Repository_<wbr>Dossier_and_README.md` |
+| **File Path** | templates/<wbr>TEMPLATE_05_Repository_<wbr>Dossier_and_README.md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Repository Dossier Template`, `Project README Template`, `Diataxis Overview`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `irdma`, `iavf`, `HevyOne`, `wiki_monitor_agent.py`, `markdown_validator.py` |

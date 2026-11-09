@@ -1,8 +1,17 @@
 # Netperf Enhancement Project Roadmap
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-PLANS-PROJECT-ROADMAP` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Enhancement Project Roadmap under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 ## Project Vision
 
-Modernize netperf with enhanced automation, multi-instance testing, comprehensive output formats, and intelligent configuration management while maintaining backward compatibility.
+Modernize netperf with enhanced automation, multi-instance testing, comprehensive output formats, and intelligent
+configuration management while maintaining backward compatibility.
 
 ## Core Objectives
 
@@ -1041,3 +1050,17 @@ Next Steps:
 **Document Version:** 1.0
 **Last Updated:** 2026-01-30
 **Status:** Draft for Review
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/plans/project-roadmap.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PROJECT-ROADMAP`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

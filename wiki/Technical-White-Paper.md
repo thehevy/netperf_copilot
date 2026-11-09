@@ -1,5 +1,13 @@
 # Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE-PAPER` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 **A Technical White Paper on the Netperf v3.0 Modernization Project**
 
 **Document Type**: Technical Architecture & Performance Engineering White Paper
@@ -11,8 +19,8 @@ Hardware Fault Gating, and Empirical Qualification Results
 
 ## Abstract
 
-Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from 10 GbE to **100
-GbE, 200 GbE, 400 GbE, and 800 GbE** over PCIe Gen5 and Gen6 interconnects—while server processor core counts have
+Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from 10GbE to **100
+GbE, 200GbE, 400GbE, and 800GbE** over PCIe Gen5 and Gen6 interconnects—while server processor core counts have
 expanded from 8–32 cores to **144–288+ physical cores** across heterogeneous Performance-core (P-Core SMT) and
 Efficient-core (E-Core shared-L2 module) microarchitectures. However, the foundational open-source network benchmarking
 tool **`netperf` (v2.7.0)** remained frozen in an architecture designed for single-port listeners, 1 MB socket buffers,
@@ -52,10 +60,10 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 ### 1.1 The Widening Gap Between Silicon Evolution and Benchmark Tooling
 Over the past decade, datacenter networking and server compute have undergone three fundamental structural shifts:
 
-1. **Line-Rate Compression of the Inter-Packet Budget**: At 10 GbE with standard 1500-byte Ethernet frames, a NIC
-   processes at most 812,740 packets per second ($\sim 1.23\,\mu\text{s}$ per frame). At **200 GbE**, line rate demands
+1. **Line-Rate Compression of the Inter-Packet Budget**: At 10GbE with standard 1500-byte Ethernet frames, a NIC
+   processes at most 812,740 packets per second ($\sim 1.23\,\mu\text{s}$ per frame). At **200GbE**, line rate demands
    **16.25 million packets per second** ($\sim 61.5\,\text{ns}$ per frame) at MTU 1500, or **2.71 million frames per
-   second** ($\sim 369\,\text{ns}$ per frame) with 9000-byte jumbo frames. At **400 GbE and 800 GbE**, the per-packet
+   second** ($\sim 369\,\text{ns}$ per frame) with 9000-byte jumbo frames. At **400GbE and 800GbE**, the per-packet
    CPU and DMA budget shrinks below single-digit DRAM access latencies.
 2. **Bifurcation of Server Processor Microarchitectures**: Modern server CPUs have diverged into two distinct silicon
    paradigms:
@@ -142,6 +150,7 @@ A benchmark engineer looking at `LOCAL_CPU_UTIL=5.56` concludes that the CPU is 
 congestion control for failing to scale, completely unaware that the 16 active cores are 100% CPU-bound!
 
 ### 2.4 Legacy 16-Bit Ethtool and `sysfs` Buffer Limits
+
 - **16-Bit Link Speed Overflow**: `src/netdrv_ethtool.c` relied on the deprecated `ETHTOOL_GSET` ioctl
   (`struct ethtool_cmd`), which stores link speed in a 16-bit unsigned integer (`__u16 speed`), overflowing at
   `65,535 Mbps` and making 100G, 200G, 400G, and 800G links unrecognizable.
@@ -238,6 +247,7 @@ Both metrics are automatically emitted in OMNI JSON metadata (`"local_active_cpu
 application bottlenecks on 288–576 thread servers.
 
 ### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
+
 - **100G–800G Link Speed Detection
   ([`src/netdrv_ethtool.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netdrv_ethtool.c))**: Queries
   `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to
@@ -365,6 +375,7 @@ parallel execution engine capable of driving up to **512 concurrent streams** ac
 and bonded LAG topologies.
 
 ### 5.1 Four Directional Execution Modes (`tx`, `rx`, `bx`, `bx-seq`)
+
 1. **`tx` (Unidirectional Send)**: Drives $N$ outbound `send` streams from the local host to the remote host.
 2. **`rx` (Unidirectional Receive / `MAERTS`)**: Drives $N$ inbound `recv` streams from the remote host to the local
    host.
@@ -379,6 +390,7 @@ and bonded LAG topologies.
    full-duplex LLC/PCIe credit contention.
 
 ### 5.2 Multi-NIC Breakout, Multi-Subnet Expansion & DSCP QoS
+
 - **Multi-NIC & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2` distributes
   stream $i$ round-robin across each interface/IP pair, automatically binding each group of streams to the NUMA node of
   its respective PCIe adapter.
@@ -409,15 +421,15 @@ flowchart LR
 programmatically audits the live system state against 24 documented hardware/OS anti-affinity rules before any benchmark
 begins. Key high-severity rules include:
 
-| Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G | Automated Remediation |
-| --- | --- | --- | --- |
-| **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput | Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
-| **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops | Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
-| **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100% | Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
-| **`AA-015`** | `tx_ring < 512` (default `256`) at 100G–200G line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core) | Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
-| **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35% | Pin NIC IRQs, `netperf`, and `netserver` to `nic_numa` cores |
-| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200G+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200G/400G line rate | Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
-| **`AA-019`** | `generic-receive-offload (GRO) = off` on 100G–800G TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse) | Enable ethtool -K <iface> gro on tso on gso on |
+| Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G / Automated Remediation |
+| --- | --- | --- |
+| **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput<br>**Automated Remediation**: Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
+| **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops<br>**Automated Remediation**: Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
+| **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100%<br>**Automated Remediation**: Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
+| **`AA-015`** | `tx_ring < 512` (default `256`) at 100G–200G line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core)<br>**Automated Remediation**: Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
+| **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35%<br>**Automated Remediation**: Pin NIC IRQs, `netperf`, and `netserver` to `nic_numa` cores |
+| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200G+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200G/400G line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
+| **`AA-019`** | `generic-receive-offload (GRO) = off` on 100G–800G TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse)<br>**Automated Remediation**: Enable ethtool -K <iface> gro on tso on gso on |
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification
 Even when all static configuration rules pass, thermal throttling, turbo frequency transients, or ARP/route cache
@@ -485,12 +497,12 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm cwf-ecore
 
 #### Empirical Comparison (16 Streams, MTU 9000, 200GbE)
 
-| Configuration | Core Allocation | TX / RX Ring | Aggregate Throughput (Mean ± 95% CI) | Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults |
-| --- | --- | --- | --- | --- |
-| **1. Legacy Baseline** | Linear `0..15` (collides w/ IRQ) | `2048 / 2048` | `128.42 ± 11.30 Gbps` | **Run-to-Run CV**: `14.21%`<br>**Active Core Util (`active_cpu_util`)**: `99.4%` (`peak_cpu_id=3`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=48,210`) |
-| **2. Per-Core Pool Only** | Linear `16..31` (4 cores/L2 mod) | `2048 / 2048` | `161.85 ± 4.12 Gbps` | **Run-to-Run CV**: `4.10%`<br>**Active Core Util (`active_cpu_util`)**: `88.7%` (`peak_cpu_id=18`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=1,120`) |
-| **3. + `spread_l2` Stride** | `spread_l2` `16,20,24..76` (1/mod) | `2048 / 2048` | `181.10 ± 1.95 Gbps` | **Run-to-Run CV**: `1.74%`<br>**Active Core Util (`active_cpu_util`)**: `76.2%` (`peak_cpu_id=24`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=0`) |
-| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 4096`** | **`192.64 ± 0.96 Gbps`** | **Run-to-Run CV**: **`0.80%`**<br>**Active Core Util (`active_cpu_util`)**: **`61.8%` (`peak_cpu_id=20`)**<br>**`dmesg` / `ethtool` Faults**: **0 faults (`PASS`)** |
+| Configuration | Core Allocation | TX / RX Ring / Aggregate Throughput (Mean ± 95% CI) / Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults |
+| --- | --- | --- |
+| **1. Legacy Baseline** | Linear `0..15` (collides w/ IRQ) | `2048 / 2048`<br>**Aggregate Throughput (Mean ± 95% CI)**: `128.42 ± 11.30 Gbps`<br>**Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults**: **Run-to-Run CV**: `14.21%`<br>**Active Core Util (`active_cpu_util`)**: `99.4%` (`peak_cpu_id=3`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=48,210`) |
+| **2. Per-Core Pool Only** | Linear `16..31` (4 cores/L2 mod) | `2048 / 2048`<br>**Aggregate Throughput (Mean ± 95% CI)**: `161.85 ± 4.12 Gbps`<br>**Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults**: **Run-to-Run CV**: `4.10%`<br>**Active Core Util (`active_cpu_util`)**: `88.7%` (`peak_cpu_id=18`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=1,120`) |
+| **3. + `spread_l2` Stride** | `spread_l2` `16,20,24..76` (1/mod) | `2048 / 2048`<br>**Aggregate Throughput (Mean ± 95% CI)**: `181.10 ± 1.95 Gbps`<br>**Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults**: **Run-to-Run CV**: `1.74%`<br>**Active Core Util (`active_cpu_util`)**: `76.2%` (`peak_cpu_id=24`)<br>**`dmesg` / `ethtool` Faults**: 0 faults (`rx_missed=0`) |
+| **4. Full v3.0 (`cwf-ecore` + `-Z`)** | **`spread_l2` `16,20,24..76`** | **`512 / 4096`**<br>**Aggregate Throughput (Mean ± 95% CI)**: **`192.64 ± 0.96 Gbps`**<br>**Run-to-Run CV / Active Core Util (`active_cpu_util`) / `dmesg` / `ethtool` Faults**: **Run-to-Run CV**: **`0.80%`**<br>**Active Core Util (`active_cpu_util`)**: **`61.8%` (`peak_cpu_id=20`)**<br>**`dmesg` / `ethtool` Faults**: **0 faults (`PASS`)** |
 
 > **Key Takeaway**: Combining per-core `netserver` isolation, `spread_l2` 1-core-per-L2-module striding,
 > `tx_ring = 512`, and `-Z` zero-copy increased throughput by **+64.2 Gbps (+50.0%)** while reducing run-to-run variance
@@ -511,12 +523,12 @@ architectural locality zones using
 
 #### Single-Stream Locality Results (`qual_locality/dashboard.md`)
 
-| Test ID | Placement Zone | Client Core (`-T`) | Relative to Queue-0 IRQ Core (`CPU 0`) | Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`) |
-| --- | --- | --- | --- | --- |
-| **`LOC-SAME-CORE`** | Exact Same Core | `-T 0,0` | Collides with Queue-0 hardirq/softirq on `CPU 0` | **Single-Stream Throughput**: `26.40 Gbps`<br>**`active_cpu_util`**: `100.0%`<br>**Efficiency (`Gbps / %CPU`)**: `0.264 Gbps/%` |
-| **`LOC-SAME-L2`** | L2 Module Sibling | `-T 1,1` | Shares 4 MB L2 cache with `CPU 0` (`CPUs 0–3`) | **Single-Stream Throughput**: `41.85 Gbps`<br>**`active_cpu_util`**: `84.2%`<br>**Efficiency (`Gbps / %CPU`)**: `0.497 Gbps/%` |
-| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16` | Dedicated L2 module on NIC local `NUMA 0` | **Single-Stream Throughput**: **`46.24 Gbps`**<br>**`active_cpu_util`**: **`78.5%`**<br>**Efficiency (`Gbps / %CPU`)**: **`0.589 Gbps/%`** |
-| **`LOC-CROSS-NUMA`** | Remote Socket NUMA | `-T 144,144` | Crosses inter-socket interconnect (`NUMA 1`) | **Single-Stream Throughput**: `31.12 Gbps`<br>**`active_cpu_util`**: `94.6%`<br>**Efficiency (`Gbps / %CPU`)**: `0.329 Gbps/%` |
+| Test ID | Placement Zone | Client Core (`-T`) / Relative to Queue-0 IRQ Core (`CPU 0`) / Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`) |
+| --- | --- | --- |
+| **`LOC-SAME-CORE`** | Exact Same Core | `-T 0,0`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Collides with Queue-0 hardirq/softirq on `CPU 0`<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `26.40 Gbps`<br>**`active_cpu_util`**: `100.0%`<br>**Efficiency (`Gbps / %CPU`)**: `0.264 Gbps/%` |
+| **`LOC-SAME-L2`** | L2 Module Sibling | `-T 1,1`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Shares 4 MB L2 cache with `CPU 0` (`CPUs 0–3`)<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `41.85 Gbps`<br>**`active_cpu_util`**: `84.2%`<br>**Efficiency (`Gbps / %CPU`)**: `0.497 Gbps/%` |
+| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Dedicated L2 module on NIC local `NUMA 0`<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: **`46.24 Gbps`**<br>**`active_cpu_util`**: **`78.5%`**<br>**Efficiency (`Gbps / %CPU`)**: **`0.589 Gbps/%`** |
+| **`LOC-CROSS-NUMA`** | Remote Socket NUMA | `-T 144,144`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Crosses inter-socket interconnect (`NUMA 1`)<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `31.12 Gbps`<br>**`active_cpu_util`**: `94.6%`<br>**Efficiency (`Gbps / %CPU`)**: `0.329 Gbps/%` |
 
 > **Key Takeaway**: Disjoint local-NUMA L2 placement (`LOC-LOCAL-NUMA`) delivers **+75.1% higher single-stream
 > throughput** than colliding on the IRQ core (`LOC-SAME-CORE`) and **+48.6% higher throughput** than cross-NUMA
@@ -542,12 +554,12 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
 
 #### Empirical Multi-Port Scaling Results (3 × 200GbE = 600 Gbps Wire Capacity)
 
-| Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) | Port 1 (`ens23np0`) | Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency |
-| --- | --- | --- | --- | --- |
-| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps` | `190.4 Gbps` | **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600G** |
-| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps` | `189.8 Gbps` | **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600G** |
-| **Sequential `bx-seq`** | `48 TX` then `48 RX` | `191.5 / 190.6 Gbps` | `190.1 / 189.4 Gbps` | **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8G TX / 568.5G RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
-| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | `172.4G TX + 168.9G RX` | `170.8G TX + 167.2G RX` | **Port 2 (`ens27np0`)**: `169.5G TX + 166.1G RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
+| Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) / Port 1 (`ens23np0`) / Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency |
+| --- | --- | --- |
+| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps`<br>**Port 1 (`ens23np0`)**: `190.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600G** |
+| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps`<br>**Port 1 (`ens23np0`)**: `189.8 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600G** |
+| **Sequential `bx-seq`** | `48 TX` then `48 RX` | `191.5 / 190.6 Gbps`<br>**Port 1 (`ens23np0`)**: `190.1 / 189.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8G TX / 568.5G RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
+| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | `172.4G TX + 168.9G RX`<br>**Port 1 (`ens23np0`)**: `170.8G TX + 167.2G RX`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `169.5G TX + 166.1G RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
 
 ---
 
@@ -609,6 +621,7 @@ Python orchestration (`netserver-manager`, `netperf-multi`, `netperf-preflight`,
 into a repeatable, statistically rigorous engineering discipline.
 
 ### Key Takeaways for Platform & Network Engineers
+
 1. **Never Share a Single `netserver` Listener at 100G+**: Always deploy a per-core `netserver` pool
    (`netserver-manager`) on NUMA-local cores disjoint from NIC RSS IRQ cores.
 2. **Respect Microarchitectural Cache Topology**: Use `spread_l2` (1 core per 4-core L2 module) and `tx_ring = 512` on
@@ -621,6 +634,7 @@ into a repeatable, statistically rigorous engineering discipline.
    utilization hides single-core softirq and application saturation.
 
 ### References & Project Documentation
+
 - **Project Wiki**: [`wiki/Home.md`](Home.md)
 - **Executive Summary**:
   [`dev/docs/EXECUTIVE_SUMMARY.md`](https://github.com/thehevy/netperf_copilot/blob/master/dev/docs/EXECUTIVE_SUMMARY.md)
@@ -629,3 +643,17 @@ into a repeatable, statistically rigorous engineering discipline.
 - **Pre-Flight Rules & Fault Signatures (`AA-001`–`AA-024`, `U1`–`U13`)**:
   [`wiki/Pre-Flight-Checks-and-Fault-Monitoring.md`](Pre-Flight-Checks-and-Fault-Monitoring.md)
 - **CLI Tools Reference**: [`wiki/CLI-Tools-Reference.md`](CLI-Tools-Reference.md)
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `wiki/Technical-White-Paper.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-TECHNICAL-WHITE-PAPER`, `DOC-NETPERF-WIKI-TECHNI<wbr>CAL-WHITE-PAPER`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

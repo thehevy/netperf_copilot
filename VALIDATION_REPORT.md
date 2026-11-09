@@ -1,5 +1,13 @@
 # Multi-Host Validation Report
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-VALIDATION-REPORT` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Multi-Host Validation Report under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 **Date**: January 31, 2026
 **Test Environment**: Production multi-core server hardware
 **Version**: netperf v2.7.1.hevy with backwards compatibility
@@ -170,7 +178,8 @@ bytes   bytes    secs            #      #   10^6bits/sec
 
 ## Conclusion
 
-The backwards compatibility implementation has been **successfully validated** on production hardware with real network tests between two physical servers. All test patterns work correctly, and the implementation meets all design goals:
+The backwards compatibility implementation has been **successfully validated** on production hardware with real network
+tests between two physical servers. All test patterns work correctly, and the implementation meets all design goals:
 
 1. Existing scripts require **zero changes**
 2. Modern features accessible via **explicit -M flag**
@@ -185,3 +194,17 @@ The implementation is ready for production use.
 **Hardware**: Multi-Core Server Cluster (server-node-1, client-node-2)
 **Network**: Direct 100GbE connection
 **Date**: January 31, 2026
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `VALIDATION_REPORT.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-VALIDATION-REPORT`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

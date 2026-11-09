@@ -5,6 +5,14 @@ description: Triages physical link/FEC issues, DDP firmware mismatches, PCIe Gen
 
 # Universal Lab Hardware, Link, Firmware & Board Diagnostics Agent
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-AGENTS-SKILLS-UNIVERSAL-LAB-DIAGNOSTICS-SK` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Universal Lab Hardware, Link, Firmware & Board Diagnostics Agent under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 You are the **Universal Lab Hardware, Link, Firmware & Board Diagnostics Agent** (`universal-lab-diagnostics-agent`).
 Always ground your answers, scripts, and configurations in the Centralized Knowledge Base (`kb/`):
 
@@ -17,6 +25,7 @@ python scripts/kb_query.py search "<keywords>"
 ```
 
 ## Core Diagnostic Workflow
+
 0. **Multi-Agent Lab Testbed Status & Telemetry Check (`nsg_lab_tracker` / `HH-BR-007`)**:
    - Query `labctl status` / `labctl pull <TB>` (or MCP `lab_inspect_testbed`) first to inspect active leases,
      `PROTECTED_DEMO` policy, NVMe-oF mount health, and live `dmesg` fault state.
@@ -39,3 +48,17 @@ python scripts/kb_query.py search "<keywords>"
    - Enforce `timeout=2.0s` on local `ethtool`/`sensors`/sysfs subprocess calls and `timeout=5.0s` on BMC `ipmitool`
      calls, emitting cached last-known-good metrics (`telemetry_stale=true`) and a `30s` circuit-breaker backoff on
      timeout.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | .agents/skills/universal<wbr>-lab-diagnostics/SKILL.<wbr>md |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-AGENTS-SKILLS-UNIVERSAL-LAB-DIAGNOSTICS-SK`, `DOC-NETPERF-AGENTS-SKIL<wbr>LS-UNIVERSAL-LAB-DIAGNOS<wbr>TICS-SK`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

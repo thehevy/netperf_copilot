@@ -1,6 +1,15 @@
 # Netperf - Modern Fork
 
-A modernized fork of the netperf network performance benchmarking tool with improved defaults, better output formats, and enhanced usability.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-README` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+A modernized fork of the netperf network performance benchmarking tool with improved defaults, better output formats,
+and enhanced usability.
 
 ## 🚀 Quick Start
 
@@ -41,7 +50,8 @@ This fork modernizes netperf with several key improvements while maintaining ful
 
 - **netperf-multi** - Parallel test execution (2-16 instances)
 - **netperf_stats.py** - Statistical analysis with CI and outliers
-- **netperf-profile** - 15 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless, jitter, lossy, mixed-workload, plus 5 high-speed 200G–600G/OCP profiles)
+- **netperf-profile** - 15 built-in test profiles (baseline, throughput, latency, stress, cloud, datacenter, wireless,
+  jitter, lossy, mixed-workload, plus 5 high-speed 200G–600G/OCP profiles)
 - **netperf-orchestrate** - Multi-host test coordination with YAML inventory
 - **netperf-monitor** - Real-time monitoring with terminal UI
 - **netperf-template** - Report generation in 5 formats (markdown, HTML, JSON, CSV, text)
@@ -254,7 +264,8 @@ Comprehensive documentation is maintained in the [`wiki/`](wiki/Home.md) directo
 
 - **[Wiki Home & Architecture Overview](wiki/Home.md)**
 - **[Executive Summary](wiki/Executive-Summary.md)** ([dev/docs/EXECUTIVE_SUMMARY.md](dev/docs/EXECUTIVE_SUMMARY.md))
-- **[Technical White Paper (100G–800G & Multi-Core Modernization)](wiki/Technical-White-Paper.md)** ([dev/docs/TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md))
+- **[Technical White Paper (100G–800G & Multi-Core Modernization)](wiki/Technical-White-Paper.md)**
+  ([dev/docs/TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md))
 - **[Getting Started & Installation](wiki/Getting-Started-and-Installation.md)**
 - **[Core Engine & OMNI Guide](wiki/Core-Engine-and-OMNI-Guide.md)**
 - **[High-Speed 200G–800G & Intel Xeon 6 Guide](wiki/High-Speed-200G-800G-and-Xeon6-Guide.md)**
@@ -405,11 +416,21 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 
 **Phase 4-7 (COMPLETE)**: 100G–800G High-Speed & Intel Xeon 6 Platform Modernization
 
-- ✅ **Directional & Multi-Port Engine (`netperf-multi` v2.0)**: TX, RX, simultaneous bidirectional (`--direction bx`), sequential BX (`bx-seq`), multi-NIC (`-i ens7np0,ens23np0,ens27np0`), multi-subnet (`-H 192.168.10..17.74`), DSCP/ToS QoS (`--dscp EF,CS3,AF21,CS0`), and up to 512 streams
-- ✅ **Core C Engine Modernization (`src/`)**: `MAXMESSAGESIZE` raised to 4 MB, `-Z` (`SO_ZEROCOPY`/`MSG_ZEROCOPY`), 512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id`, sysfs PCIe Gen5/Gen6 link & DMI detection, and `ETHTOOL_GLINKSETTINGS` (100G–800G)
-- ✅ **Xeon 6 Topology & Per-Core `netserver-manager`**: Automatic P-core (Granite Rapids SMT filtering) vs E-core (Clearwater Forest / Sierra Forest 4-core L2 module `spread_l2`) core allocation and per-core `netserver` pool (`18600..18663`)
-- ✅ **Pre-Flight & Automated BKM Tuner (`netperf-preflight`, `netperf-tuner`)**: 24 E835 feature anti-affinity rules (`AA-001`..`AA-024`), background process isolation, 5-run warmup sanity gate (`CV < 5%`), `ice` BKM profiles (`cwf-ecore`, `gnr-pcore`, `mtu1500`), and A/B parameter sweep runner
-- ✅ **High-Speed Profiles, Qualification Catalog & AI Validation Reporting (`netperf-catalog`, `netperf_report.py`)**: 5 new 200G–600G/OCP YAML profiles, 4 qualification suites (`flow-scaling`, `core-locality`, `ring-coalesce-matrix`, `lag-failover-qos`), and `U1`–`U13` kmsg/ethtool counter delta reporting
+- ✅ **Directional & Multi-Port Engine (`netperf-multi` v2.0)**: TX, RX, simultaneous bidirectional (`--direction bx`),
+  sequential BX (`bx-seq`), multi-NIC (`-i ens7np0,ens23np0,ens27np0`), multi-subnet (`-H 192.168.10..17.74`), DSCP/ToS
+  QoS (`--dscp EF,CS3,AF21,CS0`), and up to 512 streams
+- ✅ **Core C Engine Modernization (`src/`)**: `MAXMESSAGESIZE` raised to 4 MB, `-Z` (`SO_ZEROCOPY`/`MSG_ZEROCOPY`),
+  512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id` , sysfs PCIe Gen5/Gen6 link & DMI detection,
+  and `ETHTOOL_GLINKSETTINGS` (100G–800G)
+- ✅ **Xeon 6 Topology & Per-Core `netserver-manager` **: Automatic P-core (Granite Rapids SMT filtering) vs E-core
+  (Clearwater Forest / Sierra Forest 4-core L2 module `spread_l2` ) core allocation and per-core `netserver` pool
+  (`18600..18663`)
+- ✅ **Pre-Flight & Automated BKM Tuner (`netperf-preflight`, `netperf-tuner` )**: 24 E835 feature anti-affinity rules
+  (`AA-001`..`AA-024`), background process isolation, 5-run warmup sanity gate (`CV < 5%`), `ice` BKM profiles
+  (`cwf-ecore`, `gnr-pcore` , `mtu1500` ), and A/B parameter sweep runner
+- ✅ **High-Speed Profiles, Qualification Catalog & AI Validation Reporting (`netperf-catalog`, `netperf_report.py` )**:
+  5 new 200G–600G/OCP YAML profiles, 4 qualification suites (`flow-scaling`, `core-locality` , `ring-coalesce-matrix` ,
+  `lag-failover-qos` ), and `U1` –`U13` kmsg/ethtool counter delta reporting
 
 - Web-based dashboard
 - Historical result database
@@ -420,4 +441,19 @@ See development plans in [dev/plans/](dev/plans/) for detailed progress.
 
 ---
 
-**BE SURE TO READ THE MANUAL** (see [doc/netperf.txt](doc/netperf.txt)) for comprehensive usage information, even though some sections reference older defaults.
+**BE SURE TO READ THE MANUAL** (see [doc/netperf.txt](doc/netperf.txt) ) for comprehensive usage information, even
+though some sections reference older defaults.
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `README.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

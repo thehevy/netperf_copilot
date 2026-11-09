@@ -1,5 +1,13 @@
 # Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE-PAPER` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 **A Technical White Paper on the Netperf v3.0 Modernization Project**
 
 **Document Type**: Technical Architecture & Performance Engineering White Paper
@@ -11,8 +19,8 @@ Hardware Fault Gating, and Empirical Qualification Results
 
 ## Abstract
 
-Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from 10 GbE to **100
-GbE, 200 GbE, 400 GbE, and 800 GbE** over PCIe Gen5 and Gen6 interconnects—while server processor core counts have
+Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from 10GbE to **100
+GbE, 200GbE, 400GbE, and 800GbE** over PCIe Gen5 and Gen6 interconnects—while server processor core counts have
 expanded from 8–32 cores to **144–288+ physical cores** across heterogeneous Performance-core (P-Core SMT) and
 Efficient-core (E-Core shared-L2 module) microarchitectures. However, the foundational open-source network benchmarking
 tool **`netperf` (v2.7.0)** remained frozen in an architecture designed for single-port listeners, 1 MB socket buffers,
@@ -52,10 +60,10 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 ### 1.1 The Widening Gap Between Silicon Evolution and Benchmark Tooling
 Over the past decade, datacenter networking and server compute have undergone three fundamental structural shifts:
 
-1. **Line-Rate Compression of the Inter-Packet Budget**: At 10 GbE with standard 1500-byte Ethernet frames, a NIC
-   processes at most 812,740 packets per second ($\sim 1.23\,\mu\text{s}$ per frame). At **200 GbE**, line rate demands
+1. **Line-Rate Compression of the Inter-Packet Budget**: At 10GbE with standard 1500-byte Ethernet frames, a NIC
+   processes at most 812,740 packets per second ($\sim 1.23\,\mu\text{s}$ per frame). At **200GbE**, line rate demands
    **16.25 million packets per second** ($\sim 61.5\,\text{ns}$ per frame) at MTU 1500, or **2.71 million frames per
-   second** ($\sim 369\,\text{ns}$ per frame) with 9000-byte jumbo frames. At **400 GbE and 800 GbE**, the per-packet
+   second** ($\sim 369\,\text{ns}$ per frame) with 9000-byte jumbo frames. At **400GbE and 800GbE**, the per-packet
    CPU and DMA budget shrinks below single-digit DRAM access latencies.
 2. **Bifurcation of Server Processor Microarchitectures**: Modern server CPUs have diverged into two distinct silicon
    paradigms:
@@ -142,6 +150,7 @@ A benchmark engineer looking at `LOCAL_CPU_UTIL=5.56` concludes that the CPU is 
 congestion control for failing to scale, completely unaware that the 16 active cores are 100% CPU-bound!
 
 ### 2.4 Legacy 16-Bit Ethtool and `sysfs` Buffer Limits
+
 - **16-Bit Link Speed Overflow**: `src/netdrv_ethtool.c` relied on the deprecated `ETHTOOL_GSET` ioctl
   (`struct ethtool_cmd`), which stores link speed in a 16-bit unsigned integer (`__u16 speed`), overflowing at
   `65,535 Mbps` and making 100G, 200G, 400G, and 800G links unrecognizable.
@@ -235,6 +244,7 @@ Both metrics are automatically emitted in OMNI JSON metadata (`"local_active_cpu
 application bottlenecks on 288–576 thread servers.
 
 ### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
+
 - **100G–800G Link Speed Detection ([`src/netdrv_ethtool.c`](../../src/netdrv_ethtool.c))**: Queries
   `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to
   `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
@@ -355,6 +365,7 @@ core—achieving **zero kernel accept-queue lock contention** and **zero collisi
 **512 concurrent streams** across single-port, multi-port breakout, and bonded LAG topologies.
 
 ### 5.1 Four Directional Execution Modes (`tx`, `rx`, `bx`, `bx-seq`)
+
 1. **`tx` (Unidirectional Send)**: Drives $N$ outbound `send` streams from the local host to the remote host.
 2. **`rx` (Unidirectional Receive / `MAERTS`)**: Drives $N$ inbound `recv` streams from the remote host to the local
    host.
@@ -369,6 +380,7 @@ core—achieving **zero kernel accept-queue lock contention** and **zero collisi
    full-duplex LLC/PCIe credit contention.
 
 ### 5.2 Multi-NIC Breakout, Multi-Subnet Expansion & DSCP QoS
+
 - **Multi-NIC & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2` distributes
   stream $i$ round-robin across each interface/IP pair, automatically binding each group of streams to the NUMA node of
   its respective PCIe adapter.
@@ -595,6 +607,7 @@ Python orchestration (`netserver-manager`, `netperf-multi`, `netperf-preflight`,
 into a repeatable, statistically rigorous engineering discipline.
 
 ### Key Takeaways for Platform & Network Engineers
+
 1. **Never Share a Single `netserver` Listener at 100G+**: Always deploy a per-core `netserver` pool
    (`netserver-manager`) on NUMA-local cores disjoint from NIC RSS IRQ cores.
 2. **Respect Microarchitectural Cache Topology**: Use `spread_l2` (1 core per 4-core L2 module) and `tx_ring = 512` on
@@ -607,6 +620,7 @@ into a repeatable, statistically rigorous engineering discipline.
    utilization hides single-core softirq and application saturation.
 
 ### References & Project Documentation
+
 - **Project Wiki**: [`wiki/Home.md`](../../wiki/Home.md)
 - **Executive Summary**: [`dev/docs/EXECUTIVE_SUMMARY.md`](../../dev/docs/EXECUTIVE_SUMMARY.md)
 - **High-Speed 200G–800G & Multi-Core Guide**:
@@ -614,3 +628,17 @@ into a repeatable, statistically rigorous engineering discipline.
 - **Pre-Flight Rules & Fault Signatures (`AA-001`–`AA-024`, `U1`–`U13`)**:
   [`wiki/Pre-Flight-Checks-and-Fault-Monitoring.md`](../../wiki/Pre-Flight-Checks-and-Fault-Monitoring.md)
 - **CLI Tools Reference**: [`wiki/CLI-Tools-Reference.md`](../../wiki/CLI-Tools-Reference.md)
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/TECHNICAL_WHITE_PAPER.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE-PAPER`, `DOC-NETPERF-DEV-DOCS-<wbr>TECHNICAL-WHITE-PAPER`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

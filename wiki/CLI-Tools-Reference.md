@@ -1,12 +1,22 @@
 # CLI Tools Reference
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for CLI Tools Reference under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 All tools are located in `dev/tools/` and require only Python 3.8+ standard library modules.
 
 ---
 
 ## 1. `netperf-multi` — Multi-Instance, Multi-Port & Directional Runner
 
-Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topology-aware CPU affinity, per-core `netserver` port mapping, directional (`tx`, `rx`, `bx`, `bx-seq`) orchestration, DSCP QoS marking, and `dmesg`/`ethtool -S` fault gating.
+Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topology-aware CPU affinity, per-core
+`netserver` port mapping, directional (`tx`, `rx` , `bx` , `bx-seq` ) orchestration, DSCP QoS marking, and `dmesg`
+/`ethtool -S` fault gating.
 
 ```bash
 ./dev/tools/netperf-multi -H <host_or_range> -n <streams> [options] [-- <omni_args>]
@@ -52,7 +62,9 @@ Plans, starts, stops, and audits per-core `numactl`-pinned `netserver` pools loc
 
 ## 3. `netperf-preflight` — 24-Rule Hardware & Driver Pre-Flight Checker
 
-Validates platform state, noisy background processes (`vscode`, `kipmi0`, `irqbalance`, `pmlogger`), PCIe link effective bandwidth vs. NIC link speed, P0 IRQ NUMA locality, and all 24 Intel E835 feature anti-affinity rules (`AA-001`–`AA-024`).
+Validates platform state, noisy background processes (`vscode`, `kipmi0` , `irqbalance` , `pmlogger` ), PCIe link
+effective bandwidth vs. NIC link speed, P0 IRQ NUMA locality, and all 24 Intel E835 feature anti-affinity rules
+(`AA-001`–`AA-024`).
 
 ```bash
 # Run live pre-flight check on ens801f0np0
@@ -69,7 +81,8 @@ Validates platform state, noisy background processes (`vscode`, `kipmi0`, `irqba
 
 ## 4. `netperf-tuner` — BKM Tuner & A/B Parameter Sweep Engine
 
-Applies validated Intel Xeon 6 + `ice` driver Best Known Methods or runs automated A/B parameter sweeps with statistical significance testing and automatic rollback.
+Applies validated Intel Xeon 6 + `ice` driver Best Known Methods or runs automated A/B parameter sweeps with statistical
+significance testing and automatic rollback.
 
 ```bash
 # Preview or apply BKM profile ({auto, cwf-ecore, gnr-pcore, mtu1500})
@@ -80,13 +93,15 @@ sudo ./dev/tools/netperf-tuner -i ens801f0np0 --apply-bkm cwf-ecore
 sudo ./dev/tools/netperf-tuner -i ens801f0np0 --sweep tx_ring --values 256,512,1024,2048 --json
 ```
 
-Supported `--sweep` knobs: `tx_ring`, `rx_ring`, `rx_usecs`, `tx_usecs`, `channels`, `mtu`, `congestion_control`, `tx_sched_layers`.
+Supported `--sweep` knobs: `tx_ring` , `rx_ring` , `rx_usecs` , `tx_usecs` , `channels` , `mtu` , `congestion_control` ,
+`tx_sched_layers` .
 
 ---
 
 ## 5. `netperf-catalog` — Qualification Test Matrix Generator & Runner
 
-Generates and executes the 4 standardized 200G–800G qualification suites and writes `result.json`, `summary.csv`, and `dashboard.md`.
+Generates and executes the 4 standardized 200G–800G qualification suites and writes `result.json` , `summary.csv` , and
+`dashboard.md` .
 
 ```bash
 # Preview the 42-case flow-scaling suite
@@ -118,7 +133,8 @@ Loads and executes built-in or custom YAML test profiles (works with or without 
 
 ## 7. `netperf-orchestrate` — Multi-Host SSH & RoCEv2 Co-Orchestrator
 
-Manages multi-host test inventories (`hosts.yaml`), deploys/starts per-core `netserver` pools across servers, optionally starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matrix tests.
+Manages multi-host test inventories (`hosts.yaml`), deploys/starts per-core `netserver` pools across servers, optionally
+starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matrix tests.
 
 ```bash
 # Check SSH connectivity across all hosts in inventory
@@ -141,15 +157,32 @@ Manages multi-host test inventories (`hosts.yaml`), deploys/starts per-core `net
   ./dev/tools/netperf-monitor -d 60 -H 192.168.10.2 -- -d send
   ./dev/tools/netperf-monitor --follow test.log
   ```
-- **`netperf_stats.py`**: Calculates mean, median, standard deviation, CV%, 95%/99% confidence intervals, IQR/Z-score outliers, and ASCII histograms/boxplots.
+- **`netperf_stats.py`**: Calculates mean, median, standard deviation, CV%, 95%/99% confidence intervals, IQR/Z-score
+  outliers, and ASCII histograms/boxplots.
   ```bash
   python3 ./dev/tools/netperf_stats.py results.txt
   ```
-- **`netperf-aggregate`**: Aggregates multiple JSON/CSV/KEYVAL result files and compares baseline vs. current runs (automatically treating lower latency/CPU as improvements and higher throughput as improvements).
+- **`netperf-aggregate`**: Aggregates multiple JSON/CSV/KEYVAL result files and compares baseline vs. current runs
+  (automatically treating lower latency/CPU as improvements and higher throughput as improvements).
   ```bash
   ./dev/tools/netperf-aggregate baseline.json current.json --compare
   ```
-- **`netperf-template`**: Renders JSON test results into `markdown-report`, `html-report`, `csv-export`, `latex-table`, or `json-summary` (using Jinja2 or built-in stdlib engine).
+- **`netperf-template`**: Renders JSON test results into `markdown-report` , `html-report` , `csv-export` ,
+  `latex-table` , or `json-summary` (using Jinja2 or built-in stdlib engine).
   ```bash
   ./dev/tools/netperf-template -t markdown-report results.json -o report.md
   ```
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `wiki/CLI-Tools-Reference.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

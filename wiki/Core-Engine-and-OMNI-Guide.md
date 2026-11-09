@@ -1,20 +1,35 @@
 # Core C Engine and OMNI Guide
 
-This page documents the C engine enhancements in `src/` and how to use the `-M` OMNI test framework, structured output formats (`JSON`, `CSV`, `KEYVAL`, `HUMAN`), output presets, and high-speed socket options.
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-WIKI-CORE-ENGINE-AND-OMNI-GUIDE` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Core C Engine and OMNI Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
+This page documents the C engine enhancements in `src/` and how to use the `-M` OMNI test framework, structured output
+formats (`JSON`, `CSV` , `KEYVAL` , `HUMAN` ), output presets, and high-speed socket options.
 
 ---
 
 ## 1. Backwards Compatibility vs. Modern OMNI Mode (`-M`)
 
 To preserve 100% compatibility with existing benchmarks and scripts:
+
 - **Without `-M`**: `netperf -H <host>` runs classic `TCP_STREAM` with traditional columnar output.
-- **With `-M`** (or `-t OMNI`): Enables the unified OMNI test engine with `KEYVAL` output by default and unlocks `-- -J` (JSON), `-- -o` (CSV), `-- -k` (KEYVAL), and `-- -O` (HUMAN).
+- **With `-M` ** (or `-t OMNI` ): Enables the unified OMNI test engine with `KEYVAL` output by default and unlocks
+  `-- -J` (JSON), `-- -o` (CSV), `-- -k` (KEYVAL), and `-- -O` (HUMAN).
 
 > **Important Flag Ordering Rule (`src/netsh.c` vs `src/nettest_omni.c`)**:
+>
 > - **Global flags** MUST appear **before** `--`:
->   `-H <host>`, `-L <local_ip>`, `-p <control_port>`, `-M` (or `-t <test>`), `-l <duration>`, `-T <local_cpu>[,<remote_cpu>]`, `-Y <local_tos>,<remote_tos>`, `-D <interval>`, `-c`, `-C`
+>   `-H <host>` , `-L <local_ip>` , `-p <control_port>` , `-M` (or `-t <test>` ), `-l <duration>` ,
+>   `-T <local_cpu>[,<remote_cpu>]` , `-Y <local_tos>,<remote_tos>` , `-D <interval>` , `-c` , `-C`
 > - **Test-specific OMNI flags** MUST appear **after** `--`:
->   `-d <stream|maerts|rr>`, `-T <tcp|udp|sctp>`, `-J [preset]`, `-o [preset]`, `-k [preset]`, `-O [preset]`, `-m <send_size>`, `-s <sock_buf>`, `-S <remote_sock_buf>`, `-r <req>,<rsp>`, `-b <burst>`, `-P <data_port>`, `-q <pacing_rate>`, `-D` (`TCP_NODELAY`), `-Z` (`MSG_ZEROCOPY`)
+>   `-d <stream|maerts|rr>` , `-T <tcp|udp|sctp>` , `-J [preset]` , `-o [preset]` , `-k [preset]` , `-O [preset]` ,
+>   `-m <send_size>` , `-s <sock_buf>` , `-S <remote_sock_buf>` , `-r <req>,<rsp>` , `-b <burst>` , `-P <data_port>` ,
+>   `-q <pacing_rate>` , `-D` (`TCP_NODELAY`), `-Z` (`MSG_ZEROCOPY`)
 
 ---
 
@@ -34,7 +49,8 @@ DIRECTION=Send
 ```
 
 ### Enhanced JSON (`-J`)
-`netperf -M -- -J` emits a valid, RFC 8259-escaped JSON document containing both a `"metadata"` object (timestamps, hostname, interface telemetry, active/peak CPU utilization, softirq percentage) and a `"results"` object:
+`netperf -M -- -J` emits a valid, RFC 8259-escaped JSON document containing both a `"metadata"` object (timestamps,
+hostname, interface telemetry, active/peak CPU utilization, softirq percentage) and a `"results"` object:
 
 ```bash
 NETPERF_INTERFACE=ens801f0np0 netperf -H 192.168.10.2 -M -l 10 -c -C -- -d stream -m 65536 -J
@@ -111,11 +127,32 @@ netperf -H 192.168.10.2 -M -l 10 -- -d rr -r 64,64 -J latency
    - `MAXMESSAGESIZE` is `4194304` (4 MB), enabling `-m 65536` through `-m 4194304` for 200G–800G bulk transfers.
 2. **Zero-Copy Transmit (`-- -Z` in `src/nettest_omni.c`)**:
    - Enables `SO_ZEROCOPY` on the data socket and passes `MSG_ZEROCOPY` to `send()` / `sendto()`.
-   - Automatically drains completion notifications from `MSG_ERRQUEUE` (`drain_zerocopy_completions()`) every 32 sends and on `ENOBUFS`/`ENOMEM` so socket `optmem_max` never deadlocks on long 200GbE runs.
+   - Automatically drains completion notifications from `MSG_ERRQUEUE` (`drain_zerocopy_completions()`) every 32 sends
+     and on `ENOBUFS` /`ENOMEM` so socket `optmem_max` never deadlocks on long 200GbE runs.
 3. **High-Core-Count CPU Telemetry (`src/netcpu_procstat.c`)**:
-   - On 288-core Clearwater Forest or 256-thread Granite Rapids systems, whole-machine `LOCAL_CPU_UTIL` for a single pinned stream is `< 0.5%`.
-   - `netcpu_procstat.c` now tracks **active-core CPU utilization** (`active_cpu_util` across cores with `>= 5%` busy time), **peak core ID & utilization** (`peak_cpu_id`, `peak_cpu_util`), and **softirq percentage** (`softirq_pct`).
+   - On 288-core Clearwater Forest or 256-thread Granite Rapids systems, whole-machine `LOCAL_CPU_UTIL` for a single
+     pinned stream is `< 0.5%` .
+   - `netcpu_procstat.c` now tracks **active-core CPU utilization** (`active_cpu_util` across cores with `>= 5%` busy
+     time), **peak core ID & utilization** (`peak_cpu_id`, `peak_cpu_util` ), and **softirq percentage**
+     (`softirq_pct`).
 4. **Modern Linux Hardware & Link Discovery (`src/netslot_linux.c`, `src/netsys_linux.c`, `src/netdrv_ethtool.c`)**:
-   - Uses `ETHTOOL_GLINKSETTINGS` (32-bit `speed`) so 100GbE (`100000`), 200GbE (`200000`), 400GbE (`400000`), and 800GbE (`800000`) links are never truncated at 65535 Mbps.
-   - Reads PCIe BDF, NUMA node, `current_link_speed` (`32.0 GT/s PCIe`), and `current_link_width` (`x16`) directly from `/sys/class/net/<if>/device/`.
-   - Reads DMI system vendor/product from `/sys/class/dmi/id/` and CPU frequency from `cpufreq/scaling_cur_freq` without requiring external `libsmbios`.
+   - Uses `ETHTOOL_GLINKSETTINGS` (32-bit `speed` ) so 100GbE (`100000`), 200GbE (`200000`), 400GbE (`400000`), and
+     800GbE (`800000`) links are never truncated at 65535 Mbps.
+   - Reads PCIe BDF, NUMA node, `current_link_speed` (`32.0 GT/s PCIe`), and `current_link_width` (`x16`) directly from
+     `/sys/class/net/<if>/device/` .
+   - Reads DMI system vendor/product from `/sys/class/dmi/id/` and CPU frequency from `cpufreq/scaling_cur_freq` without
+     requiring external `libsmbios` .
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `wiki/Core-Engine-and-OMNI-Guide.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CORE-ENGINE-AND-OMNI-GUIDE`, `DOC-NETPERF-WIKI-CORE-<wbr>ENGINE-AND-OMNI-GUIDE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->

@@ -1,5 +1,13 @@
 # Netperf Aggregation Guide
 
+<!-- METADATA_HEADER_START -->
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-AGGREGATION-GUIDE` | **Version**: `v3.2` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
+- **Summary**: Technical documentation for Netperf Aggregation Guide under Rules `D1`–`D10` `v3.2`.
+<!-- METADATA_HEADER_END -->
+
+
 Complete guide to using the `netperf-aggregate` tool for result analysis.
 
 **Version:** 1.0.0
@@ -9,7 +17,8 @@ Complete guide to using the `netperf-aggregate` tool for result analysis.
 
 ## Overview
 
-`netperf-aggregate` is a Python tool for parsing, aggregating, comparing, and reporting netperf test results across multiple runs.
+`netperf-aggregate` is a Python tool for parsing, aggregating, comparing, and reporting netperf test results across
+multiple runs.
 
 **Features:**
 
@@ -571,3 +580,17 @@ parallel 'netperf-aggregate {} --stats -o {.}_summary.json' ::: *.json
 - [OUTPUT_FORMATS.md](OUTPUT_FORMATS.md) - Output format details
 - [OUTPUT_INTEGRATION.md](OUTPUT_INTEGRATION.md) - Integration examples
 - [PHASE2_FEATURES.md](PHASE2_FEATURES.md) - Technical implementation
+
+---
+
+<!-- METADATA_FOOTER_START -->
+### Document Search & Discovery Metadata
+
+| Field | Value |
+| --- | --- |
+| **File Path** | `dev/docs/AGGREGATION_GUIDE.md` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet E835`, `Xeon 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-AGGREGATION-GUIDE`, `DOC-NETPERF-DEV-DOCS-<wbr>AGGREGATION-GUIDE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+<!-- METADATA_FOOTER_END -->
