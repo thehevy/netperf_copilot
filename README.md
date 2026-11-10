@@ -126,6 +126,8 @@ This fork modernizes netperf with several key improvements while maintaining ful
 ### Phase 3 Tools Documentation
 
 - **[OMNI_REFERENCE.md](dev/docs/OMNI_REFERENCE.md)** - Comprehensive OMNI test guide
+- **[FLENT_V3_WORKING_LATENCY_INTEGRATION.md](dev/docs/FLENT_V3_WORKING_LATENCY_INTEGRATION.md)** - Flent v3 `.flent.gz`
+  working-latency (`RRUL`) & `net_dim` step-burst convergence guide
 - **[MONITORING.md](dev/docs/MONITORING.md)** - Real-time monitoring and TUI
 - **[ORCHESTRATION.md](dev/docs/ORCHESTRATION.md)** - Multi-host test coordination
 - **[INTEGRATION_TESTING.md](dev/docs/INTEGRATION_TESTING.md)** - Integration test results
