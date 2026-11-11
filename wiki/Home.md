@@ -37,11 +37,12 @@ Clone: git clone https://github.com/thehevy/netperf_copilot.git
 - **Modern OMNI Mode (`-M`)**: Enables structured `KEYVAL` (default with `-M` ), `JSON` (`-- -J`), `CSV` (`-- -o`), and
   `HUMAN` (`-- -O`) output, plus named output presets (`minimal`, `default` , `throughput` , `latency` , `cpu` ,
   `verbose` ).
-- **100G–800G Core C Engine Upgrades (`src/`)**:
+- **100GbE–800GbE Core C Engine Upgrades (`src/`)**:
   - `MAXCPUS` scaled to **2048** cores with `/proc/stat` softirq/active-CPU tracking (`active_cpu_util`, `peak_cpu_id`).
   - `MAXMESSAGESIZE` raised from 1 MB to **4 MB** (`4194304` bytes) for high-BDP and zero-copy transfers.
   - Native **`SO_ZEROCOPY` / `MSG_ZEROCOPY`** (`-Z`) support with automatic `MSG_ERRQUEUE` completion draining.
-  - Direct Linux `ETHTOOL_GLINKSETTINGS` (100G/200G/400G/800G link speed, driver, firmware) and sysfs PCIe Gen5/Gen6
+  - Direct Linux `ETHTOOL_GLINKSETTINGS` (100GbE/200GbE/400GbE/800GbE link speed, driver, firmware) and sysfs PCIe
+    Gen5/Gen6
     (`32.0 GT/s`, `64.0 GT/s` , `x16` , NUMA node) telemetry.
 - **Production Python Tooling (`dev/tools/`)**:
   - Zero mandatory external dependencies (pure Python 3 stdlib fallbacks for YAML, Jinja2, and SSH).
@@ -68,14 +69,14 @@ Clone: git clone https://github.com/thehevy/netperf_copilot.git
    pillars, and quantified before-vs-after impact
 5. **[Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper)** — In-depth 10-page
    architectural white paper explaining why
-   `netperf` modernization is essential at 100G–800G, mathematical models, and 4 empirical case studies
+   `netperf` modernization is essential at 100GbE–800GbE, mathematical models, and 4 empirical case studies
 6. **[Getting Started & Installation](https://github.com/thehevy/netperf_copilot/wiki/Getting-Started-and-Installation)**
    — Building `netperf`, configure options,
    and installing `dev/tools/`
 7. **[Core Engine & OMNI Guide](https://github.com/thehevy/netperf_copilot/wiki/Core-Engine-and-OMNI-Guide)** — Using
    `-M` OMNI mode, JSON/CSV/KEYVAL formats, output
    presets, and `-Z` zero-copy
-8. **[High-Speed 200G–800G & Multi-Core Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200G-800G-and-Xeon6-Guide)**
+8. **[High-Speed 200GbE–800GbE & Multi-Core Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide)**
    — P-Core SMT (`spread_step2`)
    vs. E-Core Shared-L2 (`spread_l2`) topology layout, per-core `netserver-manager`, and driver tuning
 9. **[CLI Tools Reference](https://github.com/thehevy/netperf_copilot/wiki/CLI-Tools-Reference)** — Complete reference
@@ -113,7 +114,7 @@ flowchart TD
     PoolMgr --> Catalog
     Catalog --> Multi
     Multi --> Netperf
-    Netperf <-->|"100G / 200G / 400G / 800G Data Socket"| Netserver
+    Netperf <-->|"100GbE / 200GbE / 400GbE / 800GbE Data Socket"| Netserver
     Multi --> Report
 ```
 

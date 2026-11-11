@@ -1,29 +1,31 @@
-# High-Speed 200G–800G and Intel Xeon 6 Guide
+# High-Speed 200GbE–800GbE and Intel® Xeon® 6 Guide
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-HIGH-SPEED-200G-800` | **Version**: `v3.2` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-WIKI-HIGH-SPEED-200GBE-800GBE` | **Version**: `v3.2` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
-- **Summary**: Technical documentation for High-Speed 200G–800G and Intel Xeon 6 Guide under Rules `D1`–`D10` `v3.2`.
+- **Summary**: Technical documentation for High-Speed 200GbE–800GbE and Intel Xeon 6 Guide under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
 
 
-Achieving deterministic line rate at **200GbE (189–192 Gbps TCP goodput)**, **400GbE**, and **600G–800G multi-port** on
-modern **Intel Xeon 6** platforms requires aligning CPU microarchitecture, L2/LLC cache topology, NIC ring sizes, and
+Achieving deterministic line rate at **200GbE (189–192 Gbps TCP goodput)**, **400GbE**, and **600GbE–800GbE multi-port**
+on
+modern **Intel® Xeon® 6 Processor** platforms requires aligning CPU microarchitecture, L2/LLC cache topology, network
+adapter ring sizes, and
 Load Partner (`netserver`) core pinning.
 
 ---
 
-## 1. Intel Xeon 6 P-Core vs. E-Core Topology Strategies
+## 1. Intel® Xeon® 6 P-Core vs. E-Core Topology Strategies
 
-`netperf_topology.py` automatically detects whether the host CPU is an **Intel Xeon 6 P-Core** (Multi-Core P-Core
-`Xeon P-Core` /`Xeon P-Core`, or Sapphire/Emerald Rapids) or an **Intel Xeon 6 E-Core** (Shared-L2 E-Core `Xeon E-Core`
-288-core / Sierra Forest `6780E` 144-core) and applies the optimal core layout:
+`netperf_topology.py` automatically detects whether the host CPU is an **Intel Xeon 6 P-Core** (Multi-Core P-Core, or
+earlier x86 P-Core generations) or an **Intel Xeon 6 E-Core** (Shared-L2 E-Core 288-core / 144-core E-Core) and applies
+the optimal core layout:
 
 | Platform / Microarchitecture | Core Architecture | Optimal Layout Strategy / Optimal `ice` TX Ring / Stream Sweet Spot (200GbE) |
 | --- | --- | --- |
-| **Xeon 6 Shared-L2 E-Core** (`Xeon E-Core`, `6780E`) | E-Core (No SMT, 4 cores share 4 MB L2 module) | `spread_l2` (1–2 cores per 4-core L2 module before filling siblings)<br>**Optimal `ice` TX Ring**: **512** (`rx 4096`)<br>**Stream Sweet Spot (200GbE)**: **16 streams** (~35 Gbps/flow, ~189.4 Gbps aggregate) |
-| **Xeon 6 Multi-Core P-Core** (`Xeon P-Core`, `Xeon P-Core`) | P-Core (2-way SMT, dedicated 2 MB L2 per core) | `spread_step2` (physical cores only, filtering SMT siblings >= 128)<br>**Optimal `ice` TX Ring**: **2048** (`rx 4096`)<br>**Stream Sweet Spot (200GbE)**: **8–16 streams** (~52 Gbps/flow, ~191.2 Gbps aggregate) |
+| **Xeon 6 Shared-L2 E-Core** (`Xeon 6 E-Core`) | E-Core (No SMT, 4 cores share 4 MB L2 module) | `spread_l2` (1–2 cores per 4-core L2 module before filling siblings)<br>**Optimal `ice` TX Ring**: **512** (`rx 4096`)<br>**Stream Sweet Spot (200GbE)**: **16 streams** (~35 Gbps/flow, ~189.4 Gbps aggregate) |
+| **Xeon 6 Multi-Core P-Core** (`Xeon 6 P-Core`) | P-Core (2-way SMT, dedicated 2 MB L2 per core) | `spread_step2` (physical cores only, filtering SMT siblings >= 128)<br>**Optimal `ice` TX Ring**: **2048** (`rx 4096`)<br>**Stream Sweet Spot (200GbE)**: **8–16 streams** (~52 Gbps/flow, ~191.2 Gbps aggregate) |
 
 ### Why E-Core Needs `tx_ring=512` and `spread_l2`
 
@@ -96,7 +98,7 @@ What `netperf-tuner` configures:
 
 ---
 
-## 4. Bidirectional (`bx`), Multi-NIC (600G), and OCP 8x25G Breakout Workflows
+## 4. Bidirectional (`bx`), Multi-Adapter (600GbE), and OCP 8x25GbE Breakout Workflows
 
 ### Simultaneous Bidirectional (`--direction bx`)
 Allocates disjoint TX and RX physical cores so sender and receiver streams never contend on the same core or L2 module:
@@ -106,8 +108,9 @@ Allocates disjoint TX and RX physical cores so sender and receiver streams never
     -- -m 65536 -D
 ```
 
-### Multi-NIC Aggregate 3x200GbE (600GbE Total)
-Distributes flows across 3 local 200GbE NICs, automatically pinning each port's flows to that NIC's local NUMA node:
+### Multi-Adapter Aggregate 3x200GbE (600GbE Total)
+Distributes flows across 3 local 200GbE network adapters, automatically pinning each port's flows to that adapter's
+local NUMA node:
 ```bash
 ./dev/tools/netperf-multi -H 192.168.10.2,192.168.20.2,192.168.21.2 \
     -i ens7np0,ens23np0,ens27np0 -t OMNI --direction tx -n 16 -l 30 \
@@ -130,9 +133,9 @@ Expands IP ranges (`192.168.10..17.74`) and round-robins symbolic DSCP markings 
 
 | Field | Value |
 | --- | --- |
-| **File Path** | wiki/High-Speed-200G-800<wbr>G-and-Xeon6-Guide.md |
+| **File Path** | wiki/High-Speed-200GbE-800<wbr>GbE-and-Xeon6-Guide.md |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
-| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-HIGH-SPEED-200G-800`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
+| **Validation / Patch IDs** | `DOC-NETPERF-WIKI-HIGH-SPEED-200GBE-800GBE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

@@ -953,7 +953,7 @@ Next Steps:
 ### Infrastructure
 
 - Test lab with multi-NUMA systems
-- Multiple network adapters (10G, 25G, 100G)
+- Multiple network adapters (10GbE, 25GbE, 100GbE)
 - Various OS platforms for compatibility testing
 - CI/CD infrastructure
 

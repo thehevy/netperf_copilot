@@ -124,7 +124,7 @@ netperf -H 192.168.10.2 -M -l 10 -- -d rr -r 64,64 -J latency
 ## 4. High-Speed C Engine Enhancements (`src/`)
 
 1. **4 MB Maximum Message Size (`src/netlib.h`)**:
-   - `MAXMESSAGESIZE` is `4194304` (4 MB), enabling `-m 65536` through `-m 4194304` for 200G–800G bulk transfers.
+   - `MAXMESSAGESIZE` is `4194304` (4 MB), enabling `-m 65536` through `-m 4194304` for 200GbE–800GbE bulk transfers.
 2. **Zero-Copy Transmit (`-- -Z` in `src/nettest_omni.c`)**:
    - Enables `SO_ZEROCOPY` on the data socket and passes `MSG_ZEROCOPY` to `send()` / `sendto()`.
    - Automatically drains completion notifications from `MSG_ERRQUEUE` (`drain_zerocopy_completions()`) every 32 sends

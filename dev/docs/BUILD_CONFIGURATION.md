@@ -323,14 +323,14 @@ This script builds netperf with various configurations and compares throughput a
 
 Based on internal testing on Linux x86_64:
 
-| Option | Throughput Impact | CPU Impact | Notes |
-| --- | --- | --- | --- |
-| histogram | -5% to -15% | Minimal | Per-op timing overhead |
-| dirty | -20% to -40% | Minimal | Forces cache misses |
-| demo | -0% to -2% | Minimal | I/O for interim results |
-| intervals | -1% to -5% | Minimal | Pacing overhead |
-| spin | Variable | **HIGH** | Burns CPU cycles |
-| burst | ±5% | Minimal | Changes behavior, not overhead |
+| Option | Throughput Impact | CPU Impact / Notes |
+| --- | --- | --- |
+| histogram | -5% to -15% | **CPU Impact**: Minimal<br>**Notes**: Per-op timing overhead |
+| dirty | -20% to -40% | **CPU Impact**: Minimal<br>**Notes**: Forces cache misses |
+| demo | -0% to -2% | **CPU Impact**: Minimal<br>**Notes**: I/O for interim results |
+| intervals | -1% to -5% | **CPU Impact**: Minimal<br>**Notes**: Pacing overhead |
+| spin | Variable | **CPU Impact**: **HIGH**<br>**Notes**: Burns CPU cycles |
+| burst | ±5% | **CPU Impact**: Minimal<br>**Notes**: Changes behavior, not overhead |
 
 ## Configuration File Reference
 

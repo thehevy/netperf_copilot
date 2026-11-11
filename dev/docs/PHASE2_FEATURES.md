@@ -601,12 +601,12 @@ class ReportGenerator:
 
 Measured on Intel Xeon, 10-second test:
 
-| Format | Phase 1 | Phase 2 | Overhead |
-| --- | --- | --- | --- |
-| KEYVAL | 15 μs | 15 μs | 0% |
-| CSV | 20 μs | 35 μs | +75% (escaping) |
-| JSON | 25 μs | 45 μs | +80% (metadata) |
-| HUMAN | 30 μs | 30 μs | 0% |
+| Format | Phase 1 | Phase 2 / Overhead |
+| --- | --- | --- |
+| KEYVAL | 15 μs | **Phase 2**: 15 μs<br>**Overhead**: 0% |
+| CSV | 20 μs | **Phase 2**: 35 μs<br>**Overhead**: +75% (escaping) |
+| JSON | 25 μs | **Phase 2**: 45 μs<br>**Overhead**: +80% (metadata) |
+| HUMAN | 30 μs | **Phase 2**: 30 μs<br>**Overhead**: 0% |
 
 **Note:** Overhead is negligible compared to test duration (10,000,000 μs)
 

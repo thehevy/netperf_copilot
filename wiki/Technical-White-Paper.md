@@ -1,10 +1,10 @@
-# Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures
+# Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v3.2` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
-- **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100G–800G Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
+- **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
 
 
@@ -29,7 +29,7 @@ network benchmarking tool **`netperf` (v2.7.0)** remained frozen in an architect
 1 MB socket buffers, 256-CPU telemetry arrays, 16-bit `ethtool` link speed counters, and unstructured human-readable
 text output.
 
-When engineers attempt to qualify 200G–800G adapters using unmodified `netperf`, they encounter severe artificial
+When engineers attempt to qualify 200GbE–800GbE adapters using unmodified `netperf`, they encounter severe artificial
 bottlenecks: kernel accept-queue serialization on TCP port `12865`, L2/LLC cache thrashing on 4-core E-core clusters,
 softirq/application thread collisions, user-to-kernel memory copy saturation, and **15%–40% run-to-run throughput
 variance** that masks genuine driver or hardware regressions.
@@ -47,7 +47,7 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 
 ## Table of Contents
 
-1. [Introduction: The 100G–800G Benchmarking Crisis](#1-introduction-the-100g800g-benchmarking-crisis)
+1. [Introduction: The 100GbE–800GbE Benchmarking Crisis](#1-introduction-the-100g800g-benchmarking-crisis)
 2. [Anatomy of Legacy Bottlenecks in Netperf 2.7.0](#2-anatomy-of-legacy-bottlenecks-in-netperf-270)
 3. [Architectural Modernization of the Core C Engine (`src/`)](#3-architectural-modernization-of-the-core-c-engine-src)
 4. [Silicon-Aware Topology Engine & Per-Core Daemon Architecture](#4-silicon-aware-topology-engine--per-core-daemon-architecture)
@@ -58,7 +58,7 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 
 ---
 
-## 1. Introduction: The 100G–800G Benchmarking Crisis
+## 1. Introduction: The 100GbE–800GbE Benchmarking Crisis
 
 ### 1.1 The Widening Gap Between Silicon Evolution and Benchmark Tooling
 Over the past decade, datacenter networking and server compute have undergone three fundamental structural shifts:
@@ -80,7 +80,7 @@ Over the past decade, datacenter networking and server compute have undergone th
    configurations. Unstructured ASCII tables that require fragile `awk`/`sed` regexes cannot feed automated statistical
    regression gates or AI root-cause engines.
 
-### 1.2 Why Unmodified `netperf` Produces Misleading Results at 200G+
+### 1.2 Why Unmodified `netperf` Produces Misleading Results at 200GbE+
 When validation teams run legacy `netperf` loops against a 200GbE or 400GbE adapter, they frequently observe throughput
 plateauing between **110 Gbps and 140 Gbps** with erratic **15%–40% run-to-run swings**. Engineers often misdiagnose
 this behavior as a NIC firmware bottleneck or Linux TCP stack regression, when in reality **the benchmark harness itself
@@ -99,7 +99,7 @@ that prevent accurate benchmarking on modern systems.
 
 ```mermaid
 flowchart TD
-    subgraph LegacyPath["Legacy Netperf 2.7.0 Failure Modes at 200G+"]
+    subgraph LegacyPath["Legacy Netperf 2.7.0 Failure Modes at 200GbE+"]
         direction TB
         B1["1. Control Plane Serialization\n64 clients connect to single TCP port 12865\n-> Kernel accept queue lock contention\n-> Child netserver inherits listener CPU"]
         B2["2. Memory Copy & Buffer Ceiling\nMAXMESSAGESIZE capped at 1 MB\n-> Mandatory copy_from_user() on every send()\n-> 25 GB/s DRAM copy overhead at 200 Gbps"]
@@ -156,7 +156,7 @@ congestion control for failing to scale, completely unaware that the 16 active c
 
 - **16-Bit Link Speed Overflow**: `src/netdrv_ethtool.c` relied on the deprecated `ETHTOOL_GSET` ioctl
   (`struct ethtool_cmd`), which stores link speed in a 16-bit unsigned integer (`__u16 speed`), overflowing at
-  `65,535 Mbps` and making 100G, 200G, 400G, and 800G links unrecognizable.
+  `65,535 Mbps` and making 100GbE, 200GbE, 400GbE, and 800GbE links unrecognizable.
 - **PCIe Width Truncation**: `src/netslot_linux.c` allocated a 4-byte stack buffer (`char link_width[4]`) to read PCIe
   link width strings (`"x16\n"`), risking stack buffer overflow or truncation on modern `sysfs` entries
   (`current_link_width`, `current_link_speed`).
@@ -253,7 +253,7 @@ application bottlenecks on 288–576 thread servers.
 
 ### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
 
-- **100G–800G Link Speed Detection
+- **100GbE–800GbE Link Speed Detection
   ([`src/netdrv_ethtool.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netdrv_ethtool.c))**: Queries
   `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to
   `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
@@ -409,7 +409,8 @@ parallel execution engine capable of driving up to
 
 ## 6. Pre-Flight Auditing, Automated BKM Tuning & Zero-Tolerance Fault Gating
 
-At 200G–800G speeds, a single misconfigured kernel sysctl, PCIe slot downgrade, or NIC offload toggle can silently cut
+At 200GbE–800GbE speeds, a single misconfigured kernel sysctl, PCIe slot downgrade, or NIC offload toggle can silently
+cut
 throughput in half. Worse, a benchmark run that achieves 190 Gbps while triggering an IOMMU `DMAR` fault or NIC TX queue
 timeout in `dmesg` is a **hard qualification failure** that naive benchmark scripts misreport as a pass.
 
@@ -428,15 +429,15 @@ flowchart LR
 programmatically audits the live system state against 24
 documented hardware/OS anti-affinity rules before any benchmark begins. Key high-severity rules include:
 
-| Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G / Automated Remediation |
+| Rule ID | Anti-Affinity Condition | Performance Impact at 200GbE–800GbE / Automated Remediation |
 | --- | --- | --- |
 | **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput<br>**Automated Remediation**: Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
 | **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops<br>**Automated Remediation**: Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
 | **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100%<br>**Automated Remediation**: Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
-| **`AA-015`** | `tx_ring < 512` (default `256`) at 100G–200G line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core)<br>**Automated Remediation**: Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
+| **`AA-015`** | `tx_ring < 512` (default `256`) at 100GbE–200GbE line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core)<br>**Automated Remediation**: Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
 | **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35%<br>**Automated Remediation**: Pin NIC IRQs, `netperf`, and `netserver` to `nic_numa` cores |
-| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200G+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200G/400G line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
-| **`AA-019`** | `generic-receive-offload (GRO) = off` on 100G–800G TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse)<br>**Automated Remediation**: Enable ethtool -K <iface> gro on tso on gso on |
+| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200GbE+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200GbE/400GbE line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
+| **`AA-019`** | `generic-receive-offload (GRO) = off` on 100GbE–800GbE TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse)<br>**Automated Remediation**: Enable ethtool -K <iface> gro on tso on gso on |
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification
 Even when all static configuration rules pass, thermal throttling, turbo frequency transients, or ARP/route cache
@@ -551,10 +552,10 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
 
 #### Command Execution
 ```bash
-# Run built-in 3x200G multi-port qualification profile
+# Run built-in 3x200GbE multi-port qualification profile
 ./dev/tools/netperf-profile -p 3x200g-multiport -H 192.168.10..12.2
 
-# Or invoke netperf-multi directly for 48 streams (16 streams per 200G NIC)
+# Or invoke netperf-multi directly for 48 streams (16 streams per 200GbE NIC)
 ./dev/tools/netperf-multi -H 192.168.10..12.2 -i ens7np0,ens23np0,ens27np0 \
     -n 48 --direction bx --per-core-netserver --base-port 18600 \
     -l 30 --check-kmsg -o json --export multiport_bx.json -- -m 131072
@@ -564,8 +565,8 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
 
 | Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) / Port 1 (`ens23np0`) / Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency |
 | --- | --- | --- |
-| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps`<br>**Port 1 (`ens23np0`)**: `190.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600G** |
-| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps`<br>**Port 1 (`ens23np0`)**: `189.8 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600G** |
+| **Unidirectional `tx`** | `48 TX` | `191.8 Gbps`<br>**Port 1 (`ens23np0`)**: `190.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600GbE** |
+| **Unidirectional `rx`** | `48 RX` | `190.9 Gbps`<br>**Port 1 (`ens23np0`)**: `189.8 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600GbE** |
 | **Sequential `bx-seq`** | `48 TX` then `48 RX` | `191.5 / 190.6 Gbps`<br>**Port 1 (`ens23np0`)**: `190.1 / 189.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8G TX / 568.5G RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
 | **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | `172.4G TX + 168.9G RX`<br>**Port 1 (`ens23np0`)**: `170.8G TX + 167.2G RX`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `169.5G TX + 166.1G RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
 
@@ -621,7 +622,7 @@ normality test $p$-values.
 ## 8. Conclusion & Future Roadmap
 
 The **Netperf Modernization Project (v3.0)** demonstrates that a foundational UNIX systems benchmark can be brought into
-the 100G–800G and 288+-core era without breaking compatibility with decades of existing engineering workflows. By
+the 100GbE–800GbE and 288+-core era without breaking compatibility with decades of existing engineering workflows. By
 pairing low-level C engine enhancements (`MSG_ZEROCOPY`, 4 MB buffers, 2048-core active CPU telemetry, 32-bit
 `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` introspection, and structured JSON/CSV/Preset output) with silicon-aware
 Python orchestration (`netserver-manager`, `netperf-multi`, `netperf-preflight`, `netperf-tuner`, and
@@ -630,7 +631,7 @@ into a repeatable, statistically rigorous engineering discipline.
 
 ### Key Takeaways for Platform & Network Engineers
 
-1. **Never Share a Single `netserver` Listener at 100G+**: Always deploy a per-core `netserver` pool
+1. **Never Share a Single `netserver` Listener at 100GbE+**: Always deploy a per-core `netserver` pool
    (`netserver-manager`) on NUMA-local cores disjoint from NIC RSS IRQ cores.
 2. **Respect Microarchitectural Cache Topology**: Use `spread_l2` (1 core per 4-core L2 module) and `tx_ring = 512` on
    high-density E-core processors to prevent L2 cache thrashing; use `spread_step2` (filtering SMT siblings) and
@@ -646,8 +647,8 @@ into a repeatable, statistically rigorous engineering discipline.
 - **Project Wiki**: [`wiki/Home.md`](https://github.com/thehevy/netperf_copilot/wiki)
 - **Executive Summary**:
   [`dev/docs/EXECUTIVE_SUMMARY.md`](https://github.com/thehevy/netperf_copilot/blob/master/dev/docs/EXECUTIVE_SUMMARY.md)
-- **High-Speed 200G–800G & Multi-Core Guide**:
-  [`wiki/High-Speed-200G-800G-and-Xeon6-Guide.md`](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200G-800G-and-Xeon6-Guide)
+- **High-Speed 200GbE–800GbE & Multi-Core Guide**:
+  [`wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide.md`](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide)
 - **Pre-Flight Rules & Fault Signatures (`AA-001`–`AA-024`, `U1`–`U13`)**:
   [`wiki/Pre-Flight-Checks-and-Fault-Monitoring.md`](https://github.com/thehevy/netperf_copilot/wiki/Pre-Flight-Checks-and-Fault-Monitoring)
 - **CLI Tools Reference**:

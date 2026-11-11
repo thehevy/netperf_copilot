@@ -28,17 +28,17 @@ Netperf supports four primary output formats:
 
 ## Format Comparison
 
-| Feature | KEYVAL | CSV | JSON | HUMAN |
-| --- | --- | --- | --- | --- |
-| Default | ✓ | — | — | — |
-| Headers | No | Yes | Yes (metadata) | Yes |
-| Parseable | ✓ | ✓ | ✓ | — |
-| Structured | — | — | ✓ | — |
-| Metadata | — | — | ✓ | — |
-| Append-friendly | ✓ | ✓ | — | — |
-| Excel-compatible | — | ✓ | — | — |
-| Machine-readable | ✓ | ✓ | ✓ | — |
-| Human-readable | ✓ | — | — | ✓ |
+| Feature | KEYVAL | CSV / JSON / HUMAN |
+| --- | --- | --- |
+| Default | ✓ | — |
+| Headers | No | **CSV**: Yes<br>**JSON**: Yes (metadata)<br>**HUMAN**: Yes |
+| Parseable | ✓ | **CSV**: ✓<br>**JSON**: ✓ |
+| Structured | — | **JSON**: ✓ |
+| Metadata | — | **JSON**: ✓ |
+| Append-friendly | ✓ | **CSV**: ✓ |
+| Excel-compatible | — | **CSV**: ✓ |
+| Machine-readable | ✓ | **CSV**: ✓<br>**JSON**: ✓ |
+| Human-readable | ✓ | **HUMAN**: ✓ |
 
 ---
 
@@ -330,36 +330,36 @@ netperf -H host -- -k /path/to/preset.txt -o csv   # CSV with preset
 
 ### Common Fields
 
-| Field | Type | Description | Units |
-| --- | --- | --- | --- |
-| THROUGHPUT | float | Network throughput | 10^6bits/s |
-| THROUGHPUT_UNITS | string | Units for throughput | varies |
-| ELAPSED_TIME | float | Test duration | seconds |
-| LOCAL_CPU_UTIL | float | Local CPU utilization | percent |
-| REMOTE_CPU_UTIL | float | Remote CPU utilization | percent |
-| PROTOCOL | string | Protocol used | TCP/UDP/SCTP |
-| SOCKET_SIZE_SEND | int | Send socket buffer | bytes |
-| SOCKET_SIZE_RECV | int | Receive socket buffer | bytes |
-| SEND_SIZE | int | Send message size | bytes |
-| RECV_SIZE | int | Receive message size | bytes |
-| REQUEST_SIZE | int | Request size (RR tests) | bytes |
-| RESPONSE_SIZE | int | Response size (RR tests) | bytes |
-| TRANSACTION_RATE | float | Transactions per second | tps |
-| MEAN_LATENCY | float | Mean latency | microseconds |
-| MIN_LATENCY | float | Minimum latency | microseconds |
-| MAX_LATENCY | float | Maximum latency | microseconds |
-| P50_LATENCY | float | 50th percentile latency | microseconds |
-| P90_LATENCY | float | 90th percentile latency | microseconds |
-| P99_LATENCY | float | 99th percentile latency | microseconds |
-| LOCAL_SEND_CALLS | int | Number of send calls | count |
-| LOCAL_RECV_CALLS | int | Number of receive calls | count |
-| LOCAL_BYTES_SENT | int | Total bytes sent | bytes |
-| LOCAL_BYTES_RECVD | int | Total bytes received | bytes |
-| REMOTE_BYTES_SENT | int | Remote bytes sent | bytes |
-| REMOTE_BYTES_RECVD | int | Remote bytes received | bytes |
-| CONFIDENCE_LEVEL | int | Confidence level | percent |
-| CONFIDENCE_INTERVAL | float | Confidence interval | percent |
-| COMMAND_LINE | string | Full command line | string |
+| Field | Type | Description / Units |
+| --- | --- | --- |
+| THROUGHPUT | float | **Description**: Network throughput<br>**Units**: 10^6bits/s |
+| THROUGHPUT_UNITS | string | **Description**: Units for throughput<br>**Units**: varies |
+| ELAPSED_TIME | float | **Description**: Test duration<br>**Units**: seconds |
+| LOCAL_CPU_UTIL | float | **Description**: Local CPU utilization<br>**Units**: percent |
+| REMOTE_CPU_UTIL | float | **Description**: Remote CPU utilization<br>**Units**: percent |
+| PROTOCOL | string | **Description**: Protocol used<br>**Units**: TCP/UDP/SCTP |
+| SOCKET_SIZE_SEND | int | **Description**: Send socket buffer<br>**Units**: bytes |
+| SOCKET_SIZE_RECV | int | **Description**: Receive socket buffer<br>**Units**: bytes |
+| SEND_SIZE | int | **Description**: Send message size<br>**Units**: bytes |
+| RECV_SIZE | int | **Description**: Receive message size<br>**Units**: bytes |
+| REQUEST_SIZE | int | **Description**: Request size (RR tests)<br>**Units**: bytes |
+| RESPONSE_SIZE | int | **Description**: Response size (RR tests)<br>**Units**: bytes |
+| TRANSACTION_RATE | float | **Description**: Transactions per second<br>**Units**: tps |
+| MEAN_LATENCY | float | **Description**: Mean latency<br>**Units**: microseconds |
+| MIN_LATENCY | float | **Description**: Minimum latency<br>**Units**: microseconds |
+| MAX_LATENCY | float | **Description**: Maximum latency<br>**Units**: microseconds |
+| P50_LATENCY | float | **Description**: 50th percentile latency<br>**Units**: microseconds |
+| P90_LATENCY | float | **Description**: 90th percentile latency<br>**Units**: microseconds |
+| P99_LATENCY | float | **Description**: 99th percentile latency<br>**Units**: microseconds |
+| LOCAL_SEND_CALLS | int | **Description**: Number of send calls<br>**Units**: count |
+| LOCAL_RECV_CALLS | int | **Description**: Number of receive calls<br>**Units**: count |
+| LOCAL_BYTES_SENT | int | **Description**: Total bytes sent<br>**Units**: bytes |
+| LOCAL_BYTES_RECVD | int | **Description**: Total bytes received<br>**Units**: bytes |
+| REMOTE_BYTES_SENT | int | **Description**: Remote bytes sent<br>**Units**: bytes |
+| REMOTE_BYTES_RECVD | int | **Description**: Remote bytes received<br>**Units**: bytes |
+| CONFIDENCE_LEVEL | int | **Description**: Confidence level<br>**Units**: percent |
+| CONFIDENCE_INTERVAL | float | **Description**: Confidence interval<br>**Units**: percent |
+| COMMAND_LINE | string | **Description**: Full command line<br>**Units**: string |
 
 ### Interval Fields (with -D)
 

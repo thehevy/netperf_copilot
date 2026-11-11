@@ -26,7 +26,7 @@ Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topo
 | --- | --- |
 | `-H`, `--host` | Single IP, comma-separated list (`10.0.1.2,10.0.2.2`), or octet range (`192.168.10..17.74`) |
 | `-n`, `--instances` | Number of streams per port/direction (or total streams distributed across `-i` interfaces) |
-| `-t`, `--test` | Test type: `OMNI` (recommended for 100G+), `TCP_STREAM`, `TCP_MAERTS`, `TCP_RR`, `UDP_STREAM` |
+| `-t`, `--test` | Test type: `OMNI` (recommended for 100GbE+), `TCP_STREAM`, `TCP_MAERTS`, `TCP_RR`, `UDP_STREAM` |
 | `-d`, `--direction` | `tx` (send), `rx` (maerts/receive), `bx` (simultaneous TX+RX on disjoint cores), `bx-seq` (sequential TX then RX) |
 | `-i`, `--interfaces` | Comma-separated local NICs (e.g. `ens7np0,ens23np0,ens27np0`) for NUMA/core locality |
 | `-Y`, `--dscp`, `--tos` | Symbolic DSCP (`EF,CS3,AF21,CS0`), `dscp:46`, or hex ToS (`0xb8`) |
@@ -100,7 +100,8 @@ Supported `--sweep` knobs: `tx_ring` , `rx_ring` , `rx_usecs` , `tx_usecs` , `ch
 
 ## 5. `netperf-catalog` — Qualification Test Matrix Generator & Runner
 
-Generates and executes the 4 standardized 200G–800G qualification suites and writes `result.json` , `summary.csv` , and
+Generates and executes the 4 standardized 200GbE–800GbE qualification suites and writes `result.json` , `summary.csv` ,
+and
 `dashboard.md` .
 
 ```bash

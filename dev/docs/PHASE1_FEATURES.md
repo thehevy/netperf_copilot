@@ -17,16 +17,16 @@ the upstream project. All changes are production-ready and tested on multiple pl
 
 ## Feature Summary
 
-| Feature | Status | Impact | Backward Compatible |
-| --- | --- | --- | --- |
-| OMNI Default Test | ✅ Complete | High - Better UX | ✅ Yes |
-| Key-Value Output | ✅ Complete | High - Easier parsing | ✅ Yes |
-| JSON Output | ✅ Complete | High - Modern tooling | ✅ Yes (new) |
-| Interval Reporting | ✅ Complete | Medium - Better feedback | ✅ Yes |
-| Output Presets | ✅ Complete | Medium - Standardization | ✅ Yes (new) |
-| Build System | ✅ Complete | Medium - Developer UX | ✅ Yes |
-| MAXCPUS Increase | ✅ Complete | High - Large systems | ✅ Yes |
-| Documentation | ✅ Complete | High - Adoption | N/A |
+| Feature | Status | Impact / Backward Compatible |
+| --- | --- | --- |
+| OMNI Default Test | ✅ Complete | **Impact**: High - Better UX<br>**Backward Compatible**: ✅ Yes |
+| Key-Value Output | ✅ Complete | **Impact**: High - Easier parsing<br>**Backward Compatible**: ✅ Yes |
+| JSON Output | ✅ Complete | **Impact**: High - Modern tooling<br>**Backward Compatible**: ✅ Yes (new) |
+| Interval Reporting | ✅ Complete | **Impact**: Medium - Better feedback<br>**Backward Compatible**: ✅ Yes |
+| Output Presets | ✅ Complete | **Impact**: Medium - Standardization<br>**Backward Compatible**: ✅ Yes (new) |
+| Build System | ✅ Complete | **Impact**: Medium - Developer UX<br>**Backward Compatible**: ✅ Yes |
+| MAXCPUS Increase | ✅ Complete | **Impact**: High - Large systems<br>**Backward Compatible**: ✅ Yes |
+| Documentation | ✅ Complete | **Impact**: High - Adoption |
 
 ## 1. Full Backwards Compatibility (Task 1.1)
 
@@ -578,15 +578,15 @@ netperf/
 
 ## Performance Impact Summary
 
-| Feature | Throughput Impact | CPU Impact | Memory Impact |
-| --- | --- | --- | --- |
-| OMNI default | 0% | Minimal | 0 |
-| Keyval output | 0% | Minimal | 0 |
-| JSON output | 0% | Minimal | 0 |
-| Interval reporting | 0-2% | Minimal | 0 |
-| Output presets | 0% | None | 0 |
-| MAXCPUS increase | 0% | None | +8KB |
-| Build system | N/A | N/A | N/A |
+| Feature | Throughput Impact | CPU Impact / Memory Impact |
+| --- | --- | --- |
+| OMNI default | 0% | **CPU Impact**: Minimal<br>**Memory Impact**: 0 |
+| Keyval output | 0% | **CPU Impact**: Minimal<br>**Memory Impact**: 0 |
+| JSON output | 0% | **CPU Impact**: Minimal<br>**Memory Impact**: 0 |
+| Interval reporting | 0-2% | **CPU Impact**: Minimal<br>**Memory Impact**: 0 |
+| Output presets | 0% | **CPU Impact**: None<br>**Memory Impact**: 0 |
+| MAXCPUS increase | 0% | **CPU Impact**: None<br>**Memory Impact**: +8KB |
+| Build system | N/A | N/A |
 
 **Overall**: Negligible performance impact with significant usability improvements.
 

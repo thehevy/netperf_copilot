@@ -129,7 +129,18 @@ def _apply_ste_lexical_replacements(line: str) -> Tuple[str, List[str]]:
             masked = pat.sub(_case_repl, masked)
             applied.append(desc)
 
+    speed_re = re.compile(r"\b((?:\d+x)?(?:10|25|40|50|100|200|400|600|800|1600))G(?![bB]|bps|Hz|T/s)\b")
+    if speed_re.search(masked):
+        masked = speed_re.sub(r"\1GbE", masked)
+        applied.append("D3-SPEED (bare G -> GbE)")
+
     for idx, val in enumerate(protected):
+        if val.startswith("["):
+            val = re.sub(
+                r"^\[([^\]]+)\]",
+                lambda m: "[" + speed_re.sub(r"\1GbE", m.group(1)) + "]",
+                val,
+            )
         masked = masked.replace(f"@@STE_PROT_{idx}@@", val)
     return masked, applied
 

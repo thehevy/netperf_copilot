@@ -8,7 +8,7 @@
 <!-- METADATA_HEADER_END -->
 
 
-High-speed 200G–800G qualification requires strict pre-test configuration hygiene and zero-tolerance post-test
+High-speed 200GbE–800GbE qualification requires strict pre-test configuration hygiene and zero-tolerance post-test
 kernel/hardware fault verification.
 
 ---
@@ -34,15 +34,15 @@ driver anti-affinity rules (`AA-001` through `AA-024` ):
 | **`AA-012`** | `FAIL` | `irqbalance` vs `manual_irq_pinning`<br>**Description & Remediation**: Running `irqbalance` overwrites manual SMP IRQ affinity masks mid-test. Stop `irqbalance`. |
 | **`AA-013`** | `WARN` | `numa_balancing` vs `pinned_netperf`<br>**Description & Remediation**: Kernel automatic NUMA balancing migrates memory pages during pinned runs (`sysctl -w kernel.numa_balancing=0`). |
 | **`AA-014`** | `WARN` | `busy_poll` vs `high_stream_ecore`<br>**Description & Remediation**: `busy_poll > 0` on E-core 32–64 stream tests starves softirq. Set `busy_poll=0` for bulk throughput. |
-| **`AA-015`** | `FAIL` | `tx_ring_256` vs `200g_line_rate`<br>**Description & Remediation**: Default `ice` TX ring (`256`) causes `tx_restart_queue` stalls at 100G/200G. Increase TX ring `>= 512`. |
+| **`AA-015`** | `FAIL` | `tx_ring_256` vs `200g_line_rate`<br>**Description & Remediation**: Default `ice` TX ring (`256`) causes `tx_restart_queue` stalls at 100GbE/200GbE. Increase TX ring `>= 512`. |
 | **`AA-016`** | `FAIL` | `p0_irq_cross_numa` vs `local_numa_affinity`<br>**Description & Remediation**: Queue 0 / Vector 0 IRQ pinned to a remote NUMA node degrades 1–8 stream throughput by 30–55%. |
 | **`AA-017`** | `FAIL` | `pcie_bw_bottleneck` vs `line_rate_target`<br>**Description & Remediation**: PCIe effective BW (`Speed * Width * 128/130`) is below NIC link speed. Check riser/slot bifurcation. |
 | **`AA-018`** | `FAIL` | `powersave_governor` vs `high_speed_netperf`<br>**Description & Remediation**: CPU scaling governor `powersave`/`ondemand` causes P-state ramp lag (`cpupower frequency-set -g performance`). |
-| **`AA-019`** | `WARN` | `gro_off` vs `200g_tcp_rx`<br>**Description & Remediation**: Disabling GRO on 100G/200G TCP RX limits single-core RX throughput (`ethtool -K <if> gro on`). |
-| **`AA-020`** | `WARN` | `tso_off` vs `200g_tcp_tx`<br>**Description & Remediation**: Disabling TSO on 100G/200G TCP TX increases CPU service demand by 3–5x (`ethtool -K <if> tso on`). |
+| **`AA-019`** | `WARN` | `gro_off` vs `200g_tcp_rx`<br>**Description & Remediation**: Disabling GRO on 100GbE/200GbE TCP RX limits single-core RX throughput (`ethtool -K <if> gro on`). |
+| **`AA-020`** | `WARN` | `tso_off` vs `200g_tcp_tx`<br>**Description & Remediation**: Disabling TSO on 100GbE/200GbE TCP TX increases CPU service demand by 3–5x (`ethtool -K <if> tso on`). |
 | **`AA-021`** | `WARN` | `ecore_smt_assumption` vs `ecore_srf_topology`<br>**Description & Remediation**: Assuming SMT siblings on E-core (shared-L2 E-core) misaligns L2 4-core modules. Use `spread_l2`. |
 | **`AA-022`** | `WARN` | `shared_netserver_lock` vs `high_stream_count`<br>**Description & Remediation**: Using a single `netserver` daemon on port 12865 for `>= 16` streams serializes control accepts. Use `netserver-manager`. |
-| **`AA-023`** | `WARN` | `small_rmem_wmem` vs `high_bdp_200g`<br>**Description & Remediation**: Default `rmem_max`/`wmem_max` (`212992`) throttles TCP window scaling at 100G–800G. Set to `2147483647`. |
+| **`AA-023`** | `WARN` | `small_rmem_wmem` vs `high_bdp_200g`<br>**Description & Remediation**: Default `rmem_max`/`wmem_max` (`212992`) throttles TCP window scaling at 100GbE–800GbE. Set to `2147483647`. |
 | **`AA-024`** | `INFO` | `tx_sched_9layer` vs `low_latency_200g`<br>**Description & Remediation**: Default 9-layer `ice` TX scheduler adds burst latency compared to 5-layer `devlink` `tx_scheduling_layers=5`. |
 
 ---

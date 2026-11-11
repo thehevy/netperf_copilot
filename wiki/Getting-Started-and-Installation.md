@@ -23,7 +23,7 @@ output presets, and setting up the Python CLI tool suite (`dev/tools/`).
 - **Python**: Python 3.8+ (all tools in `dev/tools/` work out-of-the-box with the Python standard library; `pyyaml` ,
   `jinja2` , `psutil` , and `paramiko` are optional enhancements)
 
-### Recommended Linux Packages for 100G–800G Testing
+### Recommended Linux Packages for 100GbE–800GbE Testing
 ```bash
 # RHEL / CentOS / Rocky / Fedora
 sudo dnf install -y gcc make autoconf automake numactl ethtool iproute procps-ng python3

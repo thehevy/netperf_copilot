@@ -28,12 +28,12 @@ legacy `netperf` hits severe architectural ceilings:
 
 - Single-port `netserver` control-plane and accept-queue serialization limits multi-stream scaling.
 - Hardcoded `MAXCPUS=256` and `MAXMESSAGESIZE=1 MB` limits truncate CPU telemetry and cap DMA burst efficiency.
-- Legacy `ETHTOOL_GSET` 16-bit speed fields overflow above 65 Gbps, leaving 100G–800G link speeds and PCIe Gen5/Gen6
+- Legacy `ETHTOOL_GSET` 16-bit speed fields overflow above 65 Gbps, leaving 100GbE–800GbE link speeds and PCIe Gen5/Gen6
   lane downgrades invisible.
 - Microarchitectural pitfalls—such as packing threads onto shared 4-core L2 cache modules on E-core processors or
   colliding application threads with NIC softirq cores—introduce **15%–40% run-to-run throughput variance**.
 
-The **Netperf Modernization Project (v3.0)** transforms `netperf` into a **silicon-aware, zero-copy, 100G–800G
+The **Netperf Modernization Project (v3.0)** transforms `netperf` into a **silicon-aware, zero-copy, 100GbE–800GbE
 qualification and automation platform** while maintaining **100% backward compatibility** with every legacy `netperf`
 command and script.
 
@@ -48,7 +48,7 @@ flowchart LR
 
     subgraph Modern["Modernized Netperf v3.0"]
         M1["Per-Core netserver Pool\nPorts 18600..18663 (Lockless)"]
-        M2["4 MB Buffers + MSG_ZEROCOPY (-Z)\nPCIe Gen5/Gen6 & 800G Ethtool"]
+        M2["4 MB Buffers + MSG_ZEROCOPY (-Z)\nPCIe Gen5/Gen6 & 800GbE Ethtool"]
         M3["2048-Core /proc/stat Engine\nactive_cpu_util & peak_cpu_id"]
         M4["24-Rule Pre-Flight, BKM Tuner,\nJSON/CSV/Presets & kmsg Fault Gate"]
     end
@@ -67,12 +67,12 @@ flowchart LR
   JSON (`-- -J`), CSV (`-- -o`), and preset (`-- -k <preset>`) output.
 - **4 MB Buffers & Zero-Copy Transmit (`-Z`)**: Raised `MAXMESSAGESIZE` from `1 MB` to `4 MB` (`4,194,304` bytes) and
   added native Linux `SO_ZEROCOPY` / `MSG_ZEROCOPY` (`-Z`) support with non-blocking `MSG_ERRQUEUE` completion draining
-  (`drain_zerocopy_completions()`) to prevent socket buffer exhaustion (`ENOBUFS`) at 200G–800G line rates.
+  (`drain_zerocopy_completions()`) to prevent socket buffer exhaustion (`ENOBUFS`) at 200GbE–800GbE line rates.
 - **2048-Core Telemetry (`src/netcpu_procstat.c`)**: Raised `MAXCPUS` from `256` to `2048` and added
   **`active_cpu_util`** (mean utilization across cores with `>5%` load) and **`peak_cpu_id`** (hottest logical core ID).
   On a 288-core server where 16 cores are 100% saturated, legacy system-wide CPU reports `5.5%` (masking the
   bottleneck), whereas `active_cpu_util` accurately reports `100.0%` .
-- **PCIe Gen5/Gen6 & 100G–800G Link Introspection (`src/netslot_linux.c`, `src/netdrv_ethtool.c` )**: Added Linux
+- **PCIe Gen5/Gen6 & 100GbE–800GbE Link Introspection (`src/netslot_linux.c`, `src/netdrv_ethtool.c` )**: Added Linux
   `sysfs` PCIe link speed/width inspection (`current_link_speed`, `current_link_width` , `numa_node` ) and upgraded link
   speed queries from legacy 16-bit `ETHTOOL_GSET` to 32-bit `ETHTOOL_GLINKSETTINGS` (`100000`–`800000` Mbps).
 
@@ -107,7 +107,7 @@ flowchart LR
 
 - **15 Built-In YAML Workload Profiles (`netperf-profile`)**: Includes 10 general profiles (`baseline`, `throughput` ,
   `latency` , `jitter` , `stress` , `datacenter` , `cloud` , `lossy` , `wireless` , `mixed-workload` ) and 5 high-speed
-  200G–600G/OCP profiles (`200g-ecore`, `200g-pcore` , `3x200g-multiport` ,
+  200GbE–600GbE/OCP profiles (`200g-ecore`, `200g-pcore` , `3x200g-multiport` ,
   `200g-mtu1500-smallpkt` , `ocp-8x25g-lag-qos` ).
 - **4 Systematic Qualification Suites (`netperf-catalog`)**: Automates `flow-scaling` (1→64 streams), `core-locality`
   (same-core vs. same-L2 vs. local-NUMA vs. cross-NUMA), `ring-coalesce-matrix` , and `lag-failover-qos` , emitting
@@ -120,16 +120,16 @@ flowchart LR
 
 ## 3. Quantified Engineering Impact: Before vs. After
 
-| Capability / Metric | Legacy `netperf` 2.7.0 | Modernized `netperf` v3.0 | Impact / Improvement |
-| --- | --- | --- | --- |
-| **Max Socket Message Size** | `1 MB` (`1,048,576` B) | **`4 MB` (`4,194,304` B) + `-Z` (`MSG_ZEROCOPY`)** | **4x** larger DMA bursts; eliminates user-space copy tax |
-| **Max Monitored CPU Cores** | `256` cores (global average only) | **`2048` cores (`active_cpu_util` + `peak_cpu_id`)** | **8x** core scaling; pinpoints single-core saturation |
-| **Ethtool Link Speed Ceiling** | `65,535 Mbps` (`ETHTOOL_GSET` 16-bit) | **`800,000 Mbps` (`ETHTOOL_GLINKSETTINGS` 32-bit)** | Full 100G / 200G / 400G / 800G visibility |
-| **200GbE E-Core 16-Stream TX** | `~128.4 Gbps` (`CV = 14.2%`, L2 thrashing) | **`192.6 Gbps` (`CV = 0.8%`, `spread_l2` + `tx_ring=512`)** | **+50% throughput**, **17x lower run-to-run variance** |
-| **Server Daemon Architecture** | Single port `12865` shared listener | **Per-core lockless pool (`18600..18663`)** | Eliminates accept-queue lock & IRQ/app core collision |
-| **Pre-Test Misconfiguration Detection** | None (silent degradation) | **24 automated rules (`AA-001`–`AA-024`) + warmup gate** | Catches PCIe/NUMA/XPS/GRO misconfigurations pre-run |
-| **Hardware Fault Detection** | Manual post-mortem `dmesg` inspection | **Automated `U1`–`U13` `dmesg` & `ethtool -S` gate** | Zero silent `DMAR` / `MDD` / TX-timeout false passes |
-| **Legacy Script Compatibility** | Baseline | **100% Compatible (`netperf -H host` unchanged)** | Zero migration cost for existing test suites |
+| Capability / Metric | Legacy `netperf` 2.7.0 | Modernized `netperf` v3.0 / Impact / Improvement |
+| --- | --- | --- |
+| **Max Socket Message Size** | `1 MB` (`1,048,576` B) | **Modernized `netperf` v3.0**: **`4 MB` (`4,194,304` B) + `-Z` (`MSG_ZEROCOPY`)**<br>**Impact / Improvement**: **4x** larger DMA bursts; eliminates user-space copy tax |
+| **Max Monitored CPU Cores** | `256` cores (global average only) | **Modernized `netperf` v3.0**: **`2048` cores (`active_cpu_util` + `peak_cpu_id`)**<br>**Impact / Improvement**: **8x** core scaling; pinpoints single-core saturation |
+| **Ethtool Link Speed Ceiling** | `65,535 Mbps` (`ETHTOOL_GSET` 16-bit) | **Modernized `netperf` v3.0**: **`800,000 Mbps` (`ETHTOOL_GLINKSETTINGS` 32-bit)**<br>**Impact / Improvement**: Full 100GbE / 200GbE / 400GbE / 800GbE visibility |
+| **200GbE E-Core 16-Stream TX** | `~128.4 Gbps` (`CV = 14.2%`, L2 thrashing) | **Modernized `netperf` v3.0**: **`192.6 Gbps` (`CV = 0.8%`, `spread_l2` + `tx_ring=512`)**<br>**Impact / Improvement**: **+50% throughput**, **17x lower run-to-run variance** |
+| **Server Daemon Architecture** | Single port `12865` shared listener | **Modernized `netperf` v3.0**: **Per-core lockless pool (`18600..18663`)**<br>**Impact / Improvement**: Eliminates accept-queue lock & IRQ/app core collision |
+| **Pre-Test Misconfiguration Detection** | None (silent degradation) | **Modernized `netperf` v3.0**: **24 automated rules (`AA-001`–`AA-024`) + warmup gate**<br>**Impact / Improvement**: Catches PCIe/NUMA/XPS/GRO misconfigurations pre-run |
+| **Hardware Fault Detection** | Manual post-mortem `dmesg` inspection | **Modernized `netperf` v3.0**: **Automated `U1`–`U13` `dmesg` & `ethtool -S` gate**<br>**Impact / Improvement**: Zero silent `DMAR` / `MDD` / TX-timeout false passes |
+| **Legacy Script Compatibility** | Baseline | **Modernized `netperf` v3.0**: **100% Compatible (`netperf -H host` unchanged)**<br>**Impact / Improvement**: Zero migration cost for existing test suites |
 
 ---
 
@@ -139,7 +139,7 @@ flowchart LR
 | --- | --- | --- |
 | **Core Binaries** | [`src/netperf`](../../src/netperf.c), [`src/netserver`](../../src/netserver.c), [`src/nettest_omni.c`](../../src/nettest_omni.c) | Modernized C benchmark engine with `-M`, `-Z`, 4 MB buffers, 2048-core telemetry, and JSON/CSV/Preset output |
 | **Production CLI Tools (11)** | [`dev/tools/`](../../dev/tools/) | `netperf-multi`, `netserver-manager`, `netperf-preflight`, `netperf-tuner`, `netperf-catalog`, `netperf-profile`, `netperf-orchestrate`, `netperf-monitor`, `netperf_stats.py`, `netperf-aggregate`, `netperf-template` |
-| **Workload Profiles (15)** | [`dev/profiles/*.yaml`](../../dev/profiles/) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
+| **Workload Profiles (15)** | [`dev/profiles/*.yaml`](../../dev/profiles/) | 10 general network profiles + 5 high-speed 200GbE–600GbE/OCP qualification profiles |
 | **Output Presets (6)** | [`*.out`](../../dev/catalog/output-presets/) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
 | **Verification Suite** | [`test_modernization.py`](../../dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
 | **Project Wiki (11 Guides)** | [`wiki/`](../../wiki/Home.md) | Complete user, architect, and qualification operator documentation |

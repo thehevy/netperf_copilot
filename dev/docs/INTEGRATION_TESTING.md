@@ -201,14 +201,14 @@ All Phase 3 tools are fully functional and production-ready.
 
 ## Tool Validation Matrix
 
-| Tool | Basic | Advanced | Integration | Status |
-| --- | --- | --- | --- | --- |
-| netperf-multi | ✅ | ✅ | ✅ | Production Ready |
-| netperf_stats.py | ✅ | ✅ | ✅ | Production Ready |
-| netperf-profile | ✅ | ✅ | ✅ | Production Ready |
-| netperf-orchestrate | ✅ | ⚠️ | N/A | SSH Testing Pending |
-| netperf-monitor | ✅ | N/A | N/A | Live Test Pending |
-| netperf-template | ✅ | ✅ | ✅ | Production Ready |
+| Tool | Basic | Advanced / Integration / Status |
+| --- | --- | --- |
+| netperf-multi | ✅ | **Advanced**: ✅<br>**Integration**: ✅<br>**Status**: Production Ready |
+| netperf_stats.py | ✅ | **Advanced**: ✅<br>**Integration**: ✅<br>**Status**: Production Ready |
+| netperf-profile | ✅ | **Advanced**: ✅<br>**Integration**: ✅<br>**Status**: Production Ready |
+| netperf-orchestrate | ✅ | **Advanced**: ⚠️<br>**Status**: SSH Testing Pending |
+| netperf-monitor | ✅ | **Status**: Live Test Pending |
+| netperf-template | ✅ | **Advanced**: ✅<br>**Integration**: ✅<br>**Status**: Production Ready |
 
 **Legend**:
 

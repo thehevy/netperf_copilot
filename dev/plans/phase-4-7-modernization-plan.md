@@ -20,7 +20,7 @@ Earlier work on `netperf_copilot` completed **Phases 1–3** of the original 7-p
 | **C Engine (`src/`)** | Raised `MAXCPUS` to `2048`; changed default OMNI output selector to `NETPERF_OUTPUT_KEYVAL`; added global `-M` shortcut for `OMNI` mode while preserving `TCP_STREAM` backwards compatibility; implemented `-- -J [file]` JSON output (`print_omni_json`) and RFC 4180 CSV escaping (`print_omni_csv`). | [`src/netlib.h`](../../src/netlib.h), [`src/netlib.c`](../../src/netlib.c), [`src/netsh.c`](../../src/netsh.c), [`src/nettest_omni.c`](../../src/nettest_omni.c) |
 | **Python Tooling** | Built multi-instance launcher (`netperf-multi`), statistical analyzer (`netperf_stats.py`), YAML profile runner (`netperf-profile`), SSH multi-host orchestrator (`netperf-orchestrate`), real-time TUI (`netperf-monitor`), template generator (`netperf-template`), and aggregator (`netperf-aggregate`). | [`dev/tools/netperf-multi`](../tools/netperf-multi), [`netperf-profile`](../tools/netperf-profile), [`netperf-orchestrate`](../tools/netperf-orchestrate) |
 
-### 1.2 Architectural Gaps Identified for 100G–800G NICs & Modern Multi-Core Platforms
+### 1.2 Architectural Gaps Identified for 100GbE–800GbE NICs & Modern Multi-Core Platforms
 
 Evaluating the Phase 1–3 baseline against modern 200GbE–800GbE adapters and high-core-count P-core/E-core processors
 revealed six major gaps:
@@ -42,7 +42,7 @@ revealed six major gaps:
      host report `<3%` CPU utilization) without exposing active-core utilization (`active_cpu_util`) or peak core ID
      (`peak_cpu_id`).
    - `netslot_linux.c` , `netsys_linux.c` , and `netdrv_ethtool.c` lacked sysfs PCIe Gen5/Gen6 speed/width introspection
-     and 32-bit `ETHTOOL_GLINKSETTINGS` support for 100G–800G links.
+     and 32-bit `ETHTOOL_GLINKSETTINGS` support for 100GbE–800GbE links.
 
 ---
 
@@ -59,7 +59,7 @@ flowchart TD
     subgraph P5["Step 2: Core C Engine Modernization (src/)"]
         B1["netcpu_procstat.c: 2048-Core Active CPU% + Peak Core ID + SoftIRQ Accounting"]
         B2["netslot_linux.c & netsys_linux.c: Sysfs PCIe Gen5/Gen6 BW, NUMA & DMI/Cpufreq"]
-        B3["netdrv_ethtool.c: 32-Bit ETHTOOL_GLINKSETTINGS (100G-800G), Rings & Channels"]
+        B3["netdrv_ethtool.c: 32-Bit ETHTOOL_GLINKSETTINGS (100GbE-800GbE), Rings & Channels"]
         B4["netlib.h / nettest_omni.c: 4MB MAXMESSAGESIZE & MSG_ZEROCOPY (-Z) with Error Queue Drain"]
     end
 
@@ -74,7 +74,7 @@ flowchart TD
         D2["netperf-tuner: Architecture-Aware BKM Applier (ecore, pcore, mtu1500) & A/B Sweep"]
     end
 
-    subgraph P8["Step 5: 200G-800G Profiles, Qualification Catalog & Fault Reporting"]
+    subgraph P8["Step 5: 200GbE-800GbE Profiles, Qualification Catalog & Fault Reporting"]
         E1["New Profiles: 200g-ecore, 200g-pcore, 3x200g-multiport, mtu1500, ocp-8x25g"]
         E2["netperf-catalog: Flow Scaling, Core Locality, Ring/Coalesce Matrix & LAG Failover Suites"]
         E3["netperf_report.py: result.json, U1-U13 dmesg/ethtool -S Fault Gate & dashboard.md"]
@@ -118,7 +118,7 @@ flowchart TD
 
 ### Step 5: High-Speed Profiles, Qualification Catalog (`netperf-catalog`) & Fault Gate (`netperf_report.py`)
 
-- Add 5 high-speed 200G–600G and OCP breakout YAML profiles under `dev/profiles/`.
+- Add 5 high-speed 200GbE–600GbE and OCP breakout YAML profiles under `dev/profiles/`.
 - Implement `netperf-catalog` with 4 automated qualification suites (`flow-scaling`, `core-locality` ,
   `ring-coalesce-matrix` , `lag-failover-qos` ).
 - Implement `netperf_report.py` with `U1` –`U13` `dmesg` and `ethtool -S` fault delta scanning and automated

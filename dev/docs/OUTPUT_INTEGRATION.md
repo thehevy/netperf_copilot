@@ -17,15 +17,15 @@ Guide for integrating netperf with monitoring, logging, and analysis systems.
 
 ## Quick Integration Matrix
 
-| System | Format | Method | Difficulty |
-| --- | --- | --- | --- |
-| Prometheus | JSON/Template | Push Gateway / Textfile Collector | Easy |
-| Grafana | JSON | Via Prometheus or JSON API | Easy |
-| ELK Stack | JSON | Filebeat → Logstash → Elasticsearch | Medium |
-| Splunk | KEYVAL/JSON | Universal Forwarder | Easy |
-| InfluxDB | JSON | Telegraf exec plugin | Easy |
-| TimescaleDB | CSV/JSON | COPY command or pg_insert | Easy |
-| Custom Scripts | Any | Direct parse | Easy |
+| System | Format | Method / Difficulty |
+| --- | --- | --- |
+| Prometheus | JSON/Template | **Method**: Push Gateway / Textfile Collector<br>**Difficulty**: Easy |
+| Grafana | JSON | **Method**: Via Prometheus or JSON API<br>**Difficulty**: Easy |
+| ELK Stack | JSON | **Method**: Filebeat → Logstash → Elasticsearch<br>**Difficulty**: Medium |
+| Splunk | KEYVAL/JSON | **Method**: Universal Forwarder<br>**Difficulty**: Easy |
+| InfluxDB | JSON | **Method**: Telegraf exec plugin<br>**Difficulty**: Easy |
+| TimescaleDB | CSV/JSON | **Method**: COPY command or pg_insert<br>**Difficulty**: Easy |
+| Custom Scripts | Any | **Method**: Direct parse<br>**Difficulty**: Easy |
 
 ---
 

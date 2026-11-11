@@ -22,7 +22,7 @@ Run any profile with:
 ./dev/tools/netperf-profile -p <profile_name> -H <target_ip> [--dry-run]
 ```
 
-### High-Speed 200G–600G & OCP Qualification Profiles (v2.0)
+### High-Speed 200GbE–600GbE & OCP Qualification Profiles (v2.0)
 
 | Profile Name | Target Scenario | Streams & Direction / Key Settings |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ Run any profile with:
 | **`baseline`** | `baseline` | Quick 30s baseline: 1-flow TCP Send, TCP Recv, TCP RR (64B), and UDP Send (1472B) |
 | **`throughput`** | `throughput` | 4-stream TCP Upload/Download (256KB socket, 64KB message) and 2-stream UDP |
 | **`latency`** | `latency` | 1B, 64B, and 1KB TCP/UDP request-response latency characterization |
-| **`datacenter`** | `datacenter` | 8-stream 10G/25G/100G line rate, East-West rack traffic, 4KB DB RR, and 1MB storage transfer |
+| **`datacenter`** | `datacenter` | 8-stream 10GbE/25GbE/100GbE line rate, East-West rack traffic, 4KB DB RR, and 1MB storage transfer |
 | **`stress`** | `stress` | 300s sustained load: 32-stream TCP, 16-stream connection storm (`-c`), and 16-stream UDP flood |
 | **`cloud`** | `cloud` | Virtualized/cloud VM network validation across small and medium payload sizes |
 | **`jitter`** | `jitter` | Latency variation and inter-packet arrival stability benchmarking |

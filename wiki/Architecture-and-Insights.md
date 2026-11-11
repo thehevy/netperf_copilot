@@ -50,7 +50,7 @@ flowchart LR
 | Guide Category | Wiki Page Link | Core Coverage |
 | --- | --- | --- |
 | **Executive & White Paper** | [Executive Summary](https://github.com/thehevy/netperf_copilot/wiki/Executive-Summary)<br>[Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper) | Strategic overview, mathematical BDP/cache models, and `4` empirical `200GbE`–`600GbE` case studies. |
-| **Engine & Platform Tuning** | [Core Engine & OMNI Guide](https://github.com/thehevy/netperf_copilot/wiki/Core-Engine-and-OMNI-Guide)<br>[200G–800G & Xeon 6 Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200G-800G-and-Xeon6-Guide) | Legacy vs. `-M` OMNI flags, `-J` JSON schema, output presets, P-Core vs. E-Core pinning, and BKM tuning. |
+| **Engine & Platform Tuning** | [Core Engine & OMNI Guide](https://github.com/thehevy/netperf_copilot/wiki/Core-Engine-and-OMNI-Guide)<br>[200GbE–800GbE & Xeon 6 Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide) | Legacy vs. `-M` OMNI flags, `-J` JSON schema, output presets, P-Core vs. E-Core pinning, and BKM tuning. |
 | **CLI, Profiles & Fault Gates** | [CLI Tools Reference](https://github.com/thehevy/netperf_copilot/wiki/CLI-Tools-Reference)<br>[Profiles & Catalog](https://github.com/thehevy/netperf_copilot/wiki/Test-Profiles-and-Qualification-Catalog)<br>[Pre-Flight & Fault Gate](https://github.com/thehevy/netperf_copilot/wiki/Pre-Flight-Checks-and-Fault-Monitoring) | All `11` CLI tools, `15` YAML workload profiles, `4` catalog suites, `AA-001`–`AA-024`, and `U1`–`U13` `dmesg` gates. |
 
 ---
