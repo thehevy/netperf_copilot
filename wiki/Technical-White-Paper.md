@@ -22,7 +22,7 @@ Hardware Fault Gating, and Empirical Qualification Results
 Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from `10GbE` to
 **`100GbE`, `200GbE`, `400GbE`, and `800GbE`** across **Intel® Ethernet 800 Series** (**Intel® Ethernet Controller
 200GbE**
-and **200GbE Network Adapter**) PCIe Gen5 and Gen6 interconnects—while server processor core counts
+and **200GbE Network Adapter**) PCIe 5.0 and Gen6 interconnects—while server processor core counts
 have expanded from 8–32 cores to **144–288+ physical cores** across **Intel® Xeon® 6 Processor** Performance-core
 (P-Core SMT) and Efficient-core (E-Core shared-L2 module) microarchitectures. However, the foundational open-source
 network benchmarking tool **`netperf` (v2.7.0)** remained frozen in an architecture designed for single-port listeners,
@@ -37,9 +37,10 @@ variance** that masks genuine driver or hardware regressions.
 This white paper presents the architecture, mathematical foundations, implementation details, and empirical results of
 the **Netperf Modernization Project (v3.0)**. We detail how `netperf` was re-engineered across seven phases—preserving
 **100% backward compatibility** for legacy scripts while introducing a zero-copy 4 MB C data path (`-Z`), 2048-core
-active CPU telemetry, 32-bit `ETHTOOL_GLINKSETTINGS` & PCIe Gen5/Gen6 introspection, a lockless per-core `netserver`
+active CPU telemetry, 32-bit `ETHTOOL_GLINKSETTINGS` & PCIe 5.0/6.0 introspection, a lockless per-core `netserver`
 daemon pool, microarchitecture-aware L2/SMT core striding, a 24-rule pre-flight sanity gate, automated Best Known Method
-(BKM) tuning, and a zero-tolerance kernel/NIC fault monitor. Empirical case studies demonstrate how these enhancements
+(BKM) tuning, and a zero-tolerance kernel/network adapter fault monitor. Empirical case studies demonstrate how these
+enhancements
 raise 200GbE E-core throughput from **128.4 Gbps ($\text{CV} = 14.2\%$) to 192.6 Gbps ($\text{CV} = 0.8\%$)** and scale
 cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 
@@ -51,7 +52,7 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 2. [Anatomy of Legacy Bottlenecks in Netperf 2.7.0](#2-anatomy-of-legacy-bottlenecks-in-netperf-270)
 3. [Architectural Modernization of the Core C Engine (`src/`)](#3-architectural-modernization-of-the-core-c-engine-src)
 4. [Silicon-Aware Topology Engine & Per-Core Daemon Architecture](#4-silicon-aware-topology-engine--per-core-daemon-architecture)
-5. [High-Speed Multi-Stream, Multi-NIC & QoS Orchestration](#5-high-speed-multi-stream-multi-nic--qos-orchestration)
+5. [High-Speed Multi-Stream, Multi-network adapter & QoS Orchestration](#5-high-speed-multi-stream-multi-nic--qos-orchestration)
 6. [Pre-Flight Auditing, Automated BKM Tuning & Zero-Tolerance Fault Gating](#6-pre-flight-auditing-automated-bkm-tuning--zero-tolerance-fault-gating)
 7. [Empirical Results, Case Studies & End-to-End Workflows](#7-empirical-results-case-studies--end-to-end-workflows)
 8. [Conclusion & Future Roadmap](#8-conclusion--future-roadmap)
@@ -63,7 +64,8 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 ### 1.1 The Widening Gap Between Silicon Evolution and Benchmark Tooling
 Over the past decade, datacenter networking and server compute have undergone three fundamental structural shifts:
 
-1. **Line-Rate Compression of the Inter-Packet Budget**: At 10GbE with standard 1500-byte Ethernet frames, a NIC
+1. **Line-Rate Compression of the Inter-Packet Budget**: At 10GbE with standard 1500-byte Ethernet frames, a network
+   adapter
    processes at most 812,740 packets per second ($\sim 1.23\,\mu\text{s}$ per frame). At **200GbE**, line rate demands
    **16.25 million packets per second** ($\sim 61.5\,\text{ns}$ per frame) at MTU 1500, or **2.71 million frames per
    second** ($\sim 369\,\text{ns}$ per frame) with 9000-byte jumbo frames. At **400GbE and 800GbE**, the per-packet
@@ -76,14 +78,16 @@ Over the past decade, datacenter networking and server compute have undergone th
    - **High-Density Efficient-Core (E-Core) Clustered Architectures**: Up to 144–288 non-SMT physical cores per socket
      organized into **4-core modules sharing a unified L2 cache** (e.g., 4 MB shared L2 per 4 cores).
 3. **CI/CD & AI-Driven Qualification Pipelines**: Modern silicon and driver validation teams execute thousands of
-   automated test matrices across ring buffer sizes, interrupt coalescing timers, QoS traffic classes, and NIC breakout
+   automated test matrices across ring buffer sizes, interrupt coalescing timers, QoS traffic classes, and network
+   adapter breakout
    configurations. Unstructured ASCII tables that require fragile `awk`/`sed` regexes cannot feed automated statistical
    regression gates or AI root-cause engines.
 
 ### 1.2 Why Unmodified `netperf` Produces Misleading Results at 200GbE+
 When validation teams run legacy `netperf` loops against a 200GbE or 400GbE adapter, they frequently observe throughput
 plateauing between **110 Gbps and 140 Gbps** with erratic **15%–40% run-to-run swings**. Engineers often misdiagnose
-this behavior as a NIC firmware bottleneck or Linux TCP stack regression, when in reality **the benchmark harness itself
+this behavior as a network adapter firmware bottleneck or Linux TCP stack regression, when in reality **the benchmark
+harness itself
 is the bottleneck**.
 
 The **Netperf Modernization Project (v3.0)** was initiated to systematically identify and eliminate every software,
@@ -117,10 +121,11 @@ In traditional multi-stream `netperf` scripts, a single `netserver` daemon liste
 2. **`fork()` / `clone()` CPU Inheritance**: When the parent `netserver` forks a child process to service a data
    connection, the child inherits the parent's CPU affinity mask until late in the control negotiation—bunching initial
    TCP socket allocations and page faults onto a single core.
-3. **NIC Softirq (`ksoftirqd`) vs. Application Thread Collision**: Without topology-aware core partitioning,
+3. **network adapter Softirq (`ksoftirqd`) vs. Application Thread Collision**: Without topology-aware core partitioning,
    `netperf -T` or OS scheduler placement frequently schedules `netperf`/`netserver` user-space threads onto the exact
-   same CPU cores (`0..15`) servicing the NIC's hardware RSS/MSIX interrupt queues. When a single core must execute both
-   the kernel `NET_RX_SOFTIRQ` NAPI poll loop and user-space `recv()` system calls at 200 Gbps, L1 instruction/data
+   same CPU cores (`0..15`) servicing the network adapter's hardware RSS/MSIX interrupt queues. When a single core must
+   execute both
+   the kernel `NET_RX_SOFTIRQ` NAPI poll loop and user-space `recv()` system calls at 200Gbps, L1 instruction/data
    cache thrashing and context-switch overhead collapse per-stream throughput by **30%–50%**.
 
 ### 2.2 Data-Path Copy Tax and the 1 MB Buffer Ceiling
@@ -133,7 +138,8 @@ write memory traffic, this imposes a minimum DRAM bandwidth tax of:
 
 $$\text{BW}_{\text{DRAM, copy}} = 2 \times \frac{R}{8} = 2 \times 25\text{ GB/s} = 50\text{ GB/s}$$
 
-before accounting for NIC DMA reads over PCIe or receive-side copies. On high-density E-core processors where per-core
+before accounting for network adapter DMA reads over PCIe or receive-side copies. On high-density E-core processors
+where per-core
 memory bandwidth and L2 cache capacity are tightly budgeted, copy-mode socket I/O saturates the memory subsystem well
 before the 200GbE or 400GbE wire is full.
 
@@ -149,7 +155,8 @@ and the remaining 272 cores are idle ($u_i = 0\%$):
 
 $$U_{\text{global}} = \frac{16 \times 100\%}{288} = 5.56\%$$
 
-A benchmark engineer looking at `LOCAL_CPU_UTIL=5.56` concludes that the CPU is 94% idle and blames the NIC or TCP
+A benchmark engineer looking at `LOCAL_CPU_UTIL=5.56` concludes that the CPU is 94% idle and blames the network adapter
+or TCP
 congestion control for failing to scale, completely unaware that the 16 active cores are 100% CPU-bound!
 
 ### 2.4 Legacy 16-Bit Ethtool and `sysfs` Buffer Limits
@@ -226,11 +233,12 @@ In [`src/netlib.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/n
    ```
 2. **Page-Pinning Data Path (`MSG_ZEROCOPY`)**: The inner transmit loop passes `MSG_ZEROCOPY` to `send()` / `sendto()`,
    instructing the kernel to pin user-space pages directly into the socket's scatter-gather list
-   (`skb_shinfo(skb)->frags`) for NIC DMA without CPU copy.
+   (`skb_shinfo(skb)->frags`) for network adapter DMA without CPU copy.
 3. **Non-Blocking Error-Queue Completion Draining (`drain_zerocopy_completions()`)**: Every `MSG_ZEROCOPY` call queues a
-   completion notification (`SO_EE_ORIGIN_ZEROCOPY`) onto the socket's error queue (`MSG_ERRQUEUE`) once the NIC DMA
+   completion notification (`SO_EE_ORIGIN_ZEROCOPY`) onto the socket's error queue (`MSG_ERRQUEUE`) once the network
+   adapter DMA
    completes. If an application never drains `MSG_ERRQUEUE`, the socket's option memory accounting (`sk_omem_alloc`)
-   reaches `sysctl net.core.optmem_max` within milliseconds at 200 Gbps, causing subsequent `send()` calls to fail with
+   reaches `sysctl net.core.optmem_max` within milliseconds at 200Gbps, causing subsequent `send()` calls to fail with
    `ENOBUFS`. We implemented `drain_zerocopy_completions(SOCKET data_socket)` in
    [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), which drains
    `MSG_ERRQUEUE | MSG_DONTWAIT` periodically and
@@ -251,13 +259,13 @@ Both metrics are automatically emitted in OMNI JSON metadata (`"local_active_cpu
 `REMOTE_CPU_ACTIVE_UTIL`, `REMOTE_CPU_ACTIVE_COUNT`), enabling instant identification of single-core softirq or
 application bottlenecks on 288–576 thread servers.
 
-### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
+### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe 5.0/6.0 `sysfs` & Hardened JSON Serialization
 
 - **100GbE–800GbE Link Speed Detection
   ([`src/netdrv_ethtool.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netdrv_ethtool.c))**: Queries
   `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to
   `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
-- **Linux `sysfs` PCIe Gen5/Gen6 & DMI Inspection
+- **Linux `sysfs` PCIe 5.0/6.0 & DMI Inspection
   ([`src/netslot_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netslot_linux.c),
   [`src/netsys_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netsys_linux.c))**: Reads
   `/sys/class/net/<iface>/device/current_link_speed`
@@ -274,7 +282,8 @@ application bottlenecks on 288–576 thread servers.
 ## 4. Silicon-Aware Topology Engine & Per-Core Daemon Architecture
 
 Hardware-level C optimizations alone are insufficient if the operating system schedules benchmark streams onto
-conflicting cache domains or shared control sockets. Pillar 2 introduces automated CPU/NIC topology discovery
+conflicting cache domains or shared control sockets. Pillar 2 introduces automated CPU/network adapter topology
+discovery
 ([`netperf_topology.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_topology.py)) and a
 lockless per-core daemon pool
 ([`netserver-manager`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netserver-manager)).
@@ -365,17 +374,19 @@ sequenceDiagram
     Pool-->>Multi: Zero accept-lock contention, 1:1 NUMA-local core pinning
 ```
 
-For each non-IRQ physical core $C$ on the NIC's local NUMA node with base port $P_0 = 18600$, `netserver-manager` maps
+For each non-IRQ physical core $C$ on the network adapter's local NUMA node with base port $P_0 = 18600$,
+`netserver-manager` maps
 deterministically to:
 
 $$\text{Port}(C) = P_0 + C$$
 
 Each `netserver` instance handles exactly one stream on its own TCP listen socket and pre-pinned physical CPU
-core—achieving **zero kernel accept-queue lock contention** and **zero collision with NIC hardware interrupts**.
+core—achieving **zero kernel accept-queue lock contention** and **zero collision with network adapter hardware
+interrupts**.
 
 ---
 
-## 5. High-Speed Multi-Stream, Multi-NIC & QoS Orchestration
+## 5. High-Speed Multi-Stream, Multi-network adapter & QoS Orchestration
 
 [`netperf-multi`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-multi) v2.0 serves as the
 parallel execution engine capable of driving up to
@@ -393,12 +404,14 @@ parallel execution engine capable of driving up to
    This guarantees that an outbound `send()` thread never contends with an inbound `recv()` thread on the same CPU core
    or `netserver` port.
 4. **`bx-seq` (Sequential Bidirectional)**: Executes the full-rate `tx` phase first, records metrics, and immediately
-   executes the full-rate `rx` phase. This mode isolates unidirectional NIC DMA and PCIe read/write efficiency from
+   executes the full-rate `rx` phase. This mode isolates unidirectional network adapter DMA and PCIe read/write
+   efficiency from
    full-duplex LLC/PCIe credit contention.
 
-### 5.2 Multi-NIC Breakout, Multi-Subnet Expansion & DSCP QoS
+### 5.2 Multi-network adapter Breakout, Multi-Subnet Expansion & DSCP QoS
 
-- **Multi-NIC & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2` distributes
+- **Multi-network adapter & Multi-Subnet Fan-Out**: Passing `-i ens7np0,ens23np0,ens27np0` and `-H 192.168.10..12.2`
+  distributes
   stream $i$ round-robin across each interface/IP pair, automatically binding each group of streams to the NUMA node of
   its respective PCIe adapter.
 - **Hardware QoS & RoCEv2 Coexistence (`--dscp`)**: Passing `--dscp EF,CS3,AF21,CS0` translates symbolic DiffServ
@@ -409,9 +422,11 @@ parallel execution engine capable of driving up to
 
 ## 6. Pre-Flight Auditing, Automated BKM Tuning & Zero-Tolerance Fault Gating
 
-At 200GbE–800GbE speeds, a single misconfigured kernel sysctl, PCIe slot downgrade, or NIC offload toggle can silently
+At 200GbE–800GbE speeds, a single misconfigured kernel sysctl, PCIe slot downgrade, or network adapter offload toggle
+can silently
 cut
-throughput in half. Worse, a benchmark run that achieves 190 Gbps while triggering an IOMMU `DMAR` fault or NIC TX queue
+throughput in half. Worse, a benchmark run that achieves 190 Gbps while triggering an IOMMU `DMAR` fault or network
+adapter TX queue
 timeout in `dmesg` is a **hard qualification failure** that naive benchmark scripts misreport as a pass.
 
 ```mermaid
@@ -431,12 +446,12 @@ documented hardware/OS anti-affinity rules before any benchmark begins. Key high
 
 | Rule ID | Anti-Affinity Condition | Performance Impact at 200GbE–800GbE / Automated Remediation |
 | --- | --- | --- |
-| **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput<br>**Automated Remediation**: Remove `mqprio` qdisc or unload `irdma` (`netperf-tuner --apply-bkm auto`) |
+| **`AA-001`** | ADQ (`tc-mqprio hw 1`) and RoCEv2 (`rdma_drv`) active simultaneously | Hardware queue conflict breaks RoCEv2 QPs and drops TCP throughput<br>**Automated Remediation**: Remove `mqprio` qdisc or unload `rdma_drv` (`netperf-tuner --apply-bkm auto`) |
 | **`AA-010`** | Both `xps_cpus != 0` and `xps_rxqs != 0` active simultaneously | Conflicting Transmit Packet Steering maps cause erratic TX queue selection and tail drops<br>**Automated Remediation**: Clear `xps_cpus` (`echo 0 > xps_cpus`) and map `xps_rxqs` |
 | **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100%<br>**Automated Remediation**: Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
 | **`AA-015`** | `tx_ring < 512` (default `256`) at 100GbE–200GbE line rate | Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core)<br>**Automated Remediation**: Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
-| **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35%<br>**Automated Remediation**: Pin NIC IRQs, `netperf`, and `netserver` to `nic_numa` cores |
-| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200GbE+ NIC | PCIe Gen4 x16 (`~252 Gbps` raw) or x8 lane training caps 200GbE/400GbE line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe Gen5/Gen6 x16 slot |
+| **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35%<br>**Automated Remediation**: Pin network adapter IRQs, `netperf`, and `netserver` to `nic_numa` cores |
+| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200GbE+ network adapter | PCIe 4.0 x16 (`~252 Gbps` raw) or x8 lane training caps 200GbE/400GbE line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe 5.0/6.0 x16 slot |
 | **`AA-019`** | `generic-receive-offload (GRO) = off` on 100GbE–800GbE TCP RX | Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse)<br>**Automated Remediation**: Enable ethtool -K <iface> gro on tso on gso on |
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification
@@ -473,7 +488,7 @@ the Netperf v3.0 Modernization Project.
 
 ### Case Study 1: 200GbE Line-Rate Saturation on High-Density E-Core Processors
 **Objective**: Achieve stable 200GbE TCP throughput on a dual-socket high-density E-core server (144 cores/socket
-organized into 4-core shared-L2 modules) with a 200GbE PCIe Gen5 x16 adapter at MTU 9000.
+organized into 4-core shared-L2 modules) with a 200GbE PCIe 5.0 x16 adapter at MTU 9000.
 
 #### Baseline (Legacy `netperf` Approach)
 Running 16 parallel legacy `netperf` instances against a single `netserver` on port `12865` with default driver rings
@@ -482,7 +497,8 @@ Running 16 parallel legacy `netperf` instances against a single `netserver` on p
 - **Observed Result**: Mean throughput plateaued at **128.4 Gbps** with high run-to-run instability ($\text{CV} =
   14.2\%$).
 - **Root Cause Diagnosed by `netperf-preflight`**:
-  1. `AA-016` / `AA-022`: Application threads on cores `0..15` collided directly with NIC RSS softirq cores `0..15`, and
+  1. `AA-016` / `AA-022`: Application threads on cores `0..15` collided directly with network adapter RSS softirq cores
+     `0..15`, and
      all 16 streams shared port `12865`.
   2. `AA-015` / `AA-021`: Linear core assignment packed 4 streams onto each 4-core shared L2 cache module while
      `tx_ring = 2048` overflowed the 4 MB L2 cache.
@@ -536,7 +552,7 @@ architectural locality zones using
 | --- | --- | --- |
 | **`LOC-SAME-CORE`** | Exact Same Core | `-T 0,0`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Collides with Queue-0 hardirq/softirq on `CPU 0`<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `26.40 Gbps`<br>**`active_cpu_util`**: `100.0%`<br>**Efficiency (`Gbps / %CPU`)**: `0.264 Gbps/%` |
 | **`LOC-SAME-L2`** | L2 Module Sibling | `-T 1,1`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Shares 4 MB L2 cache with `CPU 0` (`CPUs 0–3`)<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `41.85 Gbps`<br>**`active_cpu_util`**: `84.2%`<br>**Efficiency (`Gbps / %CPU`)**: `0.497 Gbps/%` |
-| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Dedicated L2 module on NIC local `NUMA 0`<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: **`46.24 Gbps`**<br>**`active_cpu_util`**: **`78.5%`**<br>**Efficiency (`Gbps / %CPU`)**: **`0.589 Gbps/%`** |
+| **`LOC-LOCAL-NUMA`** | Disjoint Local NUMA | `-T 16,16`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Dedicated L2 module on network adapter local `NUMA 0`<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: **`46.24 Gbps`**<br>**`active_cpu_util`**: **`78.5%`**<br>**Efficiency (`Gbps / %CPU`)**: **`0.589 Gbps/%`** |
 | **`LOC-CROSS-NUMA`** | Remote Socket NUMA | `-T 144,144`<br>**Relative to Queue-0 IRQ Core (`CPU 0`)**: Crosses inter-socket interconnect (`NUMA 1`)<br>**Single-Stream Throughput / `active_cpu_util` / Efficiency (`Gbps / %CPU`)**: **Single-Stream Throughput**: `31.12 Gbps`<br>**`active_cpu_util`**: `94.6%`<br>**Efficiency (`Gbps / %CPU`)**: `0.329 Gbps/%` |
 
 > **Key Takeaway**: Disjoint local-NUMA L2 placement (`LOC-LOCAL-NUMA`) delivers **+75.1% higher single-stream
@@ -545,8 +561,8 @@ architectural locality zones using
 
 ---
 
-### Case Study 3: 3x200GbE (600 Gbps) Multi-Port Breakout & Simultaneous vs. Sequential Bidirectional
-**Objective**: Validate aggregate PCIe Gen5 and memory subsystem scaling across three 200GbE ports (`ens7np0`,
+### Case Study 3: 3x200GbE (600Gbps) Multi-Port Breakout & Simultaneous vs. Sequential Bidirectional
+**Objective**: Validate aggregate PCIe 5.0 and memory subsystem scaling across three 200GbE ports (`ens7np0`,
 `ens23np0`, `ens27np0` mapped to `192.168.10.2`, `192.168.11.2`, `192.168.12.2`) under unidirectional TX, unidirectional
 RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) modes.
 
@@ -561,7 +577,7 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
     -l 30 --check-kmsg -o json --export multiport_bx.json -- -m 131072
 ```
 
-#### Empirical Multi-Port Scaling Results (3 × 200GbE = 600 Gbps Wire Capacity)
+#### Empirical Multi-Port Scaling Results (3 × 200GbE = 600Gbps Wire Capacity)
 
 | Workload Mode | Streams (`3 × 16`) | Port 0 (`ens7np0`) / Port 1 (`ens23np0`) / Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency |
 | --- | --- | --- |
@@ -624,7 +640,7 @@ normality test $p$-values.
 The **Netperf Modernization Project (v3.0)** demonstrates that a foundational UNIX systems benchmark can be brought into
 the 100GbE–800GbE and 288+-core era without breaking compatibility with decades of existing engineering workflows. By
 pairing low-level C engine enhancements (`MSG_ZEROCOPY`, 4 MB buffers, 2048-core active CPU telemetry, 32-bit
-`ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` introspection, and structured JSON/CSV/Preset output) with silicon-aware
+`ETHTOOL_GLINKSETTINGS`, PCIe 5.0/6.0 `sysfs` introspection, and structured JSON/CSV/Preset output) with silicon-aware
 Python orchestration (`netserver-manager`, `netperf-multi`, `netperf-preflight`, `netperf-tuner`, and
 `netperf-catalog`), the project eliminates artificial harness bottlenecks and turns network performance qualification
 into a repeatable, statistically rigorous engineering discipline.
@@ -632,7 +648,7 @@ into a repeatable, statistically rigorous engineering discipline.
 ### Key Takeaways for Platform & Network Engineers
 
 1. **Never Share a Single `netserver` Listener at 100GbE+**: Always deploy a per-core `netserver` pool
-   (`netserver-manager`) on NUMA-local cores disjoint from NIC RSS IRQ cores.
+   (`netserver-manager`) on NUMA-local cores disjoint from network adapter RSS IRQ cores.
 2. **Respect Microarchitectural Cache Topology**: Use `spread_l2` (1 core per 4-core L2 module) and `tx_ring = 512` on
    high-density E-core processors to prevent L2 cache thrashing; use `spread_step2` (filtering SMT siblings) and
    `tx_ring = 2048` on P-core SMT processors.
@@ -664,6 +680,6 @@ into a repeatable, statistically rigorous engineering discipline.
 | **File Path** | `wiki/Technical-White-Paper.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-TECHNICAL-WHITE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

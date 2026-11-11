@@ -34,7 +34,7 @@ procedures. Use RFC 5737 (`192.0.2.x`) or RFC 2544 (`198.51.100.x`) documentatio
 
 | Variable Name | Default / Example Value | Description & Hardware Constraint |
 | --- | --- | --- |
-| **`${PCI_DEV}` / `${BDF0}`** | `"0000:17:00.0"` | Primary PCIe Gen5 (`32GT/s`) Function 0 BDF on the local NUMA node. |
+| **`${PCI_DEV}` / `${BDF0}`** | `"0000:17:00.0"` | Primary PCIe 5.0 (`32GT/s`) Function 0 BDF on the local NUMA node. |
 | **`${PORT0}` / `${PORT1}`** | `"eth0"` / `"eth1"` | Dual-port bond member interfaces on the target network adapter. |
 | **`${BOND_IP}`** | `"192.0.2.11/24"` | RFC 5737 documentation IPv4 address assigned to `bond0`. |
 | **`${QUEUES}`** | `32` (`<= 63` max) | Combined queue count clamped to `min(req, ethtool_max, local_numa_cores)`. |

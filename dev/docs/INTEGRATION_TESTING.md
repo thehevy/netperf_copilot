@@ -24,7 +24,7 @@ and report generation all functioned correctly.
 
 - **Test Server**: 192.168.18.2
 - **Client**: Local netperf build (/opt/netperf/build/src/netperf)
-- **Network**: High-speed link (>50 Gbps observed)
+- **Network**: High-speed link (>50Gbps observed)
 - **Tools Directory**: /opt/netperf/dev/tools
 
 ## Tests Performed
@@ -341,7 +341,7 @@ echo "9000 9100 9200 9300" | tr ' ' '\n' | python3 /opt/netperf/dev/tools/netper
 | --- | --- |
 | **File Path** | `dev/docs/INTEGRATION_TESTING.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
-| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-INTEGRATION-TES`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

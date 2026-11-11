@@ -20,7 +20,7 @@
 | Architectural Pillar | Problem Solved on 100GbE–800GbE Fabrics | Modernized Implementation & Verification Gate |
 | --- | --- | --- |
 | **1. Core C Engine (`src/`)**<br>OMNI `-M`, `-Z` Zero-Copy, `4 MB` Buffers | Legacy `netperf` caps `MAXMESSAGESIZE` at `1 MB`, truncates `/proc/stat` at `256` CPUs, and overflows `ETHTOOL_GSET` above `65Gb/s`. | Scales `MAXMESSAGESIZE` to `4 MB`, adds `SO_ZEROCOPY`/`MSG_ZEROCOPY` (`-Z`) with `MSG_ERRQUEUE` draining, tracks `2048` cores (`active_cpu_util`), and queries 32-bit `ETHTOOL_GLINKSETTINGS`. |
-| **2. Silicon-Aware Topology**<br>`netperf_topology.py` & `netserver-manager` | Packing flows onto shared 4-core L2 modules on E-Core CPUs or colliding with NIC IRQ cores degrades `200GbE` throughput by `25%–40%`. | Auto-selects spread_l2 ([0, 4, 8, 12...]) on **Intel® Xeon® 6 Processor** E-Core and spread_step2 on P-Core SMT; spawns lockless per-core netserver` pools (`18600 + core`). |
+| **2. Silicon-Aware Topology**<br>`netperf_topology.py` & `netserver-manager` | Packing flows onto shared 4-core L2 modules on E-Core CPUs or colliding with network adapter IRQ cores degrades `200GbE` throughput by `25%–40%`. | Auto-selects spread_l2 ([0, 4, 8, 12...]) on **Intel® Xeon® 6 Processor** E-Core and spread_step2 on P-Core SMT; spawns lockless per-core netserver` pools (`18600 + core`). |
 | **3. Pre-Flight & BKM Tuning**<br>`netperf-preflight` & `netperf-tuner` | Asymmetric ring sizes, active `irqbalance`, dual XPS maps, and default socket buffers (`212 KB`) cause bimodal variance. | Enforces `24` anti-affinity rules (`AA-001`–`AA-024`), runs a live warmup stability gate (`CV <= 5.0%`), and applies `ecore` (`tx_ring=512`) or `pcore` (`tx_ring=2048`) BKMs. |
 | **4. Qualification & Fault Gate**<br>`netperf-catalog` & `netperf_report.py` | Manual multi-stream sweeps miss transient `DMAR` IOMMU faults, `MDD` events, or `tx_timeout` resets in `dmesg`. | Automates `4` qualification suites (`flow-scaling`, `core-locality`, `ring-coalesce-matrix`, `lag-failover-qos`) with `U1`–`U13` `dmesg` and `ethtool -S` zero-tolerance gates. |
 
@@ -63,6 +63,6 @@ flowchart LR
 | **File Path** | `wiki/Architecture-and-Insights.md` |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Architecture and Insights`, `netperf_copilot Wiki`, `OMNI MSG_ZEROCOPY`, `Xeon 6 spread_l2`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight`, `netperf-tuner` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight`, `netperf-tuner` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-ARCH-INSIGHTS-002`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

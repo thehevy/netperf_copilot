@@ -55,8 +55,8 @@ class AntiAffinityRule:
 ANTI_AFFINITY_RULES: List[AntiAffinityRule] = [
     AntiAffinityRule(
         "AA-001", "adq", "rocev2", "FAIL",
-        "ADQ (tc-mqprio hw 1) and RoCEv2 (irdma) cannot coexist on the same PF.",
-        "Disable ADQ (tc qdisc del dev <if> root) or unload irdma before running RoCEv2.",
+        "ADQ (tc-mqprio hw 1) and RoCEv2 (rdma_drv) cannot coexist on the same PF.",
+        "Disable ADQ (tc qdisc del dev <if> root) or unload rdma_drv before running RoCEv2.",
     ),
     AntiAffinityRule(
         "AA-002", "adq", "dcb_pfc_ets", "FAIL",
@@ -85,7 +85,7 @@ ANTI_AFFINITY_RULES: List[AntiAffinityRule] = [
     ),
     AntiAffinityRule(
         "AA-007", "rocev2", "sriov_lag", "FAIL",
-        "RoCEv2 (irdma) over SR-IOV VF LAG is unsupported when switchdev eswitch mode is active.",
+        "RoCEv2 (rdma_drv) over SR-IOV VF LAG is unsupported when switchdev eswitch mode is active.",
         "Use PF Active-Active RoCEv2 LAG or disable switchdev.",
     ),
     AntiAffinityRule(
@@ -698,9 +698,9 @@ class PreflightChecker:
         if rc == 0 and "mqprio" in out:
             state["adq_enabled"] = True
 
-        # Check lsmod for irdma
+        # Check lsmod for rdma_drv
         rc, out, _ = self._runner(["lsmod"])
-        if rc == 0 and re.search(r"^irdma\b", out, re.MULTILINE):
+        if rc == 0 and re.search(r"^rdma_drv\b", out, re.MULTILINE):
             state["rocev2_enabled"] = True
 
         return state

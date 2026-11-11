@@ -51,7 +51,7 @@ In 200GbE+ qualification testing, the Load Partner (LP) running `netserver` is f
 
 ### Solution: `netserver-manager` Per-Core Pool (`18600 + core`)
 Run `netserver-manager` on the Load Partner to launch one `numactl` -pinned `netserver` daemon per non-IRQ physical core
-on the NIC's local NUMA node:
+on the network adapter's local NUMA node:
 
 ```bash
 # Plan the pool (dry-run inspection)
@@ -92,7 +92,7 @@ What `netperf-tuner` configures:
    rx-usecs 10 tx-usecs 20`).
 6. Enables `tso on gso on gro on lro off` and sets `mtu 9000` (or `1500` with `--apply-bkm mtu1500`).
 7. Clears `xps_cpus=0` and sets `xps_rxqs=ffff` across `/sys/class/net/<if>/queues/tx-*`.
-8. Pins NIC IRQs to the local NUMA node (`set_irq_affinity_bynode.sh`).
+8. Pins network adapter IRQs to the local NUMA node (`set_irq_affinity_bynode.sh`).
 9. Applies 2 GB socket buffer sysctls (`rmem_max=2147483647`, `wmem_max=2147483647` , `kernel.numa_balancing=0` ,
    `net.core.busy_poll=0` ).
 
@@ -136,6 +136,6 @@ Expands IP ranges (`192.168.10..17.74`) and round-robins symbolic DSCP markings 
 | **File Path** | wiki/High-Speed-200GbE-800<wbr>GbE-and-Xeon6-Guide.md |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-HIGH-SPEED-200GBE-800GBE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

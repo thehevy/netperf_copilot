@@ -51,6 +51,6 @@
 | **File Path** | `wiki/Commit-Log-and-Roadmap.md` |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Commit Log and Roadmap`, `netperf_copilot Wiki`, `Phase 1-7 Modernization`, `Live 2-node Linux testbed Validation`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-catalog` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-catalog` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-COMMITS-ROADMAP-003`, `baefaf4`, `718898f`, `1924593`, `1e0b1ef`, `D1-D10 v3.2` |
 <!-- METADATA_FOOTER_END -->

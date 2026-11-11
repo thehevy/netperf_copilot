@@ -14,7 +14,8 @@ All tools are located in `dev/tools/` and require only Python 3.8+ standard libr
 
 ## 1. `netperf-multi` — Multi-Instance, Multi-Port & Directional Runner
 
-Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topology-aware CPU affinity, per-core
+Coordinates parallel `netperf` streams across 1 to 8+ network adapter ports with Intel® Xeon® 6 topology-aware CPU
+affinity, per-core
 `netserver` port mapping, directional (`tx`, `rx` , `bx` , `bx-seq` ) orchestration, DSCP QoS marking, and `dmesg`
 /`ethtool -S` fault gating.
 
@@ -28,7 +29,7 @@ Coordinates parallel `netperf` streams across 1 to 8+ NIC ports with Xeon 6 topo
 | `-n`, `--instances` | Number of streams per port/direction (or total streams distributed across `-i` interfaces) |
 | `-t`, `--test` | Test type: `OMNI` (recommended for 100GbE+), `TCP_STREAM`, `TCP_MAERTS`, `TCP_RR`, `UDP_STREAM` |
 | `-d`, `--direction` | `tx` (send), `rx` (maerts/receive), `bx` (simultaneous TX+RX on disjoint cores), `bx-seq` (sequential TX then RX) |
-| `-i`, `--interfaces` | Comma-separated local NICs (e.g. `ens7np0,ens23np0,ens27np0`) for NUMA/core locality |
+| `-i`, `--interfaces` | Comma-separated local network adapters (e.g. `ens7np0,ens23np0,ens27np0`) for NUMA/core locality |
 | `-Y`, `--dscp`, `--tos` | Symbolic DSCP (`EF,CS3,AF21,CS0`), `dscp:46`, or hex ToS (`0xb8`) |
 | `--affinity` | Enable NUMA-local, non-IRQ physical core pinning (`-T <dut_core>[,<lp_core>]`) |
 | `--layout` | `auto` (default), `spread_l2` (E-core 4-core L2 modules), `spread_step2` (P-core SMT filter), `sequential` |
@@ -63,7 +64,8 @@ Plans, starts, stops, and audits per-core `numactl`-pinned `netserver` pools loc
 ## 3. `netperf-preflight` — 24-Rule Hardware & Driver Pre-Flight Checker
 
 Validates platform state, noisy background processes (`vscode`, `kipmi0` , `irqbalance` , `pmlogger` ), PCIe link
-effective bandwidth vs. NIC link speed, P0 IRQ NUMA locality, and all 24 Intel 200GbE feature anti-affinity rules
+effective bandwidth vs. network adapter link speed, P0 IRQ NUMA locality, and all 24 Intel 200GbE feature anti-affinity
+rules
 (`AA-001`–`AA-024`).
 
 ```bash
@@ -146,7 +148,7 @@ starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matr
 
 # Run matrix tests with concurrent RoCEv2 coexistence traffic
 ./dev/tools/netperf-orchestrate --hosts dev/examples/hosts.yaml --rdma-coexist \
-    --rdma-device irdma0 -- -d stream -l 30 -m 65536 -J
+    --rdma-device rdma_drv0 -- -d stream -l 30 -m 65536 -J
 ```
 
 ---
@@ -184,6 +186,6 @@ starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matr
 | **File Path** | `wiki/CLI-Tools-Reference.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

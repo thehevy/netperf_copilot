@@ -20,16 +20,17 @@ Earlier work on `netperf_copilot` completed **Phases 1–3** of the original 7-p
 | **C Engine (`src/`)** | Raised `MAXCPUS` to `2048`; changed default OMNI output selector to `NETPERF_OUTPUT_KEYVAL`; added global `-M` shortcut for `OMNI` mode while preserving `TCP_STREAM` backwards compatibility; implemented `-- -J [file]` JSON output (`print_omni_json`) and RFC 4180 CSV escaping (`print_omni_csv`). | [`src/netlib.h`](../../src/netlib.h), [`src/netlib.c`](../../src/netlib.c), [`src/netsh.c`](../../src/netsh.c), [`src/nettest_omni.c`](../../src/nettest_omni.c) |
 | **Python Tooling** | Built multi-instance launcher (`netperf-multi`), statistical analyzer (`netperf_stats.py`), YAML profile runner (`netperf-profile`), SSH multi-host orchestrator (`netperf-orchestrate`), real-time TUI (`netperf-monitor`), template generator (`netperf-template`), and aggregator (`netperf-aggregate`). | [`dev/tools/netperf-multi`](../tools/netperf-multi), [`netperf-profile`](../tools/netperf-profile), [`netperf-orchestrate`](../tools/netperf-orchestrate) |
 
-### 1.2 Architectural Gaps Identified for 100GbE–800GbE NICs & Modern Multi-Core Platforms
+### 1.2 Architectural Gaps Identified for 100GbE–800GbE network adapters & Modern Multi-Core Platforms
 
 Evaluating the Phase 1–3 baseline against modern 200GbE–800GbE adapters and high-core-count P-core/E-core processors
 revealed six major gaps:
 
 1. **Load-Partner-Blind & Topology-Blind CPU Pinning**:
    - Local `taskset -c` round-robin assignment did not pass `-T local_core,remote_core` or
-     `-p $((base_port + remote_core))` to match pinned Load Partner (LP) `netserver` instances, nor did it avoid NIC IRQ
+     `-p $((base_port + remote_core))` to match pinned Load Partner (LP) `netserver` instances, nor did it avoid network
+     adapter IRQ
      cores (`0..23`), distinguish E-core 4-core L2 modules (`spread_l2` / `spread_step2` ) from P-core SMT sibling
-     threads, or bind to the NIC's PCIe NUMA node (`/sys/class/net/<dev>/device/numa_node`).
+     threads, or bind to the network adapter's PCIe NUMA node (`/sys/class/net/<dev>/device/numa_node`).
 2. **Legacy 10GbE Profiles & Socket Buffer Ceiling**:
    - Legacy profiles targeted `9500` Mbps (10GbE) with 8 streams and `65536` -byte buffers, while `MAXMESSAGESIZE` was
      capped below multi-megabyte DMA burst sizes and lacked `MSG_ZEROCOPY` (`-Z`) and per-stream DSCP (`-Y <tos>`)
@@ -37,11 +38,11 @@ revealed six major gaps:
 3. **No Directional (`TX`/`RX`/`BX`) or Multi-Port / Breakout Orchestration**:
    - High-speed qualification campaigns require **TX** (`TCP_STREAM`), **RX** (`TCP_MAERTS`), and **BX** (concurrent
      `TCP_STREAM + TCP_MAERTS` on separate non-overlapping TX/RX core pools across 1 to 8 ports/subnets).
-4. **Outdated C Telemetry (`src/`) on 288+-Core CPUs & PCIe Gen5/Gen6**:
+4. **Outdated C Telemetry (`src/`) on 288+-Core CPUs & PCIe 5.0/6.0**:
    - `netcpu_procstat.c` averaged CPU utilization across all system cores (making an 8-core saturated test on a 288-core
      host report `<3%` CPU utilization) without exposing active-core utilization (`active_cpu_util`) or peak core ID
      (`peak_cpu_id`).
-   - `netslot_linux.c` , `netsys_linux.c` , and `netdrv_ethtool.c` lacked sysfs PCIe Gen5/Gen6 speed/width introspection
+   - `netslot_linux.c` , `netsys_linux.c` , and `netdrv_ethtool.c` lacked sysfs PCIe 5.0/6.0 speed/width introspection
      and 32-bit `ETHTOOL_GLINKSETTINGS` support for 100GbE–800GbE links.
 
 ---
@@ -64,7 +65,7 @@ flowchart TD
     end
 
     subgraph P6["Step 3: Topology-Aware Affinity & Per-Core Netserver Pool"]
-        C1["netperf_topology.py: Detect Xeon 6 P-Core SMT vs E-Core 4-Core L2 Modules & IRQ Cores"]
+        C1["netperf_topology.py: Detect Intel® Xeon® 6 P-Core SMT vs E-Core 4-Core L2 Modules & IRQ Cores"]
         C2["netserver-manager: Pin Per-Core Netserver Pool on Non-IRQ Cores (18600+core)"]
         C3["Enforce -T local_core,remote_core == Netserver Native Core (Zero Migration)"]
     end
@@ -88,7 +89,8 @@ flowchart TD
 - Construct OMNI commands with global flags (`-M`, `-l` , `-p` , `-T` , `-Y` ) strictly **before** `--` and
   test-specific flags (`-d`, `-m` , `-D` , `-Z` , `-J` , `-o` , `-k` ) strictly **after** `--` .
 - Support `--direction {tx,rx,bx,bx-seq}` with disjoint TX and RX physical core pools in `bx` mode.
-- Support multi-NIC (`-i eth0,eth1,eth2`), multi-subnet range expansion (`-H 192.168.10..17.2`), and per-stream DSCP
+- Support multi-network adapter (`-i eth0,eth1,eth2`), multi-subnet range expansion (`-H 192.168.10..17.2`), and
+  per-stream DSCP
   marking (`--dscp EF,CS3,AF21,CS0`).
 
 ### Step 2: Core C Engine Modernization (`src/`)
@@ -134,6 +136,6 @@ flowchart TD
 | **File Path** | dev/plans/phase-4-7-mode<wbr>rnization-plan.md |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PHASE-4-7-MODE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

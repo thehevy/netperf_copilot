@@ -519,7 +519,7 @@ class RemoteOrchestrator:
         self,
         server: RemoteHost,
         client: RemoteHost,
-        ib_dev: str = "irdma0",
+        ib_dev: str = "rdma_drv0",
         gid_index: int = 1,
         tos: int = 96,
         qps: int = 8,
@@ -783,8 +783,8 @@ Examples:
                        help='Max number of per-core netservers to spawn per host')
     parser.add_argument('--rdma-coexist', action='store_true',
                        help='Run concurrent RoCEv2 ib_write_bw traffic alongside netperf')
-    parser.add_argument('--rdma-device', default='irdma0',
-                       help='RDMA device for coexistence testing (default: irdma0)')
+    parser.add_argument('--rdma-device', default='rdma_drv0',
+                       help='RDMA device for coexistence testing (default: rdma_drv0)')
     parser.add_argument('--rdma-gid-index', type=int, default=1,
                        help='RDMA GID index (default: 1)')
     parser.add_argument('--rdma-tos', type=int, default=96,

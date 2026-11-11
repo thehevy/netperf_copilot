@@ -15,7 +15,7 @@ qualification tooling.
 
 | Field | Value |
 | --- | --- |
-| **Repository** | [github.com/netperf_copilot](https://github.com/thehevy/netperf_copilot) |
+| **Repository** | [netperf_copilot](https://github.com/thehevy/netperf_copilot) |
 | **Wiki** | [github.com/wiki](https://github.com/thehevy/netperf_copilot/wiki) |
 | **Latest Commit** | `07b95cb` (`master`, Phases 1–7 Complete) |
 | **Primary Stack** | C (`src/netperf`, `src/netserver`) + Python 3 (`dev/tools/`, 0 external deps) |
@@ -137,6 +137,36 @@ This fork modernizes netperf with several key improvements while maintaining ful
 - **[Phase 1 Progress](dev/plans/phase-1-progress.md)** - Initial modernization (complete)
 - **[Phase 2 Progress](dev/plans/phase-2-progress.md)** - Output enhancements (complete)
 - **[Phase 3 Progress](dev/plans/phase-3-progress.md)** - Advanced tools (complete)
+
+### Surgical Host Network & Power Coexistence (`scripts/surgical_host_coexistence.py`)
+
+High-speed `100GbE`–`800GbE` benchmarking traditionally relied on host-wide overrides (`systemctl stop irqbalance`,
+`sysctl kernel.numa_balancing=0`, and global `/dev/cpu_dma_latency=0`), which starve background storage interrupts and
+lock non-datapath CPUs in `C0` polling. Use [surgical_host_coexistence.py](scripts/surgical_host_coexistence.py) to
+apply scoped per-interface and per-core controls:
+
+1. **Per-Core `pm_qos_resume_latency_us` (`"10"` vs `"0"` `NO_CONSTRAINT`)**:
+   - In upstream Linux `drivers/base/power/sysfs.c` (`pm_qos_resume_latency_us_store()`), writing `"n/a"` sets
+     `PM_QOS_RESUME_LATENCY_NO_CONSTRAINT_VALUE` (`0 us`), forcing the CPU into `C0` polling and blocking `C6`. Writing
+     `"0"` sets `PM_QOS_RESUME_LATENCY_NO_CONSTRAINT` (`S32_MAX`), restoring deep `C6` sleep.
+   - `surgical_host_coexistence.py` writes `"10"` (`10 us`) strictly to CPUs servicing `${NETDEV}` queues and `"0"`
+     (`NO_CONSTRAINT`) to all other CPUs.
+2. **Active `irqbalance` Coexistence (`IRQBALANCE_BANNED_INTERRUPTS`)**:
+   - Discovers MSI-X vectors for `${NETDEV}` via `/sys/class/net/${NETDEV}/device/msi_irqs` and `/proc/interrupts`,
+     emitting `IRQBALANCE_BANNED_INTERRUPTS` so `irqbalance` stays active for storage/system IRQs without migrating
+     pinned benchmark queues.
+3. **Scoped `kernel.numa_balancing=1` Scan Amortization & Per-Interface NAPI Deferral**:
+   - Keeps `kernel.numa_balancing=1` with `/sys/kernel/debug/sched/numa_balancing/scan_delay_ms=5000` and
+     `scan_period_min_ms=2000`, and sets `/sys/class/net/${NETDEV}/napi_defer_hard_irqs=2` and
+     `gro_flush_timeout=20000`.
+
+```bash
+# Dry-run preview for target interface ${NETDEV}
+python3 scripts/surgical_host_coexistence.py --netdev "${NETDEV}" --latency-us 10 --dry-run
+
+# Apply per-core PM QoS, NUMA scan amortization, and NAPI deferral as root
+sudo python3 scripts/surgical_host_coexistence.py --netdev "${NETDEV}" --latency-us 10
+```
 
 ## 🔧 Building
 
@@ -441,10 +471,11 @@ See [dev/docs/](dev/docs/) for comprehensive documentation on all tools.
 **Phase 4-7 (COMPLETE)**: 100GbE–800GbE High-Speed & Intel Xeon 6 Platform Modernization
 
 - ✅ **Directional & Multi-Port Engine (`netperf-multi` v2.0)**: TX, RX, simultaneous bidirectional (`--direction bx`),
-  sequential BX (`bx-seq`), multi-NIC (`-i ens7np0,ens23np0,ens27np0`), multi-subnet (`-H 192.168.10..17.74`), DSCP/ToS
+  sequential BX (`bx-seq`), multi-network adapter (`-i ens7np0,ens23np0,ens27np0`), multi-subnet
+  (`-H 192.168.10..17.74`), DSCP/ToS
   QoS (`--dscp EF,CS3,AF21,CS0`), and up to 512 streams
 - ✅ **Core C Engine Modernization (`src/`)**: `MAXMESSAGESIZE` raised to 4 MB, `-Z` (`SO_ZEROCOPY`/`MSG_ZEROCOPY`),
-  512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id` , sysfs PCIe Gen5/Gen6 link & DMI detection,
+  512–2048 core `/proc/stat` parser with `active_cpu_util` & `peak_cpu_id` , sysfs PCIe 5.0/6.0 link & DMI detection,
   and `ETHTOOL_GLINKSETTINGS` (100GbE–800GbE)
 - ✅ **Xeon 6 Topology & Per-Core `netserver-manager` **: Automatic P-core (Multi-Core P-Core SMT filtering) vs E-core
   (Shared-L2 E-Core 4-core L2 module `spread_l2` ) core allocation and per-core `netserver` pool
@@ -479,6 +510,6 @@ though some sections reference older defaults.
 | **File Path** | `README.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

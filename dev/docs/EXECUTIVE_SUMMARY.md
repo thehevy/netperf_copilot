@@ -28,10 +28,10 @@ legacy `netperf` hits severe architectural ceilings:
 
 - Single-port `netserver` control-plane and accept-queue serialization limits multi-stream scaling.
 - Hardcoded `MAXCPUS=256` and `MAXMESSAGESIZE=1 MB` limits truncate CPU telemetry and cap DMA burst efficiency.
-- Legacy `ETHTOOL_GSET` 16-bit speed fields overflow above 65 Gbps, leaving 100GbE–800GbE link speeds and PCIe Gen5/Gen6
+- Legacy `ETHTOOL_GSET` 16-bit speed fields overflow above 65 Gbps, leaving 100GbE–800GbE link speeds and PCIe 5.0/6.0
   lane downgrades invisible.
 - Microarchitectural pitfalls—such as packing threads onto shared 4-core L2 cache modules on E-core processors or
-  colliding application threads with NIC softirq cores—introduce **15%–40% run-to-run throughput variance**.
+  colliding application threads with network adapter softirq cores—introduce **15%–40% run-to-run throughput variance**.
 
 The **Netperf Modernization Project (v3.0)** transforms `netperf` into a **silicon-aware, zero-copy, 100GbE–800GbE
 qualification and automation platform** while maintaining **100% backward compatibility** with every legacy `netperf`
@@ -72,7 +72,7 @@ flowchart LR
   **`active_cpu_util`** (mean utilization across cores with `>5%` load) and **`peak_cpu_id`** (hottest logical core ID).
   On a 288-core server where 16 cores are 100% saturated, legacy system-wide CPU reports `5.5%` (masking the
   bottleneck), whereas `active_cpu_util` accurately reports `100.0%` .
-- **PCIe Gen5/Gen6 & 100GbE–800GbE Link Introspection (`src/netslot_linux.c`, `src/netdrv_ethtool.c` )**: Added Linux
+- **PCIe 5.0/6.0 & 100GbE–800GbE Link Introspection (`src/netslot_linux.c`, `src/netdrv_ethtool.c` )**: Added Linux
   `sysfs` PCIe link speed/width inspection (`current_link_speed`, `current_link_width` , `numa_node` ) and upgraded link
   speed queries from legacy 16-bit `ETHTOOL_GSET` to 32-bit `ETHTOOL_GLINKSETTINGS` (`100000`–`800000` Mbps).
 
@@ -85,21 +85,25 @@ flowchart LR
 - **Lockless Per-Core Daemon Pool (`netserver-manager`)**: Eliminates control-port accept-queue serialization, `fork()`
   /`clone()` CPU inheritance, and IRQ/app core collisions by spawning one dedicated `netserver` process per physical
   core (`port = 18600 + i`), pinned strictly to NUMA-local non-IRQ cores.
-- **Multi-NIC, Multi-Subnet & QoS Parallel Engine (`netperf-multi` v2.0)**: Supports `tx` , `rx` , simultaneous
+- **Multi-network adapter, Multi-Subnet & QoS Parallel Engine (`netperf-multi` v2.0)**: Supports `tx` , `rx` ,
+  simultaneous
   bidirectional (`bx` with disjoint TX/RX core pools), and sequential bidirectional (`bx-seq`) testing across up to
-  **512 concurrent streams**, multiple NICs (`-i eth0,eth1,eth2`), IP ranges (`-H 192.168.10..17.2`), and per-stream
+  **512 concurrent streams**, multiple network adapters (`-i eth0,eth1,eth2`), IP ranges (`-H 192.168.10..17.2`), and
+  per-stream
   DSCP/ToS QoS markings (`--dscp EF,CS3,AF21,CS0`).
 
 ### Pillar 3: Pre-Flight Sanity Gate, Automated BKM Tuning & Fault Monitoring
 
-- **24-Rule Hardware & OS Pre-Flight Auditor (`netperf-preflight`)**: Audits 24 high-speed NIC and Linux kernel
+- **24-Rule Hardware & OS Pre-Flight Auditor (`netperf-preflight`)**: Audits 24 high-speed network adapter and Linux
+  kernel
   anti-affinity rules (`AA-001`–`AA-024`, covering dual XPS conflicts, E-core `busy_poll` starvation, GRO/TSO state,
   IOMMU passthrough, PCIe lane degradation, C-states, and NUMA alignment), scans for noisy background processes, runs a
   **5-iteration warmup stability gate** (requiring $\text{CV} < 5.0\%$), and verifies DUT↔LP hardware symmetry.
 - **Automated BKM Tuner & A/B Sweep Runner (`netperf-tuner`)**: Applies architecture-specific Best Known Methods
   (`ecore` with `tx_ring=512` to avoid L2/LLC thrashing, `pcore` with `tx_ring=2048` , and `mtu1500` for
   small-packet PPS) and executes automated A/B parameter sweeps across ring sizes, coalesce timers, and stream counts.
-- **Zero-Tolerance Kernel & NIC Fault Gate (`--check-kmsg`)**: Snapshots `dmesg -T` and `ethtool -S` before and after
+- **Zero-Tolerance Kernel & network adapter Fault Gate (`--check-kmsg`)**: Snapshots `dmesg -T` and `ethtool -S` before
+  and after
   every test run, automatically flagging 13 critical hardware/driver failure signatures (`U1`–`U13`, including `DMAR`
   IOMMU faults, Malicious Driver Detection `MDD` events, `NETDEV WATCHDOG` TX timeouts, and PFC pause storms).
 
@@ -165,6 +169,6 @@ flowchart LR
 | **File Path** | `dev/docs/EXECUTIVE_SUMMARY.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-EXECUTIVE-SUMMA`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

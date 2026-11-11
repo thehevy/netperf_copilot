@@ -26,9 +26,9 @@ Run any profile with:
 
 | Profile Name | Target Scenario | Streams & Direction / Key Settings |
 | --- | --- | --- |
-| **`200g-ecore`** | Intel 200GbE 200GbE on Xeon 6 Shared-L2 E-Core E-Core (`Xeon E-Core`) | 1, 8, 16, 32 TX; 16 RX; 16 BX<br>**Key Settings**: `mtu: 9000`, `layout: spread_l2`, `per_core_netserver: true`, `tx_ring: 512`, `message_size: 65536` |
+| **`200g-ecore`** | Intel 200GbE 200GbE on Intel® Xeon® 6 Shared-L2 E-Core E-Core (`Xeon E-Core`) | 1, 8, 16, 32 TX; 16 RX; 16 BX<br>**Key Settings**: `mtu: 9000`, `layout: spread_l2`, `per_core_netserver: true`, `tx_ring: 512`, `message_size: 65536` |
 | **`200g-pcore`** | Intel 200GbE 200GbE on Xeon 6 Multi-Core P-Core P-Core (`Xeon P-Core`/`Xeon P-Core`) | 1, 8, 16 TX; 16 RX; 16 BX<br>**Key Settings**: `mtu: 9000`, `layout: spread_step2`, `per_core_netserver: true`, `tx_ring: 2048`, `nodelay: true` |
-| **`3x200g-multiport`** | Aggregate 3x200GbE (600GbE Total) Multi-NIC / Multi-NUMA | 48 TX (16/NIC), 48 RX (16/NIC), 24 BX<br>**Key Settings**: `interfaces: "ens7np0,ens23np0,ens27np0"`, `layout: spread_l2`, `per_core_netserver: true` |
+| **`3x200g-multiport`** | Aggregate 3x200GbE (600GbE Total) Multi-network adapter / Multi-NUMA | 48 TX (16/network adapter), 48 RX (16/network adapter), 24 BX<br>**Key Settings**: `interfaces: "ens7np0,ens23np0,ens27np0"`, `layout: spread_l2`, `per_core_netserver: true` |
 | **`200g-mtu1500-smallpkt`** | Standard MTU 1500 Small-Packet PPS & Tail-Latency RR | 1B TCP_RR, 16-flow 64B TCP_RR, 16-flow 16KB TCP_STREAM, 8-flow 64B UDP_STREAM<br>**Key Settings**: `mtu: 1500`, `layout: spread_step2`, `per_core_netserver: true`, `nodelay: true` |
 | **`ocp-8x25g-lag-qos`** | OCP 8x25GbE Breakout & Active-Active LACP LAG + 4-TC DSCP QoS | 16 TX, 8 BX, 1 EF low-latency TCP_RR<br>**Key Settings**: `dscp: "EF,CS3,AF21,CS0"`, `layout: spread_step2`, `per_core_netserver: true` |
 
@@ -51,7 +51,7 @@ Run any profile with:
 
 ## 2. Qualification Catalog Suites (`netperf-catalog`)
 
-`dev/tools/netperf_catalog.py` generates four deterministic test matrices designed for automated NIC/driver
+`dev/tools/netperf_catalog.py` generates four deterministic test matrices designed for automated network adapter/driver
 qualification:
 
 ### Suite 1: `flow-scaling` (42 Test Cases)
@@ -65,7 +65,8 @@ Isolates single-stream throughput sensitivity to CPU cache and NUMA placement:
 
 - `LOC-SAME-CORE`: Application pinned to the exact Queue-0 IRQ core (measures softirq vs. user starvation)
 - `LOC-SAME-L2`: Application pinned to an L2 module sibling of the Queue-0 IRQ core
-- `LOC-LOCAL-NUMA`: Application pinned to a disjoint physical core on the NIC's local NUMA node (optimal baseline)
+- `LOC-LOCAL-NUMA`: Application pinned to a disjoint physical core on the network adapter's local NUMA node (optimal
+  baseline)
 - `LOC-CROSS-NUMA`: Application pinned to a remote NUMA node (measures cross-UPI / cross-mesh penalty)
 
 ### Suite 3: `ring-coalesce-matrix` (20 Test Cases)
@@ -94,6 +95,6 @@ DiffServ markings (`-Y CS0/CS1/AF21/EF`), and `MSG_ZEROCOPY` (`-Z`) to export st
 | **File Path** | wiki/Test-Profiles-and-<wbr>Qualification-Catalog.<wbr>md |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-TEST-PROFILES-AND-Q`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

@@ -42,7 +42,7 @@ Clone: git clone https://github.com/thehevy/netperf_copilot.git
   - `MAXMESSAGESIZE` raised from 1 MB to **4 MB** (`4194304` bytes) for high-BDP and zero-copy transfers.
   - Native **`SO_ZEROCOPY` / `MSG_ZEROCOPY`** (`-Z`) support with automatic `MSG_ERRQUEUE` completion draining.
   - Direct Linux `ETHTOOL_GLINKSETTINGS` (100GbE/200GbE/400GbE/800GbE link speed, driver, firmware) and sysfs PCIe
-    Gen5/Gen6
+    5.0/6.0
     (`32.0 GT/s`, `64.0 GT/s` , `x16` , NUMA node) telemetry.
 - **Production Python Tooling (`dev/tools/`)**:
   - Zero mandatory external dependencies (pure Python 3 stdlib fallbacks for YAML, Jinja2, and SSH).
@@ -151,6 +151,6 @@ flowchart TD
 | **File Path** | `wiki/Home.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-HOME`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

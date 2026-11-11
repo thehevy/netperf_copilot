@@ -715,7 +715,7 @@ WantedBy=multi-user.target
 
 1. **CPU Localization Tests** - Same CPU, cross-CPU, cross-package
 2. **NUMA Tests** - Local node, remote node, cross-node
-3. **PCIe Tests** - Same PCIe root, different root, NIC alignment
+3. **PCIe Tests** - Same PCIe root, different root, network adapter alignment
 4. **Queue Tests** - Single queue, multi-queue, RSS/RFS validation
 5. **Tuning Validation** - Interrupt coalescing, ring buffers, offloads
 
@@ -1060,7 +1060,7 @@ Next Steps:
 | --- | --- |
 | **File Path** | `dev/plans/project-roadmap.md` |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
-| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PROJECT-ROADMA`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

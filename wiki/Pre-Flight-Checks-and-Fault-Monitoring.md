@@ -20,13 +20,13 @@ driver anti-affinity rules (`AA-001` through `AA-024` ):
 
 | Rule ID | Severity | Feature A vs. Feature B / Description & Remediation |
 | --- | --- | --- |
-| **`AA-001`** | `FAIL` | `adq` vs `rocev2`<br>**Description & Remediation**: ADQ (`tc-mqprio hw 1`) and RoCEv2 (`irdma`) cannot coexist on the same PF. Remove `mqprio` or unload `irdma`. |
+| **`AA-001`** | `FAIL` | `adq` vs `rocev2`<br>**Description & Remediation**: ADQ (`tc-mqprio hw 1`) and RoCEv2 (`rdma_drv`) cannot coexist on the same PF. Remove `mqprio` or unload `rdma_drv`. |
 | **`AA-002`** | `FAIL` | `adq` vs `dcb_pfc_ets`<br>**Description & Remediation**: ADQ hardware traffic classes conflict with IEEE DCB PFC/ETS scheduler. |
 | **`AA-003`** | `FAIL` | `adq` vs `sriov_vf`<br>**Description & Remediation**: ADQ cannot be enabled concurrently with SR-IOV Virtual Functions (`sriov_numvfs > 0`). |
 | **`AA-004`** | `FAIL` | `adq` vs `active_active_lag`<br>**Description & Remediation**: ADQ hardware queue sets cannot be bound across bonded LACP LAG ports. Use RSS + XPS. |
 | **`AA-005`** | `FAIL` | `adq` vs `xdp`<br>**Description & Remediation**: ADQ hardware traffic classes conflict with XDP / `AF_XDP` zero-copy queues. |
 | **`AA-006`** | `WARN` | `adq` vs `eol_notice`<br>**Description & Remediation**: Intel ADQ reached EOL in April 2025; migrate to `netperf-tuner --apply-bkm auto` (RSS + XPS + 5-layer scheduler). |
-| **`AA-007`** | `FAIL` | `rocev2` vs `sriov_lag`<br>**Description & Remediation**: RoCEv2 (`irdma`) over SR-IOV VF LAG is unsupported when `switchdev` eswitch mode is active. |
+| **`AA-007`** | `FAIL` | `rocev2` vs `sriov_lag`<br>**Description & Remediation**: RoCEv2 (`rdma_drv`) over SR-IOV VF LAG is unsupported when `switchdev` eswitch mode is active. |
 | **`AA-008`** | `FAIL` | `rocev2` vs `mtu_mismatch`<br>**Description & Remediation**: RoCEv2 active QPs suffer severe packet drop when PF MTU < IB QP path MTU. |
 | **`AA-009`** | `FAIL` | `dcb_pfc` vs `link_pause`<br>**Description & Remediation**: IEEE 802.1Qbb PFC cannot be enabled simultaneously with IEEE 802.3x Global Flow Control (ethtool -A rx off tx off). |
 | **`AA-010`** | `WARN` | `xps_cpus` vs `xps_rxqs_conflict`<br>**Description & Remediation**: Having both `xps_cpus != 0` and `xps_rxqs != 0` degrades TX queue selection on 200GbE. Clear `xps_cpus=0`. |
@@ -36,7 +36,7 @@ driver anti-affinity rules (`AA-001` through `AA-024` ):
 | **`AA-014`** | `WARN` | `busy_poll` vs `high_stream_ecore`<br>**Description & Remediation**: `busy_poll > 0` on E-core 32–64 stream tests starves softirq. Set `busy_poll=0` for bulk throughput. |
 | **`AA-015`** | `FAIL` | `tx_ring_256` vs `200g_line_rate`<br>**Description & Remediation**: Default `ice` TX ring (`256`) causes `tx_restart_queue` stalls at 100GbE/200GbE. Increase TX ring `>= 512`. |
 | **`AA-016`** | `FAIL` | `p0_irq_cross_numa` vs `local_numa_affinity`<br>**Description & Remediation**: Queue 0 / Vector 0 IRQ pinned to a remote NUMA node degrades 1–8 stream throughput by 30–55%. |
-| **`AA-017`** | `FAIL` | `pcie_bw_bottleneck` vs `line_rate_target`<br>**Description & Remediation**: PCIe effective BW (`Speed * Width * 128/130`) is below NIC link speed. Check riser/slot bifurcation. |
+| **`AA-017`** | `FAIL` | `pcie_bw_bottleneck` vs `line_rate_target`<br>**Description & Remediation**: PCIe effective BW (`Speed * Width * 128/130`) is below network adapter link speed. Check riser/slot bifurcation. |
 | **`AA-018`** | `FAIL` | `powersave_governor` vs `high_speed_netperf`<br>**Description & Remediation**: CPU scaling governor `powersave`/`ondemand` causes P-state ramp lag (`cpupower frequency-set -g performance`). |
 | **`AA-019`** | `WARN` | `gro_off` vs `200g_tcp_rx`<br>**Description & Remediation**: Disabling GRO on 100GbE/200GbE TCP RX limits single-core RX throughput (`ethtool -K <if> gro on`). |
 | **`AA-020`** | `WARN` | `tso_off` vs `200g_tcp_tx`<br>**Description & Remediation**: Disabling TSO on 100GbE/200GbE TCP TX increases CPU service demand by 3–5x (`ethtool -K <if> tso on`). |
@@ -71,7 +71,7 @@ When running `netperf-multi --check-kmsg` or generating reports with `AIValidati
 | **`U2`** | `pcie_aer_error` | `AER:`, `PCIe Bus Error`, `Uncorrectable.*Error` |
 | **`U3`** | `netdev_watchdog` | NETDEV WATCHDOG:.*transmit queue \d+ timed out |
 | **`U4`** | `ice_tx_hang_mdd` | ice.*(Malicious Driver Detection\|Tx hang\|FW reset\|EMP reset\|rebuild failed) |
-| **`U5`** | `irdma_qp_error` | `irdma.*(Async Event\|AE_.*ERROR\|QP fatal\|CQP timeout)` |
+| **`U5`** | `rdma_drv_qp_error` | `rdma_drv.*(Async Event\|AE_.*ERROR\|QP fatal\|CQP timeout)` |
 | **`U6`** | `link_flap` | `NIC Link is Down`, `carrier lost` |
 | **`U7`** | `page_alloc_failure` | `page allocation failure:`, `Out of memory:` |
 | **`U8`** | `cpu_soft_lockup` | `watchdog: BUG: soft lockup`, `rcu_sched self-detected stall` |
@@ -93,7 +93,7 @@ Any match in `U1` –`U13` or any non-zero `rx_crc_errors` / `tx_errors` delta a
 | --- | --- |
 | **File Path** | wiki/Pre-Flight-Checks-<wbr>and-Fault-Monitoring.md |
 | **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
-| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
-| **Drivers & Subsystems** | `ice`, `irdma`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
+| **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
+| **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-PRE-FLIGHT-CHECKS-A`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
 <!-- METADATA_FOOTER_END -->

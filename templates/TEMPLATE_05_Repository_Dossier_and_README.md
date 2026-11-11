@@ -53,7 +53,7 @@ Use a `3`-column table with short basename links (`<= 28` characters) to documen
 | Component & Basename Link | Role & Architectural Responsibility | CLI Entrypoint & Validation Gate |
 | --- | --- | --- |
 | **Core Validator**<br>[markdown_validator.py](../scripts/markdown_validator.py) | Enforces `D1`–`D10` `v3.2`, `<= 120`-column line wrapping (`MD013`), list indent (`MD007`), and `<= 3–4` column tables (`D5-COLS`). | `python scripts/markdown_validator.py . --fix`<br>Score: `100/100` (`0` violations) |
-| **Topology Engine**<br>[netperf_topology.py](../dev/tools/netperf_topology.py) | Discovers NUMA nodes, SMT siblings, L2 cache modules, PCIe Gen5/Gen6 effective bandwidth, and disjoint IRQ/App core pools. | `python dev/tests/test_modernization.py` |
+| **Topology Engine**<br>[netperf_topology.py](../dev/tools/netperf_topology.py) | Discovers NUMA nodes, SMT siblings, L2 cache modules, PCIe 5.0/6.0 effective bandwidth, and disjoint IRQ/App core pools. | `python dev/tests/test_modernization.py` |
 
 ---
 

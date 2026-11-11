@@ -26,7 +26,7 @@ UNEXPECTED_EVENT_PATTERNS: List[Tuple[str, str, str]] = [
     ("U2", "pcie_aer_error", r"\b(AER:|PCIe Bus Error|Uncorrectable.*Error)\b"),
     ("U3", "netdev_watchdog", r"NETDEV WATCHDOG:.*transmit queue \d+ timed out"),
     ("U4", "ice_tx_hang_mdd", r"\bice\b.*(Malicious Driver Detection|Tx hang|FW reset|EMP reset|rebuild failed)"),
-    ("U5", "irdma_qp_error", r"\birdma\b.*(Async Event|AE_.*ERROR|QP fatal|CQP timeout)"),
+    ("U5", "rdma_drv_qp_error", r"\brdma_drv\b.*(Async Event|AE_.*ERROR|QP fatal|CQP timeout)"),
     ("U6", "link_flap", r"(NIC Link is Down|carrier lost)"),
     ("U7", "page_alloc_failure", r"(page allocation failure:|Out of memory:)"),
     ("U8", "cpu_soft_lockup", r"(watchdog: BUG: soft lockup|rcu_sched self-detected stall)"),
