@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | **`Home.md`** | 1. H1 Title + `METADATA_HEADER_START..END`<br>2. `2`-Column Repository Overview Table<br>3. Quick-Start Workflow & Executive Summary<br>4. Wiki Navigation Table + `METADATA_FOOTER_START..END` | Must pass `python scripts/markdown_validator.py wiki/Home.md --strict-3col`. |
 | **`Executive-Summary.md` & `Technical-White-Paper.md`** | 1. H1 Title + `METADATA_HEADER_START..END`<br>2. Key Technical Insights & Architecture<br>3. Empirical Benchmark Summary + Footer | Must pass `D1`–`D10` `v3.2` (`0` `D5-COLS`, `D5-TOKEN`, `MD013`, or `D7-ID-MATCH` issues). |
-| **`Modernization-Tools.md` & `Installation-and-Quick-Start.md`** | 1. H1 Title + `METADATA_HEADER_START..END`<br>2. Build & CLI Reference Tables (`<= 3` cols)<br>3. End-to-End Examples + Footer | All source links must use full https://github.com/<wbr><wbr>thehevy/netperf_<wbr>copilot/<wbr>... URLs. |
+| **`Modernization-Tools.md` & `Installation-and-Quick-Start.md`** | 1. H1 Title + `METADATA_HEADER_START..END`<br>2. Build & CLI Reference Tables (`<= 3` cols)<br>3. End-to-End Examples + Footer | All source links must use full https://github.com/<wbr>thehevy/netperf_<wbr>copilot/<wbr>... URLs. |
 | **`_Sidebar.md` & `_Footer.md`** | Compact navigation links (`Home`, `Executive-Summary`, `Technical-White-Paper`, `Modernization-Tools`). | Excluded from `METADATA_HEADER_START` requirement per Global Rule #4. |
 
 ---

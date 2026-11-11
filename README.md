@@ -15,9 +15,9 @@ qualification tooling.
 
 | Field | Value |
 | --- | --- |
-| **Repository** | https://github.com/thehe<wbr>vy/netperf_copilot |
-| **Wiki** | https://github.com/thehe<wbr>vy/netperf_copilot/wiki |
-| **Latest Commit** | `baefaf4` (`master`, Phases 1–7 Complete) |
+| **Repository** | [github.com/netperf_copilot](https://github.com/thehevy/netperf_copilot) |
+| **Wiki** | [github.com/wiki](https://github.com/thehevy/netperf_copilot/wiki) |
+| **Latest Commit** | `07b95cb` (`master`, Phases 1–7 Complete) |
 | **Primary Stack** | C (`src/netperf`, `src/netserver`) + Python 3 (`dev/tools/`, 0 external deps) |
 | **Validation Status** | `49/49` automated & live hardware checks passing (`0` `dmesg` faults) |
 

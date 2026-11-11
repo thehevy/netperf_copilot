@@ -126,7 +126,7 @@ python3 dev/tools/netserver_manager.py --action start --count 32 --base-port 186
 
 | Field | Value |
 | --- | --- |
-| **File Path** | templates/<wbr>TEMPLATE_<wbr>04<wbr>_Troubleshooting_<wbr><wbr>and_<wbr>Root_Cause_<wbr>Playbook.md |
+| **File Path** | templates/<wbr>TEMPLATE_<wbr>04<wbr>_Troubleshooting_<wbr>and_<wbr>Root_Cause_<wbr>Playbook.md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Troubleshooting Playbook Template`, `Diataxis Reference`, `DMAR=0 Gate`, `Symptom Root Cause Verification Fix`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `netperf_preflight.py`, `netperf_tuner.py`, `DMAR`, `MDD` |

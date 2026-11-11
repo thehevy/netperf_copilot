@@ -121,7 +121,7 @@ link text.
 
 | Field | Value |
 | --- | --- |
-| **File Path** | templates/<wbr>TEMPLATE_<wbr>01<wbr>_Engineering_<wbr><wbr><wbr>Validation_and_<wbr><wbr>Executive_<wbr>Report<wbr>.md |
+| **File Path** | templates/<wbr>TEMPLATE_<wbr>01<wbr>_Engineering_<wbr>Validation_and_<wbr>Executive_<wbr>Report<wbr>.md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Engineering Report Template`, `A/B Validation Report`, `Zero-Scroll 3-Column Table`, `Rules D1-D10 v3.2`, `ASD-STE100` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `netperf_copilot`, `markdown_validator.py` |

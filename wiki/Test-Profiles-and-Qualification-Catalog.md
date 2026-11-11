@@ -82,7 +82,7 @@ steady-state TX (`LAG-ACTIVE-ACTIVE-4TC-TX`) and member link-down/up failover (`
 Pairs `OMNI` (`-M -- -J`), sub-second interim demo reporting (`-D 0.20`), disjoint CPU core pinning (`-T lcpu,rcpu`),
 DiffServ markings (`-Y CS0/CS1/AF21/EF`), and `MSG_ZEROCOPY` (`-Z`) to export standard Flent v3 `.flent.gz` files for
 `100GbE`–`400GbE` working-latency (`RRUL`) and `15s` step-burst convergence analysis (see
-[FLENT_V3_WORKING_LATENCY_INTEGRATION.md](../dev/docs/FLENT_V3_WORKING_LATENCY_INTEGRATION.md)).
+[FLENT_V3_WORKING_LATENCY_INTEGRATION.md](https://github.com/thehevy/netperf_copilot/blob/master/dev/docs/FLENT_V3_WORKING_LATENCY_INTEGRATION.md)).
 
 ---
 

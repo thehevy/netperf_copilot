@@ -12,7 +12,8 @@
 ## 1. Overview: Scaling Flent `RRUL` to `100GbE`–`400GbE` Fabrics
 
 Benchmarking bulk throughput (`TCP_STREAM`) and unloaded request-response latency (`TCP_RR`) as isolated runs does not
-capture **Working Latency Under Load**—specifically, how `TCP_RR` and `UDP_RR` microsecond tail latency (`p50`/`p90`/`p99`)
+capture **Working Latency Under Load**—specifically, how `TCP_RR` and `UDP_RR` microsecond tail latency
+(`p50`/`p90`/`p99`)
 behaves while `8`–`16` bidirectional elephant flows saturate a `100GbE`–`400GbE` link and drive Linux `net_dim` adaptive
 interrupt moderation coalescing timers upward.
 
@@ -44,7 +45,7 @@ flowchart LR
 | --- | --- | --- |
 | **CPU & Cache Affinity** | Unpinned (OS scheduler places bulk and RR streams on overlapping cores or remote NUMA nodes). | `allocate_topology_core_pairs()` partitions NUMA-local cores into **disjoint** `bulk_tx`, `bulk_rx`, and `rr_probe` pools (`-T lcpu,rcpu`). |
 | **`netserver` Control Plane** | Single shared port `12865` listener (`fork()` inherits listener CPU). | Supports `netserver-manager` lockless per-core daemon pool (`port = 18600 + core_id`). |
-| **Latency Measurement** | External `ping`/`fping` ICMP probes (millisecond scale). | Modernized `OMNI` (`-M -- -d rr -J -k ...`) microsecond percentiles (`P50_LATENCY`, `P90_LATENCY`, `P99_LATENCY`, `RT_LATENCY`, `STDDEV_LATENCY`) + `200ms` `-D 0.20` time series across `CS0`, `CS1`, `AF21`, `EF`. |
+| **Latency Measurement** | External `ping`/`fping` ICMP probes (millisecond scale). | Modernized `OMNI` (-M -- -d rr -J -k ...) microsecond percentiles (`P50_LATENCY`, `P90_LATENCY`, `P99_LATENCY`, `RT_LATENCY`, `STDDEV_LATENCY`) + `200ms` `-D 0.20` time series across `CS0`, `CS1`, `AF21`, `EF`. |
 | **High-Speed Data Path** | `1 MB` max message buffer, copy-only socket path. | `4 MB` message buffers + optional `MSG_ZEROCOPY` (`-Z`) + Big TCP (`gso_max_size 185000`). |
 | **CPU & Hardware Telemetry** | Global average CPU only (`MAXCPUS=256` in upstream `netperf`). | `2048`-core `local_active_cpu_util`, `local_peak_cpu_id`, `local_softirq_pct`, plus synchronized `NIC IRQ/s` and `NIC RX ITR (us)` tracks inside `.flent.gz`. |
 
@@ -64,10 +65,12 @@ flowchart LR
 ### 2.2 `net_dim` Step-Burst Convergence (`15s` Step-Response Trajectory)
 - **Phase A (`t = 0 .. 5s`, Pre-Burst Idle RPC)**: Continuous `TCP_RR` latency probes run alone (`net_dim` remains at
   its low-latency floor).
-- **Phase B (`t = 5 .. 10s`, Line-Rate Elephant Burst)**: `8 TX + 8 RX` bulk streams start simultaneously (`sleep 5.00 &&
+- **Phase B (`t = 5 .. 10s`, Line-Rate Elephant Burst)**: `8 TX + 8 RX` bulk streams start simultaneously (`sleep 5.00
+  &&
   netperf ... -l 5`), measuring how quickly `net_dim` steps up to bulk coalescing and whether shallow or deep descriptor
   rings experience transient burst retransmits.
-- **Phase C (`t = 10 .. 15s`, Post-Burst Cooldown)**: Bulk streams exit at `t = 10s`; `200ms` `-D 0.20` ticks measure how
+- **Phase C (`t = 10 .. 15s`, Post-Burst Cooldown)**: Bulk streams exit at `t = 10s`; `200ms` `-D 0.20` ticks measure
+  how
   rapidly `net_dim` steps back down and restores baseline `TCP_RR` transaction rate and microsecond RTT.
 
 ### 2.3 Standard Flent v3 `.flent.gz` Export

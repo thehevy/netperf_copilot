@@ -377,16 +377,23 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
     fixes: List[str] = []
     updated = re.sub(r"<br\s*/?>", "<br>", cell.strip(), flags=re.IGNORECASE)
 
+    def _heal_wbr_url(m: re.Match[str]) -> str:
+        cleaned = re.sub(r"(?:<wbr>)+", "", m.group(0), flags=re.IGNORECASE)
+        fixes.append(f"Removed <wbr> from corrupted URL '{cleaned[:30]}...'")
+        return cleaned
+
+    updated = re.sub(r"https?://[^\s<>\"|`)]*(?:<wbr>)+[^\s<>\"|`)]*", _heal_wbr_url, updated, flags=re.IGNORECASE)
+
     def _shorten_link_label(m: re.Match[str]) -> str:
         raw_label = m.group(1).strip()
-        url = m.group(2).strip()
+        url = re.sub(r"(?:<wbr>)+", "", m.group(2).strip(), flags=re.IGNORECASE)
         inner = raw_label.strip("`").strip("*")
-        if inner.startswith(("http://", "https://")) and len(inner) > 28:
+        if inner.startswith(("http://", "https://")) and len(inner) > 52:
             segs = [s for s in inner.split("://", 1)[-1].rstrip("/").split("/") if s]
             short_lbl = f"{segs[0]}/{segs[-1][:18]}" if len(segs) >= 2 else inner[:28]
             fixes.append(f"Shortened URL link label '{inner[:28]}...' -> '{short_lbl}'")
             return f"[{short_lbl}]({url})"
-        if "/" in inner and len(inner) > 24:
+        if "/" in inner and len(inner) > 36 and not inner.startswith(("http://", "https://", "github.com/", "thehevy/")):
             base = posixpath.basename(inner.rstrip("/"))
             if base and len(base) < len(inner):
                 fixes.append(f"Shortened path link label '{inner}' -> '{base}'")
@@ -397,12 +404,18 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
             chunked = _chunk_long_identifier(inner, chunk_size=26)
             fixes.append(f"Chunked long link label '{inner[:30]}...'")
             return f"[{chunked}]({url})"
-        return m.group(0)
+        return f"[{raw_label}]({url})"
 
     updated = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _shorten_link_label, updated)
 
     def _unwrap_or_split_backtick(m: re.Match[str]) -> str:
         inner = m.group(1)
+        clean_u = re.sub(r"(?:<wbr>)+", "", inner.strip(), flags=re.IGNORECASE)
+        if clean_u.startswith(("http://", "https://")) and " " not in clean_u:
+            segs = [s for s in clean_u.split("://", 1)[-1].rstrip("/").split("/") if s]
+            short_lbl = f"{segs[0]}/{segs[-1][:18]}" if len(segs) >= 2 else clean_u[:28]
+            fixes.append(f"Converted backticked URL '{clean_u[:30]}...' to clickable Markdown link")
+            return f"[{short_lbl}]({clean_u})"
         words = inner.split()
         if len(words) >= 6:
             fixes.append(f"Unwrapped {len(words)}-word prose backtick span")
@@ -431,14 +444,15 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
     masked = re.sub(r"\[[^\]]+\]\([^)]+\)|`[^`]+`", _protect, updated)
 
     def _break_bare_url(m: re.Match[str]) -> str:
-        url = m.group(0).rstrip(".,;)")
-        trailing = m.group(0)[len(url) :]
-        if len(url) <= max_token_len:
-            return m.group(0)
+        url = re.sub(r"(?:<wbr>)+", "", m.group(0).rstrip(".,;)"), flags=re.IGNORECASE)
+        trailing = m.group(0)[len(m.group(0).rstrip(".,;)")) :]
         segs = [s for s in url.split("://", 1)[-1].rstrip("/").split("/") if s]
-        label = f"{segs[0]}/{segs[-1][:18]}" if len(segs) >= 2 else url[:28]
-        fixes.append(f"Converted long bare URL '{url[:30]}...' to compact link")
-        return f"[{label}]({url}){trailing}"
+        label = url if len(url) <= 52 else (f"{segs[0]}/{segs[-1][:18]}" if len(segs) >= 2 else url[:28])
+        link_md = f"[{label}]({url})"
+        fixes.append(f"Converted bare URL '{url[:30]}...' to protected clickable link")
+        idx = len(protected)
+        protected.append(link_md)
+        return f"@@PROT{idx}@@{trailing}"
 
     masked = re.sub(r"https?://[^\s<>\"|`]+", _break_bare_url, masked)
 
@@ -459,7 +473,7 @@ def _clean_cell_tokens(cell: str, max_token_len: int = 40) -> Tuple[str, List[st
     for idx, orig in enumerate(protected):
         if orig.startswith("`") and orig.endswith("`") and len(orig) > max_token_len:
             inner = orig[1:-1]
-            if " " not in inner:
+            if " " not in inner and not inner.startswith(("http://", "https://")):
                 orig = _chunk_long_identifier(inner, chunk_size=26)
                 fixes.append(f"Converted long single-token code '{inner[:30]}...' to <wbr>-wrapped text")
         masked = masked.replace(f"@@PROT{idx}@@", orig)

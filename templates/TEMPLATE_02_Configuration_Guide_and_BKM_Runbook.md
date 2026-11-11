@@ -122,7 +122,7 @@ Run these checks to confirm the configuration is active and hardware-clean:
 
 | Field | Value |
 | --- | --- |
-| **File Path** | templates/<wbr>TEMPLATE_<wbr>02<wbr>_Configuration_<wbr><wbr>Guide_<wbr>and_BKM_<wbr>Runbook.md |
+| **File Path** | templates/<wbr>TEMPLATE_<wbr>02<wbr>_Configuration_<wbr>Guide_<wbr>and_BKM_<wbr>Runbook.md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `Configuration Guide Template`, `BKM Runbook`, `Diataxis Task`, `ASD-STE100`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `802.3ad`, `QoS`, `netperf_tuner.py` |

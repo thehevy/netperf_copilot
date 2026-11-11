@@ -90,7 +90,7 @@ Link directly to the canonical YAML tuning profiles and validation test suite:
 
 | Field | Value |
 | --- | --- |
-| **File Path** | templates/<wbr>TEMPLATE_<wbr>03<wbr>_Architecture_<wbr><wbr>White_<wbr>Paper_and_<wbr>Benchmark_<wbr><wbr>Study.<wbr>md |
+| **File Path** | templates/<wbr>TEMPLATE_<wbr>03<wbr>_Architecture_<wbr>White_<wbr>Paper_and_<wbr>Benchmark_<wbr>Study.<wbr>md |
 | **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
 | **Keywords / Search Tags** | `White Paper Template`, `Benchmark Study`, `Diataxis Concept`, `RFC 5737 Sanitization`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `MSG_ZEROCOPY`, `NUMA topology`, `netperf_copilot` |

@@ -39,7 +39,7 @@
 | `2026-11-09` · `baefaf4` | Engineering Team | **Live Hardware Validation Fixes (`2-node Linux testbed`)**: Quote hex `0xffffffff` TOS fields in `print_omni_json()`, wire DMI/PCIe `sysfs` into `-J`, add live LP per-core port probing in `netperf-multi`, and verify `19/19` unit + `5/5` live integration tests (`DMAR=0`). |
 | `2026-11-05` · `718898f` | Engineering Team | **Executive Summary & Technical White Paper**: Add Executive Summary and 10-page Technical White Paper across `dev/docs/` and `wiki/`. |
 | `2026-11-05` · `1924593` | Engineering Team | **Sanitization & Wiki Navigation**: Redact internal lab hostnames/IPs to RFC 2544 (`198.18.x.x`) and add GitHub Wiki `_Sidebar.md`. |
-| `2026-11-05` · `1e0b1ef` | Engineering Team | **Phase 4–7 Remediation & 200GbE–800GbE Modernization**: Link `netdrv_ethtool.c`/`nets<wbr>lot_linux.c`/`netsys_lin<wbr>ux.c`, add `active_cpu_util` wire marshalling, and complete `AA-001`–`AA-024` pre-flight rules. |
+| `2026-11-05` · `1e0b1ef` | Engineering Team | **Phase 4–7 Remediation & 200GbE–800GbE Modernization**: Link `netdrv_ethtool.c`/nets<wbr>lot_linux.c/netsys_lin<wbr>ux.c, add `active_cpu_util` wire marshalling, and complete `AA-001`–`AA-024` pre-flight rules. |
 
 ---
 

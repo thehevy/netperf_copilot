@@ -30,7 +30,7 @@ driver anti-affinity rules (`AA-001` through `AA-024` ):
 | **`AA-008`** | `FAIL` | `rocev2` vs `mtu_mismatch`<br>**Description & Remediation**: RoCEv2 active QPs suffer severe packet drop when PF MTU < IB QP path MTU. |
 | **`AA-009`** | `FAIL` | `dcb_pfc` vs `link_pause`<br>**Description & Remediation**: IEEE 802.1Qbb PFC cannot be enabled simultaneously with IEEE 802.3x Global Flow Control (ethtool -A rx off tx off). |
 | **`AA-010`** | `WARN` | `xps_cpus` vs `xps_rxqs_conflict`<br>**Description & Remediation**: Having both `xps_cpus != 0` and `xps_rxqs != 0` degrades TX queue selection on 200GbE. Clear `xps_cpus=0`. |
-| **`AA-011`** | `WARN` | `adaptive_coalesce` vs `deterministic_benchmark<wbr>`<br>**Description & Remediation**: Adaptive RX/TX moderation causes bimodal variance across 30s runs. Set adaptive-rx off adaptive-tx off rx-usecs 10 tx-usecs 20. |
+| **`AA-011`** | `WARN` | `adaptive_coalesce` vs deterministic_benchmark<br>**Description & Remediation**: Adaptive RX/TX moderation causes bimodal variance across 30s runs. Set adaptive-rx off adaptive-tx off rx-usecs 10 tx-usecs 20. |
 | **`AA-012`** | `FAIL` | `irqbalance` vs `manual_irq_pinning`<br>**Description & Remediation**: Running `irqbalance` overwrites manual SMP IRQ affinity masks mid-test. Stop `irqbalance`. |
 | **`AA-013`** | `WARN` | `numa_balancing` vs `pinned_netperf`<br>**Description & Remediation**: Kernel automatic NUMA balancing migrates memory pages during pinned runs (`sysctl -w kernel.numa_balancing=0`). |
 | **`AA-014`** | `WARN` | `busy_poll` vs `high_stream_ecore`<br>**Description & Remediation**: `busy_poll > 0` on E-core 32–64 stream tests starves softirq. Set `busy_poll=0` for bulk throughput. |

@@ -15,8 +15,8 @@ Ethernet Network Adapter 200GbE**) fabrics.
 
 | Field | Value |
 | --- | --- |
-| **Repository** | https://github.com/thehe<wbr>vy/netperf_copilot |
-| **Wiki** | https://github.com/thehe<wbr>vy/netperf_copilot/wiki |
+| **Repository** | [github.com/netperf_copilot](https://github.com/thehevy/netperf_copilot) |
+| **Wiki** | [github.com/wiki](https://github.com/thehevy/netperf_copilot/wiki) |
 | **Latest Commit** | `baefaf4` (`master`, Phases 1–7 Complete) |
 | **Validation Status** | `49/49` automated & live hardware checks passing (`0` `dmesg` faults) |
 
@@ -55,27 +55,37 @@ Clone: git clone https://github.com/thehevy/netperf_copilot.git
 
 ## 📖 Wiki Navigation
 
-1. **[Home](Home.md)** — Project overview, architecture diagram, and quick links
-2. **[Architecture and Insights](Architecture-and-Insights.md)** — Core architecture, mathematical insights, and 49/49
+1. **[Home](https://github.com/thehevy/netperf_copilot/wiki)** — Project overview, architecture diagram, and quick links
+2. **[Architecture and Insights](https://github.com/thehevy/netperf_copilot/wiki/Architecture-and-Insights)** — Core
+   architecture, mathematical insights, and 49/49
    live validation accounting
-3. **[Commit Log and Roadmap](Commit-Log-and-Roadmap.md)** — Chronological commit log (`baefaf4`), live 2-node Linux
+3. **[Commit Log and Roadmap](https://github.com/thehevy/netperf_copilot/wiki/Commit-Log-and-Roadmap)** — Chronological
+   commit log (`baefaf4`), live 2-node Linux
    testbed fixes, and
    Phases 1–8 engineering roadmap
-4. **[Executive Summary](Executive-Summary.md)** — Strategic overview of the modernization project, the four engineering
+4. **[Executive Summary](https://github.com/thehevy/netperf_copilot/wiki/Executive-Summary)** — Strategic overview of
+   the modernization project, the four engineering
    pillars, and quantified before-vs-after impact
-5. **[Technical White Paper](Technical-White-Paper.md)** — In-depth 10-page architectural white paper explaining why
+5. **[Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper)** — In-depth 10-page
+   architectural white paper explaining why
    `netperf` modernization is essential at 100G–800G, mathematical models, and 4 empirical case studies
-6. **[Getting Started & Installation](Getting-Started-and-Installation.md)** — Building `netperf`, configure options,
+6. **[Getting Started & Installation](https://github.com/thehevy/netperf_copilot/wiki/Getting-Started-and-Installation)**
+   — Building `netperf`, configure options,
    and installing `dev/tools/`
-7. **[Core Engine & OMNI Guide](Core-Engine-and-OMNI-Guide.md)** — Using `-M` OMNI mode, JSON/CSV/KEYVAL formats, output
+7. **[Core Engine & OMNI Guide](https://github.com/thehevy/netperf_copilot/wiki/Core-Engine-and-OMNI-Guide)** — Using
+   `-M` OMNI mode, JSON/CSV/KEYVAL formats, output
    presets, and `-Z` zero-copy
-8. **[High-Speed 200G–800G & Multi-Core Guide](High-Speed-200G-800G-and-Xeon6-Guide.md)** — P-Core SMT (`spread_step2`)
+8. **[High-Speed 200G–800G & Multi-Core Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200G-800G-and-Xeon6-Guide)**
+   — P-Core SMT (`spread_step2`)
    vs. E-Core Shared-L2 (`spread_l2`) topology layout, per-core `netserver-manager`, and driver tuning
-9. **[CLI Tools Reference](CLI-Tools-Reference.md)** — Complete reference for all 11 tools in `dev/tools/`
-10. **[Test Profiles & Qualification Catalog](Test-Profiles-and-Qualification-Catalog.md)** — All 15 built-in YAML
+9. **[CLI Tools Reference](https://github.com/thehevy/netperf_copilot/wiki/CLI-Tools-Reference)** — Complete reference
+   for all 11 tools in `dev/tools/`
+10. **[Test Profiles & Qualification Catalog](https://github.com/thehevy/netperf_copilot/wiki/Test-Profiles-and-Qualification-Catalog)**
+    — All 15 built-in YAML
     profiles and the 4 standardized qualification suites (`flow-scaling`, `core-locality`, `ring-coalesce-matrix`,
     `lag-failover-qos`)
-11. **[Pre-Flight Checks & Fault Monitoring](Pre-Flight-Checks-and-Fault-Monitoring.md)** — All 24 anti-affinity rules
+11. **[Pre-Flight Checks & Fault Monitoring](https://github.com/thehevy/netperf_copilot/wiki/Pre-Flight-Checks-and-Fault-Monitoring)**
+    — All 24 anti-affinity rules
     (`AA-001`–`AA-024`), `U1`–`U13` `dmesg`/`ethtool -S` fault gates, and AI-Driven Validation `result.json` schema
 
 ---

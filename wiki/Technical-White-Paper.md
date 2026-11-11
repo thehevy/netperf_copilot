@@ -192,19 +192,22 @@ stateDiagram-v2
     }
 ```
 
-In [`src/netsh.c`](../../src/netsh.c), `netperf` defaults to `TCP_STREAM` unless `-M` (Modern OMNI mode) is explicitly
+In [`src/netsh.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netsh.c), `netperf` defaults to
+`TCP_STREAM` unless `-M` (Modern OMNI mode) is explicitly
 passed before `--`. When `-M` is specified:
 
-1. The test engine switches to the unified `OMNI` test routine ([`src/nettest_omni.c`](../../src/nettest_omni.c)).
+1. The test engine switches to the unified `OMNI` test routine
+   ([`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c)).
 2. Interval reporting (`demo_mode`) is automatically enabled with a 1-second default interval (`-D 1.0`).
 3. Output defaults to machine-parseable `KEY=VALUE` format, or switches to structured **JSON (`-- -J`)**, **CSV
    (`-- -o`)**, or **Columnar (`-- -O`)**.
 4. Named **Output Presets** (`-- -k minimal|default|throughput|latency|cpu|verbose`) automatically resolve from
    `NETPERF_PRESET_DIR`, `dev/catalog/output-presets/`, or `$(datadir)/netperf/output-presets/` (installed via
-   `dist_preset_DATA` in [`Makefile.am`](../../Makefile.am)).
+   `dist_preset_DATA` in [`Makefile.am`](https://github.com/thehevy/netperf_copilot/blob/master/Makefile.am)).
 
 ### 3.2 4 MB Socket Buffers and Native `MSG_ZEROCOPY` (`-- -Z`)
-In [`src/netlib.h`](../../src/netlib.h) and [`src/nettest_omni.c`](../../src/nettest_omni.c), we increased
+In [`src/netlib.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/netlib.h) and
+[`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), we increased
 `MAXMESSAGESIZE` fourfold to **4 MB (`4,194,304` bytes)** and implemented the OMNI test-specific `-Z` flag (passed after
 `--`) to enable Linux kernel zero-copy transmit:
 
@@ -229,11 +232,13 @@ In [`src/netlib.h`](../../src/netlib.h) and [`src/nettest_omni.c`](../../src/net
    completes. If an application never drains `MSG_ERRQUEUE`, the socket's option memory accounting (`sk_omem_alloc`)
    reaches `sysctl net.core.optmem_max` within milliseconds at 200 Gbps, causing subsequent `send()` calls to fail with
    `ENOBUFS`. We implemented `drain_zerocopy_completions(SOCKET data_socket)` in
-   [`src/nettest_omni.c`](../../src/nettest_omni.c), which drains `MSG_ERRQUEUE | MSG_DONTWAIT` periodically and
+   [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c), which drains
+   `MSG_ERRQUEUE | MSG_DONTWAIT` periodically and
    immediately retries on `ENOBUFS`.
 
 ### 3.3 2048-Core `/proc/stat` Engine with `active_cpu_util` & `peak_cpu_id`
-In [`src/netcpu_procstat.c`](../../src/netcpu_procstat.c) and [`src/netlib.h`](../../src/netlib.h), we expanded
+In [`src/netcpu_procstat.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netcpu_procstat.c) and
+[`src/netlib.h`](https://github.com/thehevy/netperf_copilot/blob/master/src/netlib.h), we expanded
 `MAXCPUS` to **2048** and introduced two high-core-count telemetry metrics computed during `calc_cpu_util_internal()`:
 
 $$\text{active\_cpu\_util} = \frac{1}{|C_{\text{active}}|} \sum_{i \in C_{\text{active}}} u_i \quad \text{where }
@@ -248,14 +253,19 @@ application bottlenecks on 288–576 thread servers.
 
 ### 3.4 32-Bit `ETHTOOL_GLINKSETTINGS`, PCIe Gen5/Gen6 `sysfs` & Hardened JSON Serialization
 
-- **100G–800G Link Speed Detection ([`src/netdrv_ethtool.c`](../../src/netdrv_ethtool.c))**: Queries
+- **100G–800G Link Speed Detection
+  ([`src/netdrv_ethtool.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netdrv_ethtool.c))**: Queries
   `ETHTOOL_GLINKSETTINGS` (`struct ethtool_link_settings`) with a 32-bit `speed` field before falling back to
   `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
-- **Linux `sysfs` PCIe Gen5/Gen6 & DMI Inspection ([`src/netslot_linux.c`](../../src/netslot_linux.c),
-  [`src/netsys_linux.c`](../../src/netsys_linux.c))**: Reads `/sys/class/net/<iface>/device/current_link_speed`
+- **Linux `sysfs` PCIe Gen5/Gen6 & DMI Inspection
+  ([`src/netslot_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netslot_linux.c),
+  [`src/netsys_linux.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/netsys_linux.c))**: Reads
+  `/sys/class/net/<iface>/device/current_link_speed`
   (`32.0 GT/s PCIe` for Gen5, `64.0 GT/s PCIe` for Gen6), `current_link_width` (`x16`), `numa_node`, and
   `/sys/class/dmi/id/product_name` using safe 32–128 byte bounded buffers.
-- **RFC 8259 JSON Escaping ([`src/nettest_omni.c`](../../src/nettest_omni.c))**: All string fields in `-- -J` JSON
+- **RFC 8259 JSON Escaping
+  ([`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c))**: All string
+  fields in `-- -J` JSON
   output pass through `json_escape_string()` so embedded quotes, backslashes, or control characters in `COMMAND_LINE`
   never corrupt downstream JSON parsers.
 
@@ -265,8 +275,9 @@ application bottlenecks on 288–576 thread servers.
 
 Hardware-level C optimizations alone are insufficient if the operating system schedules benchmark streams onto
 conflicting cache domains or shared control sockets. Pillar 2 introduces automated CPU/NIC topology discovery
-([`netperf_topology.py`](../../dev/tools/netperf_topology.py)) and a lockless per-core daemon pool
-([`netserver-manager`](../../dev/tools/netserver-manager)).
+([`netperf_topology.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_topology.py)) and a
+lockless per-core daemon pool
+([`netserver-manager`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netserver-manager)).
 
 ### 4.1 P-Core SMT vs. E-Core Shared-L2 Microarchitectural Physics
 Modern server processors exhibit fundamentally different cache and execution topologies that require opposite tuning
@@ -315,7 +326,8 @@ flowchart TB
    - If a 16-stream test pins streams linearly to cores `16..31`, all 4 cores in L2 Module 4 (`16,17,18,19`)
      simultaneously stream 64 KB socket buffers and `tx_ring=2048` descriptor rings through the same 4 MB L2 cache. The
      working set exceeds the L2 capacity, triggering continuous L2 cache evictions and LLC/DRAM stalls.
-   - [`netperf_topology.py`](../../dev/tools/netperf_topology.py) detects the 4-core L2 topology and automatically
+   - [`netperf_topology.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_topology.py)
+     detects the 4-core L2 topology and automatically
      selects the **`spread_l2`** allocation strategy, picking **1 core per L2 module first**
      (`[16, 20, 24, 28, 32, ...]`) before wrapping around to a second core per module, while pairing with a smaller
      **`tx_ring = 512`** (`rx_ring = 4096`) so active descriptors remain L2-resident.
@@ -334,7 +346,8 @@ flowchart TB
 | **Interrupt Coalescing** | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` | `adaptive-rx off`, `adaptive-tx off`, `rx-usecs 10`, `tx-usecs 20` |
 
 ### 4.2 Per-Core Lockless `netserver` Pool (`netserver-manager`)
-To eliminate all three legacy `netserver` bottlenecks, [`netserver-manager`](../../dev/tools/netserver-manager) replaces
+To eliminate all three legacy `netserver` bottlenecks,
+[`netserver-manager`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netserver-manager) replaces
 the single port-12865 daemon with a **per-core pool of isolated `netserver` processes**:
 
 ```mermaid
@@ -364,7 +377,8 @@ core—achieving **zero kernel accept-queue lock contention** and **zero collisi
 
 ## 5. High-Speed Multi-Stream, Multi-NIC & QoS Orchestration
 
-[`netperf-multi`](../../dev/tools/netperf-multi) v2.0 serves as the parallel execution engine capable of driving up to
+[`netperf-multi`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-multi) v2.0 serves as the
+parallel execution engine capable of driving up to
 **512 concurrent streams** across single-port, multi-port breakout, and bonded LAG topologies.
 
 ### 5.1 Four Directional Execution Modes (`tx`, `rx`, `bx`, `bx-seq`)
@@ -410,7 +424,8 @@ flowchart LR
 ```
 
 ### 6.1 The 24 Feature Anti-Affinity Rules (`AA-001`–`AA-024`)
-[`netperf-preflight`](../../dev/tools/netperf_preflight.py) programmatically audits the live system state against 24
+[`netperf-preflight`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_preflight.py)
+programmatically audits the live system state against 24
 documented hardware/OS anti-affinity rules before any benchmark begins. Key high-severity rules include:
 
 | Rule ID | Anti-Affinity Condition | Performance Impact at 200G–800G / Automated Remediation |
@@ -437,8 +452,10 @@ before hours of unstable sweep data are collected. Additionally, `--lp-state <lp
 blocking saturation.
 
 ### 6.3 Zero-Tolerance Kernel & Ethtool Fault Gate (`U1`–`U13`)
-Implemented in [`netperf_report.py`](../../dev/tools/netperf_report.py) and integrated into
-[`netperf-multi --check-kmsg`](../../dev/tools/netperf-multi), the fault monitor snapshots `dmesg -T` and
+Implemented in [`netperf_report.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_report.py)
+and integrated into
+[`netperf-multi --check-kmsg`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-multi), the
+fault monitor snapshots `dmesg -T` and
 `ethtool -S <iface>` before and after every benchmark run. Any new occurrence of signatures **`U1` through
 `U13`**—including `DMAR: [DMA Read/Write]`, `Malicious Driver Detection (MDD)`,
 `NETDEV WATCHDOG ... transmit queue timed out`, `Kernel Oops/BUG/Call Trace`, PCIe AER errors, or unexpected link-down
@@ -503,7 +520,8 @@ sudo ./dev/tools/netperf-tuner -i eth0 --apply-bkm ecore
 
 ### Case Study 2: Core Locality Qualification Matrix (`netperf-catalog -s core-locality`)
 **Objective**: Quantify the exact throughput and CPU efficiency impact of process-to-IRQ core placement across four
-architectural locality zones using [`netperf-catalog`](../../dev/tools/netperf-catalog).
+architectural locality zones using
+[`netperf-catalog`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-catalog).
 
 #### Command Execution
 ```bash
@@ -556,7 +574,8 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
 ### Case Study 4: Automated Statistical Confidence & Direction-Aware Regression Gating
 **Objective**: Compare a candidate kernel driver build against a golden baseline across both throughput
 (`higher-is-better`) and request-response tail latency (`lower-is-better`) using
-[`netperf_stats.py`](../../dev/tools/netperf_stats.py) and [`netperf-aggregate`](../../dev/tools/netperf-aggregate).
+[`netperf_stats.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf_stats.py) and
+[`netperf-aggregate`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tools/netperf-aggregate).
 
 #### Statistical Foundations (`netperf_stats.py`)
 For sample size $n < 30$, `netperf_stats.py` uses the exact two-tailed Student's *t*-distribution critical value
@@ -624,13 +643,15 @@ into a repeatable, statistically rigorous engineering discipline.
 
 ### References & Project Documentation
 
-- **Project Wiki**: [`wiki/Home.md`](../../wiki/Home.md)
-- **Executive Summary**: [`dev/docs/EXECUTIVE_SUMMARY.md`](../../dev/docs/EXECUTIVE_SUMMARY.md)
+- **Project Wiki**: [`wiki/Home.md`](https://github.com/thehevy/netperf_copilot/wiki)
+- **Executive Summary**:
+  [`dev/docs/EXECUTIVE_SUMMARY.md`](https://github.com/thehevy/netperf_copilot/blob/master/dev/docs/EXECUTIVE_SUMMARY.md)
 - **High-Speed 200G–800G & Multi-Core Guide**:
-  [`wiki/High-Speed-200G-800G-and-Xeon6-Guide.md`](../../wiki/High-Speed-200G-800G-and-Xeon6-Guide.md)
+  [`wiki/High-Speed-200G-800G-and-Xeon6-Guide.md`](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200G-800G-and-Xeon6-Guide)
 - **Pre-Flight Rules & Fault Signatures (`AA-001`–`AA-024`, `U1`–`U13`)**:
-  [`wiki/Pre-Flight-Checks-and-Fault-Monitoring.md`](../../wiki/Pre-Flight-Checks-and-Fault-Monitoring.md)
-- **CLI Tools Reference**: [`wiki/CLI-Tools-Reference.md`](../../wiki/CLI-Tools-Reference.md)
+  [`wiki/Pre-Flight-Checks-and-Fault-Monitoring.md`](https://github.com/thehevy/netperf_copilot/wiki/Pre-Flight-Checks-and-Fault-Monitoring)
+- **CLI Tools Reference**:
+  [`wiki/CLI-Tools-Reference.md`](https://github.com/thehevy/netperf_copilot/wiki/CLI-Tools-Reference)
 
 ---
 

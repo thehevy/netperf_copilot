@@ -137,12 +137,12 @@ flowchart LR
 
 | Component | Path | Purpose |
 | --- | --- | --- |
-| **Core Binaries** | [`src/netperf`](../../src/netperf.c), [`src/netserver`](../../src/netserver.c), [`src/nettest_omni.c`](../../src/nettest_omni.c) | Modernized C benchmark engine with `-M`, `-Z`, 4 MB buffers, 2048-core telemetry, and JSON/CSV/Preset output |
-| **Production CLI Tools (11)** | [`dev/tools/`](../../dev/tools/) | `netperf-multi`, `netserver-manager`, `netperf-preflight`, `netperf-tuner`, `netperf-catalog`, `netperf-profile`, `netperf-orchestrate`, `netperf-monitor`, `netperf_stats.py`, `netperf-aggregate`, `netperf-template` |
-| **Workload Profiles (15)** | [`dev/profiles/*.yaml`](../../dev/profiles/) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
-| **Output Presets (6)** | [`*.out`](../../dev/catalog/output-presets/) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
-| **Verification Suite** | [`test_modernization.py`](../../dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
-| **Project Wiki (11 Guides)** | [`wiki/`](../../wiki/Home.md) | Complete user, architect, and qualification operator documentation |
+| **Core Binaries** | [`src/netperf`](https://github.com/thehevy/netperf_copilot/blob/master/src/netperf.c), [`src/netserver`](https://github.com/thehevy/netperf_copilot/blob/master/src/netserver.c), [`src/nettest_omni.c`](https://github.com/thehevy/netperf_copilot/blob/master/src/nettest_omni.c) | Modernized C benchmark engine with `-M`, `-Z`, 4 MB buffers, 2048-core telemetry, and JSON/CSV/Preset output |
+| **Production CLI Tools (11)** | [`dev/tools/`](https://github.com/thehevy/netperf_copilot/tree/master/dev/tools) | `netperf-multi`, `netserver-manager`, `netperf-preflight`, `netperf-tuner`, `netperf-catalog`, `netperf-profile`, `netperf-orchestrate`, `netperf-monitor`, `netperf_stats.py`, `netperf-aggregate`, `netperf-template` |
+| **Workload Profiles (15)** | [`dev/profiles/*.yaml`](https://github.com/thehevy/netperf_copilot/tree/master/dev/profiles) | 10 general network profiles + 5 high-speed 200G–600G/OCP qualification profiles |
+| **Output Presets (6)** | [`*.out`](https://github.com/thehevy/netperf_copilot/tree/master/dev/catalog/output-presets) | `minimal`, `default`, `throughput`, `latency`, `cpu`, `verbose` |
+| **Verification Suite** | [`test_modernization.py`](https://github.com/thehevy/netperf_copilot/blob/master/dev/tests/test_modernization.py) | 18 deterministic unit & architectural verification tests + live integration suites |
+| **Project Wiki (11 Guides)** | [`wiki/`](https://github.com/thehevy/netperf_copilot/wiki) | Complete user, architect, and qualification operator documentation |
 
 ---
 
