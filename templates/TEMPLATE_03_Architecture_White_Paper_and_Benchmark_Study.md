@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-WHITE-PAPER-003` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Technical White Papers (`WP-*`), Architecture Studies, and Multi-Core Benchmark Papers
 - **Summary**: Canonical white paper template for `100GbE`–`800GbE` network adapters and multi-core server architecture studies under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -91,7 +91,7 @@ Link directly to the canonical YAML tuning profiles and validation test suite:
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_<wbr>03<wbr>_Architecture_<wbr>White_<wbr>Paper_and_<wbr>Benchmark_<wbr>Study.<wbr>md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `White Paper Template`, `Benchmark Study`, `Diataxis Concept`, `RFC 5737 Sanitization`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `MSG_ZEROCOPY`, `NUMA topology`, `netperf_copilot` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-WHITE-PAPER-003`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

@@ -2,7 +2,7 @@
 # === METADATA_HEADER_START ===
 # File: scripts/markdown_validator.py
 # Created Date: 2026-02-02
-# Last Updated Date: 2026-11-09
+# Last Updated Date: 2026-11-13
 # Version: v3.1
 # Status: Production Validated (Single Source of Truth)
 # Target Scope: Public & Open-Source Technical Documentation (Rules D1-D10 v3.2)
@@ -1048,6 +1048,24 @@ def calculate_quality_score(violations: List[Any]) -> int:
     return max(0, score)
 
 
+
+def _bump_metadata_last_updated(markdown_text: str) -> str:
+    """Update Last Updated Date in METADATA_HEADER and METADATA_FOOTER to today's YYYY-MM-DD when a file is modified."""
+    import datetime as _dt
+    today_iso = _dt.date.today().isoformat()
+    updated = re.sub(
+        r"(\*\*Last Updated Date\*\*:\s*`)\d{4}-\d{2}-\d{2}(`)",
+        rf"\g<1>{today_iso}\2",
+        markdown_text,
+    )
+    updated = re.sub(
+        r"(\|\s*\*\*Created / Last Updated\*\*\s*\|\s*`\d{4}-\d{2}-\d{2}`\s*/\s*`)\d{4}-\d{2}-\d{2}(`\s*\|)",
+        rf"\g<1>{today_iso}\2",
+        updated,
+    )
+    return updated
+
+
 def check_markdown_quality(
     file_path: str,
     auto_fix: bool = False,
@@ -1078,6 +1096,7 @@ def check_markdown_quality(
             max_line_len=max_line_len,
         )
         if fixed_text != original_text:
+            fixed_text = _bump_metadata_last_updated(fixed_text)
             p.write_text(fixed_text, encoding="utf-8")
         return {
             "file": str(p),
@@ -1207,5 +1226,5 @@ if __name__ == "__main__":
 # Search Keywords: markdown_validator, D5-SEP, D5-PAD, D5-COLS, D5-TOKEN, D5-WRAP, D5-PIPE, MD013, MD007, MD032, compact tables
 # Drivers & Subsystems: documentation, markdownlint, netperf_copilot
 # Related Units / Patches: DOC-RULE-D5, DOC-RULE-D5, Rule D1-D10 v3.1
-# Created / Last-Updated: 2026-02-02 / 2026-11-09
+# Created / Last-Updated: 2026-02-02 / 2026-11-13
 # === METADATA_FOOTER_END ===

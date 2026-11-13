@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-WIKI-GETTING-STARTED-AND` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Getting Started and Installation under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -123,7 +123,7 @@ make test-formats
 | Field | Value |
 | --- | --- |
 | **File Path** | wiki/Getting-Started-and<wbr>-Installation.md |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-GETTING-STARTED-AND`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

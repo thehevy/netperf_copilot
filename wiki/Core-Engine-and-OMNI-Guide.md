@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-WIKI-CORE-ENGINE-AND-OMN` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Core C Engine and OMNI Guide under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -151,7 +151,7 @@ netperf -H 192.168.10.2 -M -l 10 -- -d rr -r 64,64 -J latency
 | Field | Value |
 | --- | --- |
 | **File Path** | `wiki/Core-Engine-and-OMNI-Guide.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CORE-ENGINE-AND-OMN`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-WIKI-ARCH-INSIGHTS-002` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: `netperf_copilot` Central Wiki & 5-Page Repository Wiki Pack (`TEMPLATE-06`)
 - **Summary**: Architectural design and empirical engineering insights for the modernized `netperf` C engine and Python qualification suite across **Intel® Ethernet 800 Series** (**200GbE Ethernet Controller** and **200GbE Network Adapter**) and **Intel® Xeon® 6 Processor** platforms.
 <!-- METADATA_HEADER_END -->
@@ -61,7 +61,7 @@ flowchart LR
 | Field | Value |
 | --- | --- |
 | **File Path** | `wiki/Architecture-and-Insights.md` |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Architecture and Insights`, `netperf_copilot Wiki`, `OMNI MSG_ZEROCOPY`, `Xeon 6 spread_l2`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight`, `netperf-tuner` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-ARCH-INSIGHTS-002`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

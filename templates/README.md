@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-SUITE-INDEX-000` | **Version**: `v3.2` | **Status**: `Active (Single Source of Truth)`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Public & Open-Source Technical Documentation, Engineering Reports, and GitHub Wikis
 - **Summary**: Canonical technical documentation, engineering report, white paper, configuration guide, troubleshooting playbook, dossier, and GitHub Wiki templates enforcing Rules `D1`–`D10` `v3.2` (`100/100` zero-violation score).
 <!-- METADATA_HEADER_END -->
@@ -76,7 +76,7 @@ python scripts/markdown_validator.py <path_to_file_or_dir> --fix
 | Field | Value |
 | --- | --- |
 | **File Path** | `templates/README.md` |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Technical Document Templates`, `Engineering Report Template`, `Config Guide Template`, `White Paper Template`, `Wiki Template`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `netperf_copilot`, `markdown_validator.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-SUITE-INDEX-000`, `D1-D10 v3.2`, `MD013`, `MD007`, `MD032`, `D7-ID-MATCH` |

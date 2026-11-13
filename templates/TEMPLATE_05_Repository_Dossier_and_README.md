@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-DOSSIER-README-005` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Repository Overview Dossiers and Project Root `README.md` Files
 - **Summary**: Canonical repository overview and `README.md` template for high-speed networking and benchmark repositories under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -86,7 +86,7 @@ Use a `3`-column table with short basename links (`<= 28` characters) to documen
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_05_Repository_<wbr>Dossier_and_README.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Repository Dossier Template`, `Project README Template`, `Diataxis Overview`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `netperf_copilot`, `markdown_validator.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-DOSSIER-README-005`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

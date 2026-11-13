@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-ENG-AB-REPORT-001` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Executive Engineering Reports, Code Audits, and Multi-Node A/B Validation Reports
 - **Summary**: Canonical technical report template for `100GbE`–`800GbE` network adapter and multi-core server validation reports under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -122,7 +122,7 @@ link text.
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_<wbr>01<wbr>_Engineering_<wbr>Validation_and_<wbr>Executive_<wbr>Report<wbr>.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Engineering Report Template`, `A/B Validation Report`, `Zero-Scroll 3-Column Table`, `Rules D1-D10 v3.2`, `ASD-STE100` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `netperf_copilot`, `markdown_validator.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-ENG-AB-REPORT-001`, `D1-D10 v3.2`, `MD013`, `MD007`, `MD032`, `D7-ID-MATCH` |

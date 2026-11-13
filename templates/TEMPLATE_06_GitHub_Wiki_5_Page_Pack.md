@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-GITHUB-WIKI-006` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Repository GitHub Wiki (`wiki/*.md`)
 - **Summary**: Canonical GitHub Wiki page and multi-page wiki pack template for high-speed networking repositories under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -64,7 +64,7 @@ python scripts/markdown_validator.py wiki --strict-3col --fix
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_06_GitHub_Wiki_5_<wbr>Page_Pack.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `GitHub Wiki Template`, `5-Page Wiki Pack`, `Zero-Scroll 3-Column Wiki`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `netperf_copilot`, `wiki`, `markdown_validator.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-GITHUB-WIKI-006`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

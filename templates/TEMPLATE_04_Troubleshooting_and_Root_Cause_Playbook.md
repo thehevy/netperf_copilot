@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-PLAYBOOK-004` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: High-Speed Network Performance, PCIe/NUMA Locality, and Pre-Flight Troubleshooting Playbooks
 - **Summary**: Canonical 4-step (`Symptom -> Root Cause -> Verification -> Fix`) diagnostic playbook template for `100GbE`–`800GbE` network benchmarking under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -127,7 +127,7 @@ python3 dev/tools/netserver_manager.py --action start --count 32 --base-port 186
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_<wbr>04<wbr>_Troubleshooting_<wbr>and_<wbr>Root_Cause_<wbr>Playbook.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Troubleshooting Playbook Template`, `Diataxis Reference`, `DMAR=0 Gate`, `Symptom Root Cause Verification Fix`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `netperf_preflight.py`, `netperf_tuner.py`, `DMAR`, `MDD` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-PLAYBOOK-004`, `D1-D10 v3.2`, `AA-001..AA-024`, `MD013`, `D7-ID-MATCH` |

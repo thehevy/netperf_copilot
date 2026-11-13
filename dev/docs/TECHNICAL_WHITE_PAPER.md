@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -657,7 +657,7 @@ into a repeatable, statistically rigorous engineering discipline.
 | Field | Value |
 | --- | --- |
 | **File Path** | `dev/docs/TECHNICAL_WHITE_PAPER.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

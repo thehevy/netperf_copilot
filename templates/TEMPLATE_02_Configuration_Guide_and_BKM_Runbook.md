@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-CONFIG-GUIDE-002` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
 - **Target Scope**: Host, Switch, LACP LAG, and Auto-Tune Configuration Guides (`CG-*`)
 - **Summary**: Canonical **ASD-STE100** task-oriented configuration guide template for `100GbE`–`800GbE` network adapters and multi-core Linux servers under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -123,7 +123,7 @@ Run these checks to confirm the configuration is active and hardware-clean:
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_<wbr>02<wbr>_Configuration_<wbr>Guide_<wbr>and_BKM_<wbr>Runbook.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
 | **Keywords / Search Tags** | `Configuration Guide Template`, `BKM Runbook`, `Diataxis Task`, `ASD-STE100`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `802.3ad`, `QoS`, `netperf_tuner.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-CONFIG-GUIDE-002`, `D1-D10 v3.2`, `D6-STE100`, `D8-SH`, `D9-CFG` |
