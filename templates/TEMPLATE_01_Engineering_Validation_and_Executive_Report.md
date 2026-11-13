@@ -71,8 +71,8 @@ in Column 3 with `<br>` and combining **Delta**, **Pass Gate**, and **`dmesg` St
 
 | Testbed & Hardware Topology | Workload & Metric | Baseline (`State A`) vs. Tuned (`State B`) | Measured Delta & Pass Gate |
 | --- | --- | --- | --- |
-| **`Node-Pair A` — P-Core (`SMT`)**<br>Dual `200GbE` (`PCIe Gen5 x16`)<br>Multi-Node NUMA | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: Node-local `spread_step2` | **State A (Baseline)**: `148.2Gb/s` (`Retrans: 0.14%`)<br>**State B (Tuned)**: `191.4Gb/s` (`Retrans: 0.00%`) | **Delta**: `+29.1%` (`+43.2Gb/s`)<br>**Gate**: `PASS` (`>= 188Gb/s`)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
-| **`Node-Pair B` — E-Core (`Shared-L2`)**<br>Dual `200GbE` (`PCIe Gen5 x16`)<br>`4`-Core L2 Modules | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: `spread_l2` (`TX=512`) | **State A (Baseline)**: `139.5Gb/s` (`CV: 8.4%`)<br>**State B (Tuned)**: `189.4Gb/s` (`CV: 0.42%`) | **Delta**: `+35.8%` (`CV <= 1%`)<br>**Gate**: `PASS` (`0` queue stalls)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
+| **`Node-Pair A` — P-Core (`SMT`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>Multi-Node NUMA | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: Node-local `spread_step2` | **State A (Baseline)**: `148.2Gb/s` (`Retrans: 0.14%`)<br>**State B (Tuned)**: `191.4Gb/s` (`Retrans: 0.00%`) | **Delta**: `+29.1%` (`+43.2Gb/s`)<br>**Gate**: `PASS` (`>= 188Gb/s`)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
+| **`Node-Pair B` — E-Core (`Shared-L2`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>`4`-Core L2 Modules | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: `spread_l2` (`TX=512`) | **State A (Baseline)**: `139.5Gb/s` (`CV: 8.4%`)<br>**State B (Tuned)**: `189.4Gb/s` (`CV: 0.42%`) | **Delta**: `+35.8%` (`CV <= 1%`)<br>**Gate**: `PASS` (`0` queue stalls)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
 
 ---
 

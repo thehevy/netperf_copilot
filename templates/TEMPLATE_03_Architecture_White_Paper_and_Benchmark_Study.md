@@ -36,7 +36,7 @@ and GitHub views.
 
 | Topology Profile & Sanitized IP | Host CPU, Cache & NUMA Architecture | Network Adapter & Link Configuration |
 | --- | --- | --- |
-| **`Profile A` — P-Core (`SMT`)**<br>DUT: `192.0.2.11`<br>LP: `192.0.2.12` | **Multi-Core P-Core Server**<br>`2` Threads/Core (`SMT`), Dedicated `2` MB L2<br>Layout: `spread_step2` (`TX=2048`, `RX=4096`) | **High-Speed `200GbE` Network Adapter**<br>Mode: `200GbE` (`PCIe Gen5 x16`, `504.12` Gbps eff.)<br>MTU: `9000` (`5`-Layer TX Scheduler) |
+| **`Profile A` — P-Core (`SMT`)**<br>DUT: `192.0.2.11`<br>LP: `192.0.2.12` | **Multi-Core P-Core Server**<br>`2` Threads/Core (`SMT`), Dedicated `2` MB L2<br>Layout: `spread_step2` (`TX=2048`, `RX=4096`) | **High-Speed `200GbE` Network Adapter**<br>Mode: `200GbE` (`PCIe 5.0 x16`, `504.12` Gbps eff.)<br>MTU: `9000` (`5`-Layer TX Scheduler) |
 | **`Profile B` — E-Core (`Shared-L2`)**<br>DUT: `198.51.100.11`<br>LP: `198.51.100.12` | **High-Density E-Core Server**<br>`1` Thread/Core, `4` Cores per `4` MB L2 Module<br>Layout: `spread_l2` (`TX=512`, `RX=4096`) | **High-Speed `200GbE` Network Adapter**<br>Mode: `200GbE` / `8x25GbE` LACP Breakout<br>MTU: `9000` / `1500` |
 
 ---
@@ -53,7 +53,7 @@ flowchart LR
         Stack["TCP/IP Stack + MSG_ZEROCOPY (4MB Buffers)"]
         Driver["Linux Network Driver (RSS + XPS rxqs=ffff)"]
     end
-    subgraph Adapter["200GbE Network Adapter (PCIe Gen5 x16)"]
+    subgraph Adapter["200GbE Network Adapter (PCIe 5.0 x16)"]
         Queues["32 Combined TxRx Queues (IRQ Cores 0..23)"]
         MAC["200GbE MAC/PHY (MTU 9000)"]
     end

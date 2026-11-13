@@ -22,7 +22,7 @@ Hardware Fault Gating, and Empirical Qualification Results
 Network interface speeds in cloud and enterprise datacenters have scaled by two orders of magnitude—from `10GbE` to
 **`100GbE`, `200GbE`, `400GbE`, and `800GbE`** across **Intel® Ethernet 800 Series** (**Intel® Ethernet Controller
 200GbE**
-and **200GbE Network Adapter**) PCIe 5.0 and Gen6 interconnects—while server processor core counts
+and **200GbE Network Adapter**) PCIe 5.0 and PCIe 6.0 interconnects—while server processor core counts
 have expanded from 8–32 cores to **144–288+ physical cores** across **Intel® Xeon® 6 Processor** Performance-core
 (P-Core SMT) and Efficient-core (E-Core shared-L2 module) microarchitectures. However, the foundational open-source
 network benchmarking tool **`netperf` (v2.7.0)** remained frozen in an architecture designed for single-port listeners,
@@ -108,7 +108,7 @@ flowchart TD
         B1["1. Control Plane Serialization\n64 clients connect to single TCP port 12865\n-> Kernel accept queue lock contention\n-> Child netserver inherits listener CPU"]
         B2["2. Memory Copy & Buffer Ceiling\nMAXMESSAGESIZE capped at 1 MB\n-> Mandatory copy_from_user() on every send()\n-> 25 GB/s DRAM copy overhead at 200 Gbps"]
         B3["3. High-Core-Count Blind Spots\nMAXCPUS = 256 limit in /proc/stat parser\n-> Global avg CPU reports 5.5% when 16/288 cores hit 100%\n-> Hottest core saturation completely hidden"]
-        B4["4. Hardware & Link Blindness\nETHTOOL_GSET 16-bit speed overflows > 65 Gbps\n-> 4-char PCIe width buffer overflows on 'x16'\n-> No pre-flight check for PCIe Gen5 downgrade or NUMA mismatch"]
+        B4["4. Hardware & Link Blindness\nETHTOOL_GSET 16-bit speed overflows > 65 Gbps\n-> 4-char PCIe width buffer overflows on 'x16'\n-> No pre-flight check for PCIe 5.0 downgrade or NUMA mismatch"]
     end
 ```
 
@@ -261,7 +261,7 @@ application bottlenecks on 288–576 thread servers.
   `ETHTOOL_GSET`, accurately reporting `100000`, `200000`, `400000`, and `800000` Mbps.
 - **Linux `sysfs` PCIe 5.0/6.0 & DMI Inspection ([`src/netslot_linux.c`](../../src/netslot_linux.c),
   [`src/netsys_linux.c`](../../src/netsys_linux.c))**: Reads `/sys/class/net/<iface>/device/current_link_speed`
-  (`32.0 GT/s PCIe` for Gen5, `64.0 GT/s PCIe` for Gen6), `current_link_width` (`x16`), `numa_node`, and
+  (`32.0 GT/s PCIe` for PCIe 5.0, `64.0 GT/s PCIe` for PCIe 6.0), `current_link_width` (`x16`), `numa_node`, and
   `/sys/class/dmi/id/product_name` using safe 32–128 byte bounded buffers.
 - **RFC 8259 JSON Escaping ([`src/nettest_omni.c`](../../src/nettest_omni.c))**: All string fields in `-- -J` JSON
   output pass through `json_escape_string()` so embedded quotes, backslashes, or control characters in `COMMAND_LINE`
@@ -436,7 +436,7 @@ documented hardware/OS anti-affinity rules before any benchmark begins. Key high
 | **`AA-014`** | `net.core.busy_poll > 0` on 32–64 stream E-core workloads | **Performance Impact at 200GbE–800GbE**: Busy-polling across 64 E-cores starves kernel softirq processing and pins CPU at 100%<br>**Automated Remediation**: Set `sysctl -w net.core.busy_poll=0 net.core.busy_read=0` for throughput runs |
 | **`AA-015`** | `tx_ring < 512` (default `256`) at 100GbE–200GbE line rate | **Performance Impact at 200GbE–800GbE**: Small default TX ring causes `tx_restart_queue` stalls (`tx_ring=512` on E-core, `2048` on P-core)<br>**Automated Remediation**: Set ethtool -G <iface> tx 512 rx 4096 on E-core (`tx 2048` on P-core) |
 | **`AA-016`** | Cross-NUMA P0 IRQ / app placement (`p0_irq_numa != nic_numa`) | **Performance Impact at 200GbE–800GbE**: Cross-socket UPI/mesh traversal adds latency and cuts throughput by 20%–35%<br>**Automated Remediation**: Pin network adapter IRQs, `netperf`, and `netserver` to `nic_numa` cores |
-| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{Gen5 (32 GT/s)}$ on 200GbE+ network adapter | **Performance Impact at 200GbE–800GbE**: PCIe 4.0 x16 (`~252 Gbps` raw) or x8 lane training caps 200GbE/400GbE line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe 5.0/6.0 x16 slot |
+| **`AA-017`** | PCIe link width $< \text{x16}$ or speed $< \text{PCIe 5.0 (32 GT/s)}$ on 200GbE+ network adapter | **Performance Impact at 200GbE–800GbE**: PCIe 4.0 x16 (`~252 Gbps` raw) or x8 lane training caps 200GbE/400GbE line rate<br>**Automated Remediation**: Reseat adapter in full-bandwidth PCIe 5.0/6.0 x16 slot |
 | **`AA-019`** | `generic-receive-offload (GRO) = off` on 100GbE–800GbE TCP RX | **Performance Impact at 200GbE–800GbE**: Disabling GRO forces per-MTU-frame traversal of the TCP stack (60%+ throughput collapse)<br>**Automated Remediation**: Enable ethtool -K <iface> gro on tso on gso on |
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification

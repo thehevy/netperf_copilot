@@ -9,7 +9,7 @@ Provides hardware discovery and core-pool partitioning for Intel Xeon 6
 Key Capabilities:
 - Detects E-core (4 cores / 4MB L2 module) vs P-core (1 physical core / 2MB L2)
 - Parses NUMA nodes, Sub-NUMA Clustering (SNC), and filters out SMT sibling threads
-- Queries NIC sysfs for PCIe Gen4/Gen5/Gen6 link speed/width & effective bandwidth
+- Queries NIC sysfs for PCIe 4.0/5.0/PCIe 6.0 link speed/width & effective bandwidth
 - Partitions per-NUMA cores into disjoint pools:
     1. IRQ Core Pool (NIC queue interrupts, e.g. cores 0..23)
     2. Non-IRQ App / Netserver Core Pool (strictly disjoint from IRQ cores)
@@ -74,8 +74,8 @@ def format_cpu_list(cpus: List[int]) -> str:
 def compute_pcie_bw_and_gen(speed_str: str, width: Any) -> Tuple[float, int]:
     """Compute effective PCIe bandwidth in Gbps and PCIe generation from sysfs speed and width.
 
-    Uses 128b/130b encoding for PCIe Gen3 (8 GT/s), Gen4 (16 GT/s), Gen5 (32 GT/s),
-    and PAM4 FLIT encoding (~240/256) for PCIe Gen6 (64 GT/s).
+    Uses 128b/130b encoding for PCIe 3.0 (8 GT/s), PCIe 4.0 (16 GT/s), PCIe 5.0 (32 GT/s),
+    and PAM4 FLIT encoding (~240/256) for PCIe 6.0 (64 GT/s).
     """
     try:
         w_str = str(width).strip().lower().lstrip('x')

@@ -136,7 +136,7 @@ ANTI_AFFINITY_RULES: List[AntiAffinityRule] = [
     AntiAffinityRule(
         "AA-017", "pcie_bw_bottleneck", "line_rate_target", "FAIL",
         "PCIe link effective bandwidth (Speed * Width * 128/130) is below NIC link speed.",
-        "Verify riser/slot bifurcation and PCIe Gen5 x16 / Gen4 x16 link negotiation in lspci -vv.",
+        "Verify riser/slot bifurcation and PCIe 5.0 x16 / PCIe 4.0 x16 link negotiation in lspci -vv.",
     ),
     AntiAffinityRule(
         "AA-018", "powersave_governor", "high_speed_netperf", "FAIL",

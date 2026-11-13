@@ -48,7 +48,7 @@ flowchart LR
 
     subgraph Modern["Modernized Netperf v3.0"]
         M1["Per-Core netserver Pool\nPorts 18600..18663 (Lockless)"]
-        M2["4 MB Buffers + MSG_ZEROCOPY (-Z)\nPCIe Gen5/Gen6 & 800GbE Ethtool"]
+        M2["4 MB Buffers + MSG_ZEROCOPY (-Z)\nPCIe PCIe 5.0/6.0 & 800GbE Ethtool"]
         M3["2048-Core /proc/stat Engine\nactive_cpu_util & peak_cpu_id"]
         M4["24-Rule Pre-Flight, BKM Tuner,\nJSON/CSV/Presets & kmsg Fault Gate"]
     end

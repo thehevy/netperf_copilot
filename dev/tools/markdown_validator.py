@@ -134,6 +134,14 @@ def _apply_ste_lexical_replacements(line: str) -> Tuple[str, List[str]]:
         masked = speed_re.sub(r"\1GbE", masked)
         applied.append("D3-SPEED (bare G -> GbE)")
 
+    pcie_compound_re = re.compile(r"\b(?:PCIe\s+)?Gen\s*([1-6])\s*(?:/|–|-)\s*(?:PCIe\s+)?Gen\s*([1-6])(?:\.0)?\b", re.IGNORECASE)
+    pcie_single_re = re.compile(r"\b(?:PCIe\s+)?Gen\s*([1-6])(?:\.0)?\b")
+    if pcie_compound_re.search(masked) or pcie_single_re.search(masked):
+        masked = pcie_compound_re.sub(r"PCIe \1.0/\2.0", masked)
+        masked = pcie_single_re.sub(r"PCIe \1.0", masked)
+        masked = re.sub(r"\bPCIe\s+PCIe\s+([1-6]\.0)", r"PCIe \1", masked)
+        applied.append("D3-PCIE (GenX -> PCIe X.0)")
+
     for idx, val in enumerate(protected):
         if val.startswith("["):
             val = re.sub(

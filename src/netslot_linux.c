@@ -212,7 +212,7 @@ find_interface_slot(char *interface_name) {
      (interface_address, lets find that slot shall we? */
   nftw("/sys/bus/pci/slots", find_slot, 20, flags);
 
-  /* Modern PCIe Gen5/Gen6 servers often have empty /sys/bus/pci/slots;
+  /* Modern PCIe 5.0/6.0 servers often have empty /sys/bus/pci/slots;
      fall back to reporting PCIe BDF, NUMA node, link speed, and width. */
   if (strcmp(interface_slot, "not found") == 0 ||
       strcmp(interface_slot, "fopen") == 0 ||

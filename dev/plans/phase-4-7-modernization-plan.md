@@ -59,7 +59,7 @@ flowchart TD
 
     subgraph P5["Step 2: Core C Engine Modernization (src/)"]
         B1["netcpu_procstat.c: 2048-Core Active CPU% + Peak Core ID + SoftIRQ Accounting"]
-        B2["netslot_linux.c & netsys_linux.c: Sysfs PCIe Gen5/Gen6 BW, NUMA & DMI/Cpufreq"]
+        B2["netslot_linux.c & netsys_linux.c: Sysfs PCIe 5.0/6.0 BW, NUMA & DMI/Cpufreq"]
         B3["netdrv_ethtool.c: 32-Bit ETHTOOL_GLINKSETTINGS (100GbE-800GbE), Rings & Channels"]
         B4["netlib.h / nettest_omni.c: 4MB MAXMESSAGESIZE & MSG_ZEROCOPY (-Z) with Error Queue Drain"]
     end

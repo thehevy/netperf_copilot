@@ -15,7 +15,7 @@ Ethernet Network Adapter 200GbE**) fabrics.
 
 | Field | Value |
 | --- | --- |
-| **Repository** | [github.com/netperf_copilot](https://github.com/thehevy/netperf_copilot) |
+| **Repository** | [netperf_copilot](https://github.com/thehevy/netperf_copilot) |
 | **Wiki** | [github.com/wiki](https://github.com/thehevy/netperf_copilot/wiki) |
 | **Latest Commit** | `baefaf4` (`master`, Phases 1–7 Complete) |
 | **Validation Status** | `49/49` automated & live hardware checks passing (`0` `dmesg` faults) |
@@ -105,7 +105,7 @@ flowchart TD
     end
 
     subgraph CoreEngine["Core C Engine (src/)"]
-        Netperf["netperf (-M OMNI / Legacy TCP_STREAM)\n• 4MB MAXMESSAGESIZE & -Z MSG_ZEROCOPY\n• 2048-Core /proc/stat Active & Peak CPU\n• ETHTOOL_GLINKSETTINGS & PCIe Gen5/Gen6 sysfs"]
+        Netperf["netperf (-M OMNI / Legacy TCP_STREAM)\n• 4MB MAXMESSAGESIZE & -Z MSG_ZEROCOPY\n• 2048-Core /proc/stat Active & Peak CPU\n• ETHTOOL_GLINKSETTINGS & PCIe 5.0/6.0 sysfs"]
         Netserver["netserver (-p 18600+core)\n• NUMA-Local & Non-IRQ Core Pinned"]
     end
 
