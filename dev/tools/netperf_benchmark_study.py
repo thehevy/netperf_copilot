@@ -38,7 +38,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent))
-from netperf_pcm_bridge import PCM_COUNTER_FORMULAS
+from netperf_flent_bridge import compute_jains_fairness_index
+from netperf_pcm_bridge import PCM_COUNTER_FORMULAS, ProcStatGroundTruth
 from netperf_stats import AdvancedStatistics
 from netperf_topology import SystemTopology, TopologyAnalyzer, format_cpu_list
 
@@ -389,6 +390,121 @@ class BenchmarkStudyHarness:
             "ci_95_margin_pct": round(rel_margin, 2),
         }
 
+    @staticmethod
+    def parse_iperf3_json_output(
+        raw_json: str,
+        procstat_cpu_pct: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Parse iperf3 -J output into aggregate Gbps, per-stream Jain's fairness, and CPU reporting error."""
+        data = json.loads(raw_json)
+        end = data.get("end", {})
+        streams = end.get("streams", [])
+        stream_gbps: List[float] = []
+        total_retrans = 0
+        for st in streams:
+            sender = st.get("sender") or st.get("receiver") or {}
+            bps = float(sender.get("bits_per_second", 0.0))
+            stream_gbps.append(round(bps / 1e9, 3))
+            total_retrans += int(sender.get("retransmits", 0) or 0)
+
+        sum_block = end.get("sum_received") or end.get("sum_sent") or {}
+        agg_bps = float(sum_block.get("bits_per_second", sum(stream_gbps) * 1e9))
+        agg_gbps = round(agg_bps / 1e9, 3)
+        jains = compute_jains_fairness_index(stream_gbps) if stream_gbps else 1.0
+
+        cpu_block = end.get("cpu_utilization_percent", {})
+        host_total_pct = float(cpu_block.get("host_total", 0.0))
+        remote_total_pct = float(cpu_block.get("remote_total", 0.0))
+
+        result: Dict[str, Any] = {
+            "tool": "iperf3",
+            "num_streams": len(stream_gbps),
+            "total_throughput_gbps": agg_gbps,
+            "per_stream_gbps": stream_gbps,
+            "jains_fairness_index": round(jains, 4),
+            "total_retransmits": total_retrans,
+            "reported_host_cpu_pct": round(host_total_pct, 2),
+            "reported_remote_cpu_pct": round(remote_total_pct, 2),
+        }
+        if procstat_cpu_pct is not None:
+            result["cpu_reporting_error"] = ProcStatGroundTruth.compute_cpu_reporting_error(
+                host_total_pct, procstat_cpu_pct
+            )
+        return result
+
+    @staticmethod
+    def parse_iperf2_output(raw_text: str) -> Dict[str, Any]:
+        """Parse iperf2 multi-stream output lines into per-stream Gbps and Jain's Fairness Index."""
+        stream_gbps: List[float] = []
+        sum_gbps: Optional[float] = None
+        line_re = re.compile(
+            r"\[\s*(SUM|\d+)\]\s+[0-9.]+\s*-\s*[0-9.]+\s+sec\s+[0-9.]+\s+\S+\s+([0-9.]+)\s+([KMG]bits/sec)",
+            re.IGNORECASE,
+        )
+        scale_map = {"kbits/sec": 1e-6, "mbits/sec": 1e-3, "gbits/sec": 1.0}
+        for line in (raw_text or "").splitlines():
+            m = line_re.search(line)
+            if not m:
+                continue
+            tag = m.group(1).upper()
+            val = float(m.group(2))
+            unit = m.group(3).lower()
+            gbps = round(val * scale_map.get(unit, 1.0), 3)
+            if tag == "SUM":
+                sum_gbps = gbps
+            else:
+                stream_gbps.append(gbps)
+
+        total_gbps = sum_gbps if sum_gbps is not None else round(sum(stream_gbps), 3)
+        jains = compute_jains_fairness_index(stream_gbps) if stream_gbps else 1.0
+        return {
+            "tool": "iperf2",
+            "num_streams": len(stream_gbps),
+            "total_throughput_gbps": total_gbps,
+            "per_stream_gbps": stream_gbps,
+            "jains_fairness_index": round(jains, 4),
+        }
+
+
+def run_self_test() -> int:
+    """Deterministic self-test for BenchmarkStudyHarness parsers, version detection, and two-tier matrix."""
+    v313 = BenchmarkStudyHarness.parse_iperf3_version("iperf 3.13 (cJSON 1.7.15)")
+    v316 = BenchmarkStudyHarness.parse_iperf3_version("iperf 3.16 (cJSON 1.7.15)")
+    assert v313["is_multithreaded_p"] is False
+    assert v316["is_multithreaded_p"] is True
+
+    sample_ip3 = json.dumps({
+        "end": {
+            "streams": [
+                {"sender": {"bits_per_second": 8120000000.0, "retransmits": 2}},
+                {"sender": {"bits_per_second": 3440000000.0, "retransmits": 11}},
+            ],
+            "sum_received": {"bits_per_second": 11560000000.0},
+            "cpu_utilization_percent": {"host_total": 14.2, "remote_total": 18.5},
+        }
+    })
+    parsed_ip3 = BenchmarkStudyHarness.parse_iperf3_json_output(sample_ip3, procstat_cpu_pct=52.0)
+    assert parsed_ip3["total_throughput_gbps"] == 11.56
+    assert parsed_ip3["jains_fairness_index"] < 0.90
+    assert parsed_ip3["cpu_reporting_error"]["relative_error_pct"] > 70.0
+
+    sample_ip2 = (
+        "[  3] 0.00-30.00 sec  25.9 GBytes  7.42 Gbits/sec\n"
+        "[  4] 0.00-30.00 sec  13.3 GBytes  3.81 Gbits/sec\n"
+        "[SUM] 0.00-30.00 sec  39.2 GBytes  11.23 Gbits/sec\n"
+    )
+    parsed_ip2 = BenchmarkStudyHarness.parse_iperf2_output(sample_ip2)
+    assert parsed_ip2["total_throughput_gbps"] == 11.23
+    assert parsed_ip2["num_streams"] == 2
+    assert parsed_ip2["jains_fairness_index"] < 0.92
+
+    summary = BenchmarkStudyHarness.summarize_trial_samples([192.1, 192.8, 192.5, 193.0, 192.6])
+    assert summary["n_trials"] == 5
+    assert 192.0 < summary["mean_gbps"] < 193.1
+
+    print("netperf_benchmark_study self-test PASSED")
+    return 0
+
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
@@ -404,7 +520,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--iperf3-version-override", help="Optional iperf3 version string for dry-run testing")
     parser.add_argument("--output", help="Optional file path to write JSON study plan")
     parser.add_argument("--dry-run", action="store_true", help="Generate and print reproducible study plan without running live traffic")
+    parser.add_argument("--self-test", action="store_true", help="Run deterministic unit self-test")
     args = parser.parse_args(argv)
+
+    if args.self_test:
+        return run_self_test()
 
     flows = tuple(int(x.strip()) for x in args.flows.split(",") if x.strip())
     harness = BenchmarkStudyHarness(

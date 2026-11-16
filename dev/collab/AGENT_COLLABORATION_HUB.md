@@ -75,6 +75,8 @@ evaluation of what Copilot built, what works well, and the `5` issues resolved j
 | `COLLAB-004` | [`netperf_pcm_bridge.py`](../tools/netperf_pcm_bridge.py), [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py) | Script footers (`METADATA_FOOTER_START..END`) were missing `# Search Keywords:` required by Global Rule 4. | Added `# Search Keywords:` to both script metadata footers. |
 | `COLLAB-005` | [`TECHNICAL_WHITE_PAPER.md`](../docs/TECHNICAL_WHITE_PAPER.md), [`Technical-White-Paper.md`](../../wiki/Technical-White-Paper.md) | `Clone B` white paper edits were based on `1762f32` before the `Gb`/`GbE` speed notation fix (`8ae1736`), reintroducing standalone `G` (`570.8G TX`, `172.4G TX`) and `Last Updated Date: 2026-11-13`. | Merged Case Study 5 with the `Gb`/`GbE` (`570.8Gb TX`, `172.4Gb TX`) and `PCIe 5.0`/`6.0` fixes and updated `Last Updated Date` to `2026-11-16`. |
 | `COLLAB-006` | [`README.md`](../../README.md), [`CLI-Tools-Reference.md`](../../wiki/CLI-Tools-Reference.md) | New Step 8 CLI scripts (`netperf_pcm_bridge.py`, `netperf_flent_bridge.py`, `netperf_benchmark_study.py`) and `netperf-multi` flags (`--pcm`, `--pcm-csv-dir`, `--flent-working-latency`, `--barrier-wait`) needed documentation in `README.md` and `wiki/CLI-Tools-Reference.md`. | Added CLI reference entries and updated `Last Updated Date: 2026-11-16`. |
+| `COLLAB-007` | [`nettest_omni.c`](../../src/nettest_omni.c) | Sampling `get_current_runtime_cpu()` only at `cpu_start()` and `cpu_stop()` could miss mid-run scheduler migrations that return to the starting CPU before test completion. | Added low-overhead bitwise (`& 0xfff == 0`) runtime CPU sampling inside `send_omni()` to capture mid-run core migrations in `LOCAL_CPU_MIGRATIONS`. |
+| `COLLAB-008` | [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py), [`test_modernization.py`](../tests/test_modernization.py) | `netperf_benchmark_study.py` generated the 2-tier command plan but needed deterministic output parsers for `iperf3 -J` and `iperf2 -P N` plus a `--self-test` CLI flag matching the other two Step 8 bridges. | Added `parse_iperf3_json_output()`, `parse_iperf2_output()`, `run_self_test()`, and `--self-test` CLI support to `netperf_benchmark_study.py`. |
 
 ---
 
@@ -90,6 +92,7 @@ When either **GitHub Copilot** or **Antigravity** starts a new task:
 ```bash
 python dev/tools/netperf_pcm_bridge.py --self-test
 python dev/tools/netperf_flent_bridge.py --self-test
+python dev/tools/netperf_benchmark_study.py --self-test
 python dev/tests/test_modernization.py
 python scripts/markdown_validator.py . --fix
 ```

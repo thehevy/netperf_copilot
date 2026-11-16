@@ -754,6 +754,9 @@ class TestNetperfModernization(unittest.TestCase):
         self.assertIn("iperf3_multiprocess_pinned", tier_b)
         self.assertEqual(len(tier_b["iperf3_multiprocess_pinned"]["command"]), 16)
 
+        from netperf_benchmark_study import run_self_test as study_self_test
+        self.assertEqual(study_self_test(), 0)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

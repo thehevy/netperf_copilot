@@ -5217,6 +5217,17 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	}
       }
 
+      /* Periodically sample runtime CPU every 4096 socket operations to detect mid-run scheduler migrations */
+      if (((local_send_calls + local_receive_calls) & 0xfff) == 0) {
+	int mid_cpu = get_current_runtime_cpu();
+	if (mid_cpu >= 0) {
+	  if (local_cpu_exec >= 0 && mid_cpu != local_cpu_exec) {
+	    local_cpu_migrations++;
+	  }
+	  local_cpu_exec = mid_cpu;
+	}
+      }
+
 
     }
 

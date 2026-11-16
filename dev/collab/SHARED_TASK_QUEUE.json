@@ -89,6 +89,29 @@
         "wiki/CLI-Tools-Reference.md"
       ],
       "resolution": "Synchronized all Step 8 files and dev/collab/ across both local clones and pushed to GitHub."
+    },
+    {
+      "task_id": "COLLAB-007",
+      "title": "Add periodic mid-loop runtime CPU migration sampling in src/nettest_omni.c send_omni()",
+      "assigned_agent": "github_copilot",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "src/nettest_omni.c"
+      ],
+      "resolution": "Added low-overhead bitwise (& 0xfff == 0) runtime CPU sampling inside send_omni() so transient mid-run OS scheduler migrations are counted in LOCAL_CPU_MIGRATIONS and LOCAL_CPU_EXEC."
+    },
+    {
+      "task_id": "COLLAB-008",
+      "title": "Add iperf3 JSON / iperf2 output parsers and --self-test CLI entrypoint to dev/tools/netperf_benchmark_study.py",
+      "assigned_agent": "github_copilot",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/tools/netperf_benchmark_study.py",
+        "dev/tests/test_modernization.py"
+      ],
+      "resolution": "Added parse_iperf3_json_output() (with Jain's fairness + ProcStatGroundTruth CPU error), parse_iperf2_output(), run_self_test(), and --self-test CLI support to netperf_benchmark_study.py."
     }
   ]
 }
