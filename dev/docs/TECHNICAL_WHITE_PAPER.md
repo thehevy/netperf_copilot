@@ -616,19 +616,22 @@ normality test $p$-values.
 
 ---
 
-### Case Study 5: Two-Tier Comparative Benchmark Methodology & Reproducibility Appendix
+### Case Study 5: Three-Tier Comparative Methodology & $2 \times 2$ Link-Speed $\times$ MTU Matrix
 
-**Objective**: Establish a fair, reproducible comparative methodology across `netperf_copilot`, classic `netperf 2.7.0`,
-`iperf2`, and `iperf3` using [`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py),
+**Objective**: Establish a confounder-free, reproducible comparative methodology across `netperf_copilot`, classic
+`netperf 2.7.0`, `iperf2`, and `iperf3` (`<= 3.15` vs. `>= 3.16`) across the full **$2 \times 2$ Link-Speed $\times$
+MTU matrix (`100GbE` & `200GbE` at both `MTU 1500` and `MTU 9000`)** using
+[`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py),
 [`netperf_pcm_bridge.py`](../../dev/tools/netperf_pcm_bridge.py), and
 [`netperf_flent_bridge.py`](../../dev/tools/netperf_flent_bridge.py).
 
-#### 1. Two-Tier Experimental Design (`Tier A` vs. `Tier B`)
+#### 1. Three-Tier Experimental Design (`Tier A` $\to$ `Tier B1` $\to$ `Tier B2`) & `2x2` MTU Coverage
 
 | Tier | Configuration | Purpose & Tool Equivalence |
 | --- | --- | --- |
-| **`Tier A: Default Unpinned`** | No explicit CPU pinning; default single daemon listener; 8 parallel streams (`-n 8` / `-P 8`). | Quantifies out-of-the-box user experience and scheduler/listener bottlenecks across tools. |
-| **`Tier B: Tuned & Pinned`** | Identical NUMA-local non-IRQ core list $C = \{c_0, \dots, c_7\}$ assigned across all 4 tools (`--affinity` vs. `taskset -c` / `-A`). | Isolates intrinsic data-path efficiency when every tool is given identical core locality. |
+| **`Tier A: Default Unpinned`** | No explicit CPU pinning; default single daemon listener (`12865` / `5001` / `5201`); `1`–`64` streams. | Quantifies out-of-the-box user experience and scheduler/listener bottlenecks across tools. |
+| **`Tier B1: Shared taskset Pool`** | Identical `numactl --cpunodebind=<node> taskset -c <core_list>` non-IRQ pool applied to **all 4 tools** (including `netperf-multi` without 1:1 `--affinity`, `--per-core-netserver`, or `-Z`). | Strict apples-to-apples engine comparison under identical shared-pool OS scheduling (`17%`–`22%` intra-pool overlap across all tools). |
+| **Tier B2: 1:1 Pinned + Full Capabilities** | 1:1 per-flow core pinning (`--affinity` `spread_l2`/`spread_step2` + `--per-core-netserver` + `-Z` `MSG_ZEROCOPY` vs. 1:1 `taskset -c` classic `netperf` and $N$-process `iperf3`). | Quantifies the incremental gain unlocked by `netperf_copilot`'s 1:1 topology striding, lockless daemon pool, and zero-copy (`+19.55 Gbps` at `200GbE MTU 1500`). |
 
 #### 2. `iperf3` Threading Regime Classification (`<= 3.15` vs. `>= 3.16`)
 

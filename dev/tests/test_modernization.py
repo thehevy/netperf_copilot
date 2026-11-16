@@ -745,14 +745,30 @@ class TestNetperfModernization(unittest.TestCase):
         f16 = plan["flow_matrix"]["16"]
         self.assertEqual(len(f16["trial_schedule"]), 5)
         tier_a = f16["tiers"]["tier_a_default_unpinned"]
+        tier_b1 = f16["tiers"]["tier_b1_shared_taskset_pool"]
         tier_b = f16["tiers"]["tier_b_tuned_pinned"]
         self.assertIn("iperf3_default", tier_a)
+        self.assertIn("netperf_copilot_taskset_pool", tier_b1)
+        self.assertIn("classic_netperf_taskset_pool", tier_b1)
+        self.assertIn("iperf2_taskset_pool", tier_b1)
+        self.assertIn("iperf3_mt_taskset_pool", tier_b1)
+        self.assertIn("taskset", tier_b1["netperf_copilot_taskset_pool"]["command"])
+        self.assertNotIn("--affinity", tier_b1["netperf_copilot_taskset_pool"]["command"])
         self.assertIn("netperf_copilot_pinned", tier_b)
         self.assertIn("classic_netperf_pinned", tier_b)
         self.assertIn("iperf2_pinned", tier_b)
         self.assertIn("iperf3_mt_pinned", tier_b)
         self.assertIn("iperf3_multiprocess_pinned", tier_b)
         self.assertEqual(len(tier_b["iperf3_multiprocess_pinned"]["command"]), 16)
+
+        claims = BenchmarkStudyHarness.evaluate_comparative_claims()
+        for key in (
+            "100gbe_mtu1500_16f_64f_gbps",
+            "100gbe_mtu9000_16f_64f_gbps",
+            "200gbe_mtu1500_16f_64f_gbps",
+            "200gbe_mtu9000_16f_64f_gbps",
+        ):
+            self.assertIn(key, claims)
 
         from netperf_benchmark_study import run_self_test as study_self_test
         self.assertEqual(study_self_test(), 0)

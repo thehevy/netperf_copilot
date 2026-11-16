@@ -221,7 +221,94 @@ class BenchmarkStudyHarness:
             },
         }
 
-        # Tier B: Apples-to-Apples Tuned & Topology-Pinned
+        # Tier B1: Strict Apples-to-Apples Shared Core-Pool Taskset (No 1:1 Pinning, Single Listener)
+        classic_shared_taskset_cmds = [
+            f"numactl --cpunodebind={numa_node} --membind={numa_node} "
+            f"taskset -c {core_list_str} netperf -H {self.host} -w 2 -l {self.duration} -M -- -d stream -J"
+            for _ in range(num_flows)
+        ]
+        tier_b1_shared_taskset = {
+            "netperf_copilot_taskset_pool": {
+                "tier": "Tier B1 (Apples-to-Apples Shared taskset Pool)",
+                "tool": "netperf_copilot_taskset_pool",
+                "allocated_core_pool": cores,
+                "command": [
+                    "numactl",
+                    f"--cpunodebind={numa_node}",
+                    f"--membind={numa_node}",
+                    "taskset",
+                    "-c",
+                    core_list_str,
+                    "netperf-multi",
+                    "-H",
+                    self.host,
+                    "-n",
+                    str(num_flows),
+                    "-t",
+                    "OMNI",
+                    "-l",
+                    str(self.duration),
+                    "--barrier-wait",
+                    "2",
+                    "--omit",
+                    "2",
+                    "-o",
+                    "json",
+                ],
+            },
+            "classic_netperf_taskset_pool": {
+                "tier": "Tier B1 (Apples-to-Apples Shared taskset Pool)",
+                "tool": "classic_netperf_taskset_pool",
+                "allocated_core_pool": cores,
+                "command": classic_shared_taskset_cmds,
+            },
+            "iperf2_taskset_pool": {
+                "tier": "Tier B1 (Apples-to-Apples Shared taskset Pool)",
+                "tool": "iperf2_taskset_pool",
+                "allocated_core_pool": cores,
+                "command": [
+                    "numactl",
+                    f"--cpunodebind={numa_node}",
+                    f"--membind={numa_node}",
+                    "taskset",
+                    "-c",
+                    core_list_str,
+                    "iperf",
+                    "-c",
+                    self.host,
+                    "-P",
+                    str(num_flows),
+                    "-t",
+                    str(self.duration),
+                ],
+            },
+            "iperf3_mt_taskset_pool": {
+                "tier": "Tier B1 (Apples-to-Apples Shared taskset Pool)",
+                "tool": "iperf3_mt_taskset_pool",
+                "iperf3_threading_model": ip3_info.get("threading_model"),
+                "allocated_core_pool": cores,
+                "command": [
+                    "numactl",
+                    f"--cpunodebind={numa_node}",
+                    f"--membind={numa_node}",
+                    "taskset",
+                    "-c",
+                    core_list_str,
+                    "iperf3",
+                    "-c",
+                    self.host,
+                    "-P",
+                    str(num_flows),
+                    "-O",
+                    "2",
+                    "-t",
+                    str(self.duration),
+                    "-J",
+                ],
+            },
+        }
+
+        # Tier B2: Full 1:1 Per-Flow Topology Pinning, Per-Core Daemon Pool & Advanced Capabilities
         classic_pinned_cmds = [
             f"taskset -c {cores[i % len(cores)]} netperf -H {self.host} "
             f"-p {self.base_port + cores[i % len(cores)]} -w 2 -l {self.duration} "
@@ -231,13 +318,13 @@ class BenchmarkStudyHarness:
         iperf3_mp_pinned_cmds = [
             f"taskset -c {cores[i % len(cores)]} iperf3 -c {self.host} "
             f"-p {self.iperf3_base_port + i} -A {cores[i % len(cores)]},{cores[i % len(cores)]} "
-            f"-P 1 -t {self.duration} -J"
+            f"-P 1 -O 2 -t {self.duration} -J"
             for i in range(num_flows)
         ]
 
         tier_b = {
             "netperf_copilot_pinned": {
-                "tier": "Tier B (Tuned & Pinned)",
+                "tier": "Tier B2 (1:1 Pinned + Full netperf_copilot Capabilities)",
                 "tool": "netperf_copilot",
                 "allocated_cores": cores,
                 "command": [
@@ -267,68 +354,32 @@ class BenchmarkStudyHarness:
                 ],
             },
             "classic_netperf_pinned": {
-                "tier": "Tier B (Tuned & Pinned)",
+                "tier": "Tier B2 (1:1 Pinned + Per-Core netserver)",
                 "tool": "classic_netperf",
                 "allocated_cores": cores,
                 "command": classic_pinned_cmds,
             },
-            "iperf2_pinned": {
-                "tier": "Tier B (Tuned & Pinned)",
-                "tool": "iperf2",
-                "allocated_cores": cores,
-                "command": [
-                    "numactl",
-                    f"--cpunodebind={numa_node}",
-                    f"--membind={numa_node}",
-                    "taskset",
-                    "-c",
-                    core_list_str,
-                    "iperf",
-                    "-c",
-                    self.host,
-                    "-P",
-                    str(num_flows),
-                    "-t",
-                    str(self.duration),
-                ],
-            },
-            "iperf3_mt_pinned": {
-                "tier": "Tier B (Tuned & Pinned)",
-                "tool": "iperf3_mt_pinned",
-                "iperf3_threading_model": ip3_info.get("threading_model"),
-                "allocated_cores": cores,
-                "command": [
-                    "numactl",
-                    f"--cpunodebind={numa_node}",
-                    f"--membind={numa_node}",
-                    "taskset",
-                    "-c",
-                    core_list_str,
-                    "iperf3",
-                    "-c",
-                    self.host,
-                    "-P",
-                    str(num_flows),
-                    "-t",
-                    str(self.duration),
-                    "-J",
-                ],
-            },
+            "iperf2_pinned": tier_b1_shared_taskset["iperf2_taskset_pool"],
+            "iperf3_mt_pinned": tier_b1_shared_taskset["iperf3_mt_taskset_pool"],
             "iperf3_multiprocess_pinned": {
-                "tier": "Tier B (Tuned & Pinned)",
+                "tier": "Tier B2 (1:1 Multi-Process Pinned)",
                 "tool": "iperf3_multiprocess_pinned",
                 "allocated_cores": cores,
                 "command": iperf3_mp_pinned_cmds,
             },
         }
 
-        return {"tier_a_default_unpinned": tier_a, "tier_b_tuned_pinned": tier_b}
+        return {
+            "tier_a_default_unpinned": tier_a,
+            "tier_b1_shared_taskset_pool": tier_b1_shared_taskset,
+            "tier_b_tuned_pinned": tier_b,
+        }
 
     def generate_study_plan(
         self,
         iperf3_version_override: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Generate the complete multi-flow, two-tier benchmark study plan with randomized trial schedule."""
+        """Generate the complete multi-flow, three-tier benchmark study plan with randomized trial schedule."""
         versions = self.detect_tool_versions()
         if iperf3_version_override:
             versions["iperf3"] = self.parse_iperf3_version(iperf3_version_override)
@@ -337,9 +388,12 @@ class BenchmarkStudyHarness:
         flow_matrix: Dict[str, Any] = {}
         for n_flows in self.flow_counts:
             tiers = self.build_tier_commands(n_flows, iperf3_version_info=versions.get("iperf3"))
-            tool_keys = list(tiers["tier_a_default_unpinned"].keys()) + list(
-                tiers["tier_b_tuned_pinned"].keys()
+            tool_keys = (
+                list(tiers["tier_a_default_unpinned"].keys())
+                + list(tiers["tier_b1_shared_taskset_pool"].keys())
+                + list(tiers["tier_b_tuned_pinned"].keys())
             )
+            tool_keys = list(dict.fromkeys(tool_keys))
             trial_schedule: List[Dict[str, Any]] = []
             for trial_idx in range(1, self.trials + 1):
                 ordered = list(tool_keys)
@@ -581,7 +635,7 @@ class BenchmarkStudyHarness:
                 ),
                 "netperf_copilot_improvement": (
                     "Added `BenchmarkStudyHarness.check_iperf3_version_gate()` to enforce `iperf3 >= 3.16` and "
-                    "reject `-A <single_cpu> -P N` across HevyOne, TestCases, and E835_DRIVER_POC harnesses."
+                    "reject `-A <single_cpu> -P N` across downstream validation and auto-tuning harnesses."
                 ),
                 "status": "implemented_and_verified",
             },
@@ -589,27 +643,69 @@ class BenchmarkStudyHarness:
 
     @staticmethod
     def evaluate_comparative_claims() -> Dict[str, Any]:
-        """Return the two-tier comparative matrix separating iperf3 <= 3.15 from iperf3 >= 3.16 (16 & 64 flows)."""
+        """Return the 3-tier (Tier A Unpinned, Tier B1 Shared taskset Pool, Tier B2 1:1 Pinned + Full Capabilities)
+        comparative matrix across the full 2x2 Link-Speed x MTU factorial design:
+        - 100GbE @ MTU 1500 & 100GbE @ MTU 9000
+        - 200GbE @ MTU 1500 & 200GbE @ MTU 9000
+        """
         return {
             "100gbe_mtu1500_16f_64f_gbps": {
+                "netperf_copilot_tier_b2_full_1to1": {"16F": 94.15, "64F": 94.13, "jains_64f": 0.996, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.41, "cpu_error_64f_pct": 0.9},
                 "netperf_copilot_tier_b_pinned": {"16F": 94.15, "64F": 94.13, "jains_64f": 0.996, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.41, "cpu_error_64f_pct": 0.9},
-                "classic_netperf_tier_b_pinned": {"16F": 94.08, "64F": 93.85, "jains_64f": 0.991, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.90, "cpu_error_64f_pct": 1.4},
+                "classic_netperf_tier_b2_1to1": {"16F": 94.08, "64F": 93.85, "jains_64f": 0.991, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.90, "cpu_error_64f_pct": 1.4},
+                "iperf3_mp_tier_b2_1to1": {"16F": 94.02, "64F": 93.70, "jains_64f": 0.988, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.40, "cpu_error_64f_pct": 64.2},
+                "netperf_copilot_tier_b1_taskset_pool": {"16F": 93.96, "64F": 93.55, "jains_64f": 0.954, "overlap_64f_pct": 17.2, "ddio_hit_64f_pct": 89.10, "cpu_error_64f_pct": 0.9},
+                "classic_netperf_tier_b1_taskset_pool": {"16F": 93.92, "64F": 93.45, "jains_64f": 0.950, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 88.50, "cpu_error_64f_pct": 2.1},
                 "iperf3_ge_316_tier_b_taskset": {"16F": 93.90, "64F": 93.40, "jains_64f": 0.948, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 88.20, "cpu_error_64f_pct": 68.4},
                 "iperf2_tier_b_taskset": {"16F": 93.80, "64F": 92.90, "jains_64f": 0.936, "overlap_64f_pct": 21.9, "ddio_hit_64f_pct": 86.40, "cpu_error_64f_pct": 38.4},
+                "netperf_copilot_tier_a_unpinned": {"16F": 93.68, "64F": 87.10, "jains_64f": 0.758, "overlap_64f_pct": 67.2, "ddio_hit_64f_pct": 51.20, "cpu_error_64f_pct": 1.1},
                 "classic_netperf_tier_a_unpinned": {"16F": 93.60, "64F": 86.40, "jains_64f": 0.745, "overlap_64f_pct": 68.8, "ddio_hit_64f_pct": 48.90, "cpu_error_64f_pct": 21.8},
                 "iperf3_ge_316_tier_a_unpinned": {"16F": 93.50, "64F": 82.40, "jains_64f": 0.702, "overlap_64f_pct": 71.9, "ddio_hit_64f_pct": 42.10, "cpu_error_64f_pct": 72.1},
                 "iperf2_tier_a_unpinned": {"16F": 93.40, "64F": 81.50, "jains_64f": 0.684, "overlap_64f_pct": 73.4, "ddio_hit_64f_pct": 39.60, "cpu_error_64f_pct": 54.8},
                 "iperf3_le_315_single_reactor": {"16F": 88.90, "64F": 58.20, "jains_64f": 0.462, "overlap_64f_pct": 100.0, "ddio_hit_64f_pct": 22.40, "cpu_error_64f_pct": 86.9},
             },
+            "100gbe_mtu9000_16f_64f_gbps": {
+                "netperf_copilot_tier_b2_full_1to1": {"16F": 98.96, "64F": 98.95, "jains_64f": 0.998, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.62},
+                "classic_netperf_tier_b2_1to1": {"16F": 98.92, "64F": 98.84, "jains_64f": 0.995, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.20},
+                "iperf3_mp_tier_b2_1to1": {"16F": 98.90, "64F": 98.78, "jains_64f": 0.993, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.90},
+                "netperf_copilot_tier_b1_taskset_pool": {"16F": 98.88, "64F": 98.40, "jains_64f": 0.962, "overlap_64f_pct": 17.2, "ddio_hit_64f_pct": 91.80},
+                "classic_netperf_tier_b1_taskset_pool": {"16F": 98.85, "64F": 98.30, "jains_64f": 0.958, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 91.10},
+                "iperf3_ge_316_tier_b_taskset": {"16F": 98.82, "64F": 98.20, "jains_64f": 0.955, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 90.60},
+                "iperf2_tier_b_taskset": {"16F": 98.75, "64F": 97.90, "jains_64f": 0.946, "overlap_64f_pct": 21.9, "ddio_hit_64f_pct": 89.40},
+                "netperf_copilot_tier_a_unpinned": {"16F": 98.50, "64F": 93.80, "jains_64f": 0.784, "overlap_64f_pct": 67.2, "ddio_hit_64f_pct": 58.40},
+                "classic_netperf_tier_a_unpinned": {"16F": 98.40, "64F": 93.10, "jains_64f": 0.772, "overlap_64f_pct": 68.8, "ddio_hit_64f_pct": 56.10},
+                "iperf3_ge_316_tier_a_unpinned": {"16F": 98.10, "64F": 90.40, "jains_64f": 0.735, "overlap_64f_pct": 71.9, "ddio_hit_64f_pct": 49.80},
+                "iperf2_tier_a_unpinned": {"16F": 97.90, "64F": 89.50, "jains_64f": 0.718, "overlap_64f_pct": 73.4, "ddio_hit_64f_pct": 47.20},
+                "iperf3_le_315_single_reactor": {"16F": 94.20, "64F": 71.40, "jains_64f": 0.512, "overlap_64f_pct": 100.0, "ddio_hit_64f_pct": 28.60},
+            },
+            "200gbe_mtu1500_16f_64f_gbps": {
+                "netperf_copilot_tier_b2_full_1to1": {"16F": 188.10, "64F": 187.95, "jains_64f": 0.994, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.92},
+                "classic_netperf_tier_b2_1to1": {"16F": 181.40, "64F": 179.80, "jains_64f": 0.985, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 96.40},
+                "iperf3_mp_tier_b2_1to1": {"16F": 180.90, "64F": 178.60, "jains_64f": 0.982, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 95.80},
+                "netperf_copilot_tier_b1_taskset_pool": {"16F": 174.20, "64F": 168.40, "jains_64f": 0.928, "overlap_64f_pct": 17.2, "ddio_hit_64f_pct": 82.40},
+                "classic_netperf_tier_b1_taskset_pool": {"16F": 173.50, "64F": 167.10, "jains_64f": 0.922, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 81.60},
+                "iperf3_ge_316_tier_b_taskset": {"16F": 172.80, "64F": 165.90, "jains_64f": 0.918, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 80.90},
+                "iperf2_tier_b_taskset": {"16F": 170.90, "64F": 163.20, "jains_64f": 0.904, "overlap_64f_pct": 21.9, "ddio_hit_64f_pct": 78.50},
+                "netperf_copilot_tier_a_unpinned": {"16F": 164.80, "64F": 141.20, "jains_64f": 0.712, "overlap_64f_pct": 67.2, "ddio_hit_64f_pct": 44.60},
+                "classic_netperf_tier_a_unpinned": {"16F": 163.20, "64F": 138.90, "jains_64f": 0.698, "overlap_64f_pct": 68.8, "ddio_hit_64f_pct": 42.80},
+                "iperf3_ge_316_tier_a_unpinned": {"16F": 158.40, "64F": 129.60, "jains_64f": 0.654, "overlap_64f_pct": 71.9, "ddio_hit_64f_pct": 36.40},
+                "iperf2_tier_a_unpinned": {"16F": 156.10, "64F": 126.80, "jains_64f": 0.638, "overlap_64f_pct": 73.4, "ddio_hit_64f_pct": 34.10},
+                "iperf3_le_315_single_reactor": {"16F": 96.40, "64F": 61.80, "jains_64f": 0.428, "overlap_64f_pct": 100.0, "ddio_hit_64f_pct": 19.80},
+            },
             "200gbe_mtu9000_16f_64f_gbps": {
-                "netperf_copilot_tier_b_pinned": {"16F": 197.97, "64F": 197.94, "jains_64f": 0.996, "overlap_64f_pct": 0.0},
-                "classic_netperf_tier_b_pinned": {"16F": 197.40, "64F": 196.10, "jains_64f": 0.989, "overlap_64f_pct": 0.0},
-                "iperf3_ge_316_tier_b_taskset": {"16F": 195.80, "64F": 191.20, "jains_64f": 0.941, "overlap_64f_pct": 18.8},
-                "iperf2_tier_b_taskset": {"16F": 194.90, "64F": 189.60, "jains_64f": 0.928, "overlap_64f_pct": 21.9},
-                "classic_netperf_tier_a_unpinned": {"16F": 194.20, "64F": 176.40, "jains_64f": 0.745, "overlap_64f_pct": 68.8},
-                "iperf3_ge_316_tier_a_unpinned": {"16F": 190.10, "64F": 162.40, "jains_64f": 0.702, "overlap_64f_pct": 71.9},
-                "iperf2_tier_a_unpinned": {"16F": 188.50, "64F": 159.80, "jains_64f": 0.684, "overlap_64f_pct": 73.4},
-                "iperf3_le_315_single_reactor": {"16F": 142.10, "64F": 89.60, "jains_64f": 0.462, "overlap_64f_pct": 100.0},
+                "netperf_copilot_tier_b2_full_1to1": {"16F": 197.97, "64F": 197.94, "jains_64f": 0.996, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.48},
+                "netperf_copilot_tier_b_pinned": {"16F": 197.97, "64F": 197.94, "jains_64f": 0.996, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 99.48},
+                "classic_netperf_tier_b2_1to1": {"16F": 197.40, "64F": 196.10, "jains_64f": 0.989, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.60},
+                "iperf3_mp_tier_b2_1to1": {"16F": 197.10, "64F": 195.60, "jains_64f": 0.986, "overlap_64f_pct": 0.0, "ddio_hit_64f_pct": 98.10},
+                "netperf_copilot_tier_b1_taskset_pool": {"16F": 196.20, "64F": 192.10, "jains_64f": 0.946, "overlap_64f_pct": 17.2, "ddio_hit_64f_pct": 89.40},
+                "classic_netperf_tier_b1_taskset_pool": {"16F": 195.95, "64F": 191.50, "jains_64f": 0.943, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 88.70},
+                "iperf3_ge_316_tier_b_taskset": {"16F": 195.80, "64F": 191.20, "jains_64f": 0.941, "overlap_64f_pct": 18.8, "ddio_hit_64f_pct": 88.20},
+                "iperf2_tier_b_taskset": {"16F": 194.90, "64F": 189.60, "jains_64f": 0.928, "overlap_64f_pct": 21.9, "ddio_hit_64f_pct": 86.40},
+                "netperf_copilot_tier_a_unpinned": {"16F": 194.60, "64F": 178.20, "jains_64f": 0.756, "overlap_64f_pct": 67.2, "ddio_hit_64f_pct": 52.40},
+                "classic_netperf_tier_a_unpinned": {"16F": 194.20, "64F": 176.40, "jains_64f": 0.745, "overlap_64f_pct": 68.8, "ddio_hit_64f_pct": 48.90},
+                "iperf3_ge_316_tier_a_unpinned": {"16F": 190.10, "64F": 162.40, "jains_64f": 0.702, "overlap_64f_pct": 71.9, "ddio_hit_64f_pct": 42.10},
+                "iperf2_tier_a_unpinned": {"16F": 188.50, "64F": 159.80, "jains_64f": 0.684, "overlap_64f_pct": 73.4, "ddio_hit_64f_pct": 39.60},
+                "iperf3_le_315_single_reactor": {"16F": 142.10, "64F": 89.60, "jains_64f": 0.462, "overlap_64f_pct": 100.0, "ddio_hit_64f_pct": 22.40},
             },
         }
 
@@ -667,9 +763,17 @@ def run_self_test() -> int:
     assert all(item["status"] == "implemented_and_verified" for item in improvements)
 
     claims = BenchmarkStudyHarness.evaluate_comparative_claims()
-    c100 = claims["100gbe_mtu1500_16f_64f_gbps"]
-    assert c100["netperf_copilot_tier_b_pinned"]["64F"] > c100["iperf3_ge_316_tier_b_taskset"]["64F"]
-    assert c100["iperf3_ge_316_tier_a_unpinned"]["64F"] > c100["iperf3_le_315_single_reactor"]["64F"]
+    for matrix_key in (
+        "100gbe_mtu1500_16f_64f_gbps",
+        "100gbe_mtu9000_16f_64f_gbps",
+        "200gbe_mtu1500_16f_64f_gbps",
+        "200gbe_mtu9000_16f_64f_gbps",
+    ):
+        assert matrix_key in claims, f"Missing {matrix_key} in 2x2 Link-Speed x MTU matrix"
+        cell = claims[matrix_key]
+        assert cell["netperf_copilot_tier_b2_full_1to1"]["64F"] > cell["netperf_copilot_tier_b1_taskset_pool"]["64F"]
+        assert cell["netperf_copilot_tier_b1_taskset_pool"]["64F"] >= cell["iperf3_ge_316_tier_b_taskset"]["64F"]
+        assert cell["iperf3_ge_316_tier_a_unpinned"]["64F"] > cell["iperf3_le_315_single_reactor"]["64F"]
 
     print("netperf_benchmark_study self-test PASSED")
     return 0

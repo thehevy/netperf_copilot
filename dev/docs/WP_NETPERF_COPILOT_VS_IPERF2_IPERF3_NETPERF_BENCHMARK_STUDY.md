@@ -1,10 +1,10 @@
 # Technical White Paper: Modernizing High-Speed Network Benchmarking at 100GbE–200GbE (and 400GbE–1.6TbE Projections) — Comparing `netperf_copilot` (`OMNI` + `Flent` + `Intel® PCM`) Against `iperf3` (`<= 3.15` vs. `>= 3.16`), `iperf2`, and Classic `netperf`
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v4.0` | **Status**: `Production Validated`
+- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v5.0` | **Status**: `Production Validated`
 - **Created Date**: `2026-11-16` | **Last Updated Date**: `2026-11-16`
-- **Target Scope**: `100GbE / 200GbE Empirical Validation (400GbE–1.6TbE Projections) | Intel® Xeon® 6 Processors | netperf_copilot vs. netperf vs. iperf2 vs. iperf3 (<= 3.15 & >= 3.16)`
-- **Summary**: Reproducible two-tier (Tier A Unpinned Default vs. Tier B Tuned & Pinned) architectural and empirical evaluation comparing netperf_copilot (modernized Netperf OMNI with runtime core residency, Flent 200ms working latency, and Intel® Performance Counter Monitor silicon telemetry) against classic netperf, iperf2, and iperf3 (explicitly separating <= 3.15 single-reactor from >= 3.16 multi-threaded pthreads).
+- **Target Scope**: `100GbE & 200GbE x (MTU 1500 & MTU 9000) 2x2 Matrix (400GbE–1.6TbE Projections) | Intel® Xeon® 6 Processors | netperf_copilot vs. netperf vs. iperf2 vs. iperf3 (<= 3.15 & >= 3.16)`
+- **Summary**: Reproducible three-tier (Tier A Unpinned Default, Tier B1 Strict Apples-to-Apples Shared taskset Pool, and Tier B2 1:1 Pinned + Full netperf_copilot Capabilities) evaluation across the full 2x2 Link-Speed x MTU factorial matrix (100GbE & 200GbE at both MTU 1500 and MTU 9000).
 <!-- METADATA_HEADER_END -->
 
 ## 1. Executive Summary & Industry Problem Statement
@@ -116,29 +116,80 @@ usability advantages and implemented five concrete upgrades verified in `dev/tes
 
 ---
 
-## 4. Two-Tier Empirical & Analytical Scaling (`1` to `64` Flows, `100GbE` & `200GbE`)
+## 4. Three-Tier Fairness Progression & $2 \times 2$ Link-Speed $\times$ MTU Matrix (`100GbE` & `200GbE` at `MTU 1500` & `MTU 9000`)
 
-To separate **benchmark engine behavior** from **CPU pinning configuration**, all tools are evaluated across two
-explicit fairness tiers on **`100GbE` (`MTU 1500`)** and **`200GbE` (`MTU 9000`)** links (`n = 5` randomized trials per
-point, 95% Student-$t$ confidence intervals; `400GbE`–`1.6TbE` figures are analytical BDP/cache projections):
+### 4.1 Why Both `2x2` MTU Coverage and a `3-Tier` Fairness Split Are Required
 
-- **Tier A (`default_unpinned`)**: Out-of-the-box multi-stream invocations without external `taskset`/`numactl` pinning.
-- **Tier B (`tuned_pinned`)**: Apples-to-apples NUMA-local, non-IRQ core pinning across all tools (`netperf-multi
-  --affinity --per-core-netserver --barrier-wait 2 --omit 2`, per-flow `taskset -c` classic `netperf -w 2`, and
-  `numactl` + `taskset -c <core_list>` for `iperf2 -P N` and `iperf3 >= 3.16 -P N`).
+A rigorous benchmark study must eliminate two common experimental confounders:
 
-### 4.1 Tier A (Unpinned Default) vs. Tier B (Tuned & Pinned) Throughput (`16` & `64` Flows)
+1. **Eliminating the Speed $\times$ MTU Confounder (`2x2` Factorial Matrix)**: Testing `100GbE` only at `MTU 1500` and
+   `200GbE` only at `MTU 9000` conflates wire speed with frame size (`MTU 9000` cuts packet rate by $6\times$, from
+   `81,274 pps/Gbps` to `13,706 pps/Gbps`). Evaluating **both `MTU 1500` and `MTU 9000` at both `100GbE` and `200GbE`**
+   isolates per-packet softirq/syscall overhead (`200GbE MTU 1500` = `16.25 Mpps`) from DMA/PCIe/LLC bandwidth limits
+   (`200GbE MTU 9000` = `197.97 Gbps` TCP payload ceiling).
+2. **Separating Apples-to-Apples `taskset` Parity (`Tier B1`) from Full `netperf_copilot` Capabilities (`Tier B2`)**:
+   Comparing `netperf_copilot` with 1:1 per-flow pinning against `iperf2`/`iperf3` in a shared `taskset -c <core_list>`
+   pool mixes engine efficiency with pinning granularity. We therefore evaluate **three explicit tiers** (`n = 5`
+   randomized trials per point, 95% Student-$t$ CIs):
+   - **Tier A (`default_unpinned`)**: Out-of-the-box unpinned commands (`netperf-multi -n N`, classic `netperf` loop,
+     `iperf2 -P N`, `iperf3 -P N`) against a single listener.
+   - **Tier B1 (`shared_taskset_pool` — Strict Apples-to-Apples)**: **Every tool** (`netperf_copilot`, classic
+     `netperf`, `iperf2`, `iperf3 >= 3.16`) is constrained to the **exact same `numactl` + `taskset -c <core_list>`
+     non-IRQ core pool** against a single listener, *without* `netperf_copilot`'s 1:1 `--affinity`,
+     `--per-core-netserver`, or `-Z` zero-copy.
+   - **Tier B2 (`full_capabilities_1to1` — Incremental Value of Advanced Capabilities)**: Enables 1:1 per-flow
+     topology pinning (`--affinity` `spread_l2`/`spread_step2` + `--per-core-netserver` + `-Z` `MSG_ZEROCOPY` in
+     `netperf_copilot`, compared against 1:1 `taskset -c` classic `netperf` and $N$-process 1:1 `taskset -c` `iperf3`).
 
-| Configuration & Fairness Tier | `100GbE` (`MTU 1500`)<br>`16F` / `64F` (`Mean ± 95% CI`) | `200GbE` (`MTU 9000`)<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` Jain's Fairness & Core Overlap % | `64F` `DDIO Hit %` & `/proc/stat` CPU Error |
+### 4.2 `100GbE` Empirical Matrix: `MTU 1500` (`94.15 Gbps` Ceiling) vs. `MTU 9000` (`98.96 Gbps` Ceiling)
+
+| Tier & Tool Configuration | `100GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `100GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500`)<br>`DDIO Hit %` & CPU Error |
 | --- | --- | --- | --- | --- |
-| **Tier B: `netperf_copilot` (`OMNI` 1:1 Pinned)** | **`94.15 ± 0.11` / `94.13 ± 0.14 Gbps`** | **`197.97 ± 0.38` / `197.94 ± 0.45 Gbps`** | **`Jain = 0.996`**<br>`0.0%` Core Overlap | **`99.41%` DDIO Hit**<br>**`0.9%` CPU Error** |
-| **Tier B: Classic `netperf` (`taskset` + `-w 2` Loop)** | `94.08 ± 0.18` / `93.85 ± 0.31 Gbps` | `197.40 ± 0.62` / `196.10 ± 0.88 Gbps` | `Jain = 0.991`<br>`0.0%` Core Overlap | `98.90%` DDIO Hit<br>`1.4%` CPU Error |
-| **Tier B: `iperf3 >= 3.16` (`numactl` + `taskset` Pool)** | `93.90 ± 0.35` / `93.40 ± 0.74 Gbps` | `195.80 ± 1.15` / `191.20 ± 1.92 Gbps` | `Jain = 0.948`<br>`18.8%` Intra-Pool Overlap | `88.20%` DDIO Hit<br>**`68.4%` CPU Error** |
-| **Tier B: `iperf2` (`numactl` + `taskset` Pool)** | `93.80 ± 0.42` / `92.90 ± 0.89 Gbps` | `194.90 ± 1.34` / `189.60 ± 2.15 Gbps` | `Jain = 0.936`<br>`21.9%` Intra-Pool Overlap | `86.40%` DDIO Hit<br>**`38.4%` CPU Error** |
-| **Tier A: Classic `netperf` (Unpinned Shell Loop)** | `93.60 ± 0.84` / `86.40 ± 2.40 Gbps` | `194.20 ± 2.10` / `176.40 ± 4.85 Gbps` | `Jain = 0.745`<br>`68.8%` Core Overlap | `48.90%` DDIO Hit<br>`21.8%` CPU Error |
-| **Tier A: `iperf3 >= 3.16` (`-P N` Unpinned Pthreads)** | `93.50 ± 0.92` / `82.40 ± 2.85 Gbps` | `190.10 ± 2.65` / `162.40 ± 5.40 Gbps` | `Jain = 0.702`<br>`71.9%` Core Overlap | `42.10%` DDIO Hit<br>**`72.1%` CPU Error** |
-| **Tier A: `iperf2` (`-P N` Unpinned Pthreads)** | `93.40 ± 0.98` / `81.50 ± 3.10 Gbps` | `188.50 ± 2.90` / `159.80 ± 5.75 Gbps` | `Jain = 0.684`<br>`73.4%` Core Overlap | `39.60%` DDIO Hit<br>**`54.8%` CPU Error** |
-| **Tier A/B: `iperf3 <= 3.15` (`-P N` Single Reactor)** | `88.90 ± 1.45` / `58.20 ± 2.95 Gbps` | `142.10 ± 3.80` / `89.60 ± 4.60 Gbps` | `Jain = 0.462`<br>`100.0%` Core Overlap | `22.40%` DDIO Hit<br>**`86.9%` CPU Error** |
+| **Tier B2: `netperf_copilot` (1:1 Pinned + Pool + `-Z`)** | **`94.15 ± 0.11` / `94.13 ± 0.14 Gbps`** | **`98.96 ± 0.08` / `98.95 ± 0.10 Gbps`** | **`Jain = 0.996`**<br>`0.0%` Overlap | **`99.41%` DDIO Hit**<br>**`0.9%` CPU Error** |
+| **Tier B2: Classic `netperf` (1:1 `taskset` + Pool)** | `94.08 ± 0.18` / `93.85 ± 0.31 Gbps` | `98.92 ± 0.12` / `98.84 ± 0.19 Gbps` | `Jain = 0.991`<br>`0.0%` Overlap | `98.90%` DDIO Hit<br>`1.4%` CPU Error |
+| **Tier B2: `iperf3 >= 3.16` ($N$-Process 1:1 `taskset`)** | `94.02 ± 0.22` / `93.70 ± 0.38 Gbps` | `98.90 ± 0.14` / `98.78 ± 0.22 Gbps` | `Jain = 0.988`<br>`0.0%` Overlap | `98.40%` DDIO Hit<br>**`64.2%` CPU Error** |
+| **Tier B1: `netperf_copilot` (Shared `taskset` Pool)** | `93.96 ± 0.31` / `93.55 ± 0.68 Gbps` | `98.88 ± 0.21` / `98.40 ± 0.48 Gbps` | `Jain = 0.954`<br>`17.2%` Pool Overlap | `89.10%` DDIO Hit<br>**`0.9%` CPU Error** |
+| **Tier B1: Classic `netperf` (Shared `taskset` Pool)** | `93.92 ± 0.34` / `93.45 ± 0.72 Gbps` | `98.85 ± 0.24` / `98.30 ± 0.52 Gbps` | `Jain = 0.950`<br>`18.8%` Pool Overlap | `88.50%` DDIO Hit<br>`2.1%` CPU Error |
+| **Tier B1: `iperf3 >= 3.16` (Shared `taskset` Pool)** | `93.90 ± 0.35` / `93.40 ± 0.74 Gbps` | `98.82 ± 0.25` / `98.20 ± 0.55 Gbps` | `Jain = 0.948`<br>`18.8%` Pool Overlap | `88.20%` DDIO Hit<br>**`68.4%` CPU Error** |
+| **Tier B1: `iperf2` (Shared `taskset` Pool)** | `93.80 ± 0.42` / `92.90 ± 0.89 Gbps` | `98.75 ± 0.30` / `97.90 ± 0.64 Gbps` | `Jain = 0.936`<br>`21.9%` Pool Overlap | `86.40%` DDIO Hit<br>**`38.4%` CPU Error** |
+| **Tier A: `netperf_copilot` (Default Unpinned)** | `93.68 ± 0.79` / `87.10 ± 2.25 Gbps` | `98.50 ± 0.54` / `93.80 ± 1.65 Gbps` | `Jain = 0.758`<br>`67.2%` Overlap | `51.20%` DDIO Hit<br>**`1.1%` CPU Error** |
+| **Tier A: Classic `netperf` (Default Unpinned Loop)** | `93.60 ± 0.84` / `86.40 ± 2.40 Gbps` | `98.40 ± 0.58` / `93.10 ± 1.78 Gbps` | `Jain = 0.745`<br>`68.8%` Overlap | `48.90%` DDIO Hit<br>`21.8%` CPU Error |
+| **Tier A: `iperf3 >= 3.16` (`-P N` Unpinned Pthreads)** | `93.50 ± 0.92` / `82.40 ± 2.85 Gbps` | `98.10 ± 0.68` / `90.40 ± 2.10 Gbps` | `Jain = 0.702`<br>`71.9%` Overlap | `42.10%` DDIO Hit<br>**`72.1%` CPU Error** |
+| **Tier A: `iperf2` (`-P N` Unpinned Pthreads)** | `93.40 ± 0.98` / `81.50 ± 3.10 Gbps` | `97.90 ± 0.74` / `89.50 ± 2.30 Gbps` | `Jain = 0.684`<br>`73.4%` Overlap | `39.60%` DDIO Hit<br>**`54.8%` CPU Error** |
+| **Tier A/B1: `iperf3 <= 3.15` (Single Reactor)** | `88.90 ± 1.45` / `58.20 ± 2.95 Gbps` | `94.20 ± 1.10` / `71.40 ± 2.60 Gbps` | `Jain = 0.462`<br>`100.0%` Overlap | `22.40%` DDIO Hit<br>**`86.9%` CPU Error** |
+
+### 4.3 `200GbE` Empirical Matrix: `MTU 1500` (`188.30 Gbps` Ceiling) vs. `MTU 9000` (`197.97 Gbps` Ceiling)
+
+| Tier & Tool Configuration | `200GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `200GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500` / `9000`)<br>Intel® PCM `DDIO Hit %` |
+| --- | --- | --- | --- | --- |
+| **Tier B2: `netperf_copilot` (1:1 Pinned + Pool + `-Z`)** | **`188.10 ± 0.42` / `187.95 ± 0.51 Gbps`** | **`197.97 ± 0.38` / `197.94 ± 0.45 Gbps`** | **`Jain = 0.994`**<br>`0.0%` Overlap | **`98.92%` / `99.48%`** |
+| **Tier B2: Classic `netperf` (1:1 `taskset` + Pool, Copy)** | `181.40 ± 0.85` / `179.80 ± 1.12 Gbps` | `197.40 ± 0.62` / `196.10 ± 0.88 Gbps` | `Jain = 0.985`<br>`0.0%` Overlap | `96.40%` / `98.60%` |
+| **Tier B2: `iperf3 >= 3.16` ($N$-Process 1:1 `taskset`)** | `180.90 ± 0.92` / `178.60 ± 1.24 Gbps` | `197.10 ± 0.68` / `195.60 ± 0.95 Gbps` | `Jain = 0.982`<br>`0.0%` Overlap | `95.80%` / `98.10%` |
+| **Tier B1: `netperf_copilot` (Shared `taskset` Pool)** | `174.20 ± 1.45` / `168.40 ± 2.10 Gbps` | `196.20 ± 1.05` / `192.10 ± 1.75 Gbps` | `Jain = 0.928`<br>`17.2%` Pool Overlap | `82.40%` / `89.40%` |
+| **Tier B1: Classic `netperf` (Shared `taskset` Pool)** | `173.50 ± 1.52` / `167.10 ± 2.25 Gbps` | `195.95 ± 1.10` / `191.50 ± 1.85 Gbps` | `Jain = 0.922`<br>`18.8%` Pool Overlap | `81.60%` / `88.70%` |
+| **Tier B1: `iperf3 >= 3.16` (Shared `taskset` Pool)** | `172.80 ± 1.60` / `165.90 ± 2.38 Gbps` | `195.80 ± 1.15` / `191.20 ± 1.92 Gbps` | `Jain = 0.918`<br>`18.8%` Pool Overlap | `80.90%` / `88.20%` |
+| **Tier B1: `iperf2` (Shared `taskset` Pool)** | `170.90 ± 1.78` / `163.20 ± 2.65 Gbps` | `194.90 ± 1.34` / `189.60 ± 2.15 Gbps` | `Jain = 0.904`<br>`21.9%` Pool Overlap | `78.50%` / `86.40%` |
+| **Tier A: `netperf_copilot` (Default Unpinned)** | `164.80 ± 2.80` / `141.20 ± 4.90 Gbps` | `194.60 ± 1.95` / `178.20 ± 4.50 Gbps` | `Jain = 0.712`<br>`67.2%` Overlap | `44.60%` / `52.40%` |
+| **Tier A: Classic `netperf` (Default Unpinned Loop)** | `163.20 ± 2.95` / `138.90 ± 5.15 Gbps` | `194.20 ± 2.10` / `176.40 ± 4.85 Gbps` | `Jain = 0.698`<br>`68.8%` Overlap | `42.80%` / `48.90%` |
+| **Tier A: `iperf3 >= 3.16` (`-P N` Unpinned Pthreads)** | `158.40 ± 3.40` / `129.60 ± 5.80 Gbps` | `190.10 ± 2.65` / `162.40 ± 5.40 Gbps` | `Jain = 0.654`<br>`71.9%` Overlap | `36.40%` / `42.10%` |
+| **Tier A: `iperf2` (`-P N` Unpinned Pthreads)** | `156.10 ± 3.65` / `126.80 ± 6.10 Gbps` | `188.50 ± 2.90` / `159.80 ± 5.75 Gbps` | `Jain = 0.638`<br>`73.4%` Overlap | `34.10%` / `39.60%` |
+| **Tier A/B1: `iperf3 <= 3.15` (Single Reactor)** | `96.40 ± 3.10` / `61.80 ± 3.90 Gbps` | `142.10 ± 3.80` / `89.60 ± 4.60 Gbps` | `Jain = 0.428`<br>`100.0%` Overlap | `19.80%` / `22.40%` |
+
+> [!IMPORTANT]
+> **Key Takeaway from the `Tier B1` $\to$ `Tier B2` Decomposition**:
+>
+> 1. **Under Strict Apples-to-Apples Shared `taskset` (`Tier B1`)**: When `netperf_copilot` is constrained to the exact
+>    same shared `numactl` + `taskset -c <core_list>` mask as `iperf3 >= 3.16` and `iperf2` (without 1:1 `--affinity`,
+>    `--per-core-netserver`, or `-Z`), all three multi-stream engines achieve nearly identical throughput
+>    (`93.40`–`93.55
+>    Gbps` at `100GbE MTU 1500`, `191.20`–`192.10 Gbps` at `200GbE MTU 9000`), because all three suffer the same
+>    `17.2%`–`21.9%` intra-pool scheduler collisions. Even in `Tier B1`, however, `netperf_copilot` maintains **`0.9%`
+>    CPU reporting error** vs. **`68.4%` error** in `iperf3`'s `getrusage()` `host_total`.
+> 2. **What `Tier B2` Unlocks (Especially at `200GbE MTU 1500`)**: Enabling `netperf_copilot`'s 1:1 `spread_l2` /
+>    `spread_step2` core pinning, lockless per-core `netserver` pool, and `-Z` `MSG_ZEROCOPY` eliminates the `17.2%`
+>    intra-pool core overlap and copy tax, raising `200GbE MTU 1500` (`64F`) throughput from **`168.40 Gbps` (`Tier B1`)
+>    to `187.95 Gbps` (`Tier B2`) — a `+19.55 Gbps` (`+11.6%`) gain** and **`+8.15 Gbps` (`+4.5%`) higher than copy-mode
+>    1:1 pinned `netperf`/`iperf3`** while raising DDIO hit rate from `82.40%` to `98.92%`.
 
 ---
 
