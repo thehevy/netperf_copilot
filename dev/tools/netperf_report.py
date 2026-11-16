@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
+# === METADATA_HEADER_START ===
+# File: dev/tools/netperf_report.py
+# Created Date: 2026-11-05
+# Last Updated Date: 2026-11-16
+# Version: v2.0
+# Status: Active
+# Target Scope: AI-Driven Validation Schema Reporter, U1-U13 Event Scanner & Step 8/9 Telemetry Dashboard Generator
+# Summary: Produces result.json, summary.csv, and compact zero-scroll Markdown dashboards with Step 8/9 pooled tail latency, per-flow core collision matrix, Intel PCM telemetry, and Flent working latency.
+# === METADATA_HEADER_END ===
 """
 netperf_report - AI-Driven Validation Schema Reporter, U1-U13 Event Scanner & Dashboard Generator
 
 Produces:
-1. result.json compliant with Intel_Ethernet_AI_Driven_Validation result.schema.json
+1. result.json compliant with Intel_Ethernet_AI_Driven_Validation result.schema.json + Step 8/9 telemetry
 2. U1-U13 unexpected kernel/driver/hardware event scan (kmsg/dmesg + ethtool -S deltas)
-3. summary.csv and Markdown dashboard.md with ASCII throughput scaling bars
+3. summary.csv and Markdown dashboard.md with Step 8/9 telemetry and ASCII throughput scaling bars
 """
 
 from __future__ import annotations
@@ -93,7 +102,32 @@ def compute_counter_deltas(
 class AIValidationReporter:
     """Builds AI-Driven Validation result.json, summary.csv, and dashboard.md."""
 
-    SCHEMA_VERSION = "1.0.0"
+    SCHEMA_VERSION = "1.1.0"
+
+    STEP8_STEP9_KEYS: Tuple[str, ...] = (
+        "steady_state_throughput_gbps",
+        "pooled_p50_latency_us",
+        "pooled_p90_latency_us",
+        "pooled_p99_latency_us",
+        "pooled_p999_latency_us",
+        "worst_flow_p99_latency_us",
+        "worst_flow_p999_latency_us",
+        "jains_fairness_index",
+        "core_overlap_count",
+        "core_overlap_pct",
+        "per_flow_core_matrix",
+        "pcm_telemetry",
+        "flent_working_latency",
+    )
+
+    @classmethod
+    def extract_step8_step9_telemetry(cls, source: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract Step 8/9 telemetry fields from a metrics or netperf-multi summary dictionary."""
+        telemetry: Dict[str, Any] = {}
+        for key in cls.STEP8_STEP9_KEYS:
+            if key in source and source[key] is not None:
+                telemetry[key] = source[key]
+        return telemetry
 
     @classmethod
     def build_result_json(
@@ -114,7 +148,11 @@ class AIValidationReporter:
         events = scan_kmsg_events(kmsg_text)
         deltas = counter_deltas or {}
 
-        throughput_gbps = float(metrics.get("throughput_gbps", 0.0) or 0.0)
+        throughput_gbps = float(
+            metrics.get("steady_state_throughput_gbps")
+            or metrics.get("throughput_gbps", 0.0)
+            or 0.0
+        )
         cv_pct = float(metrics.get("cv_pct", 0.0) or 0.0)
 
         failure_reasons: List[str] = []
@@ -150,6 +188,8 @@ class AIValidationReporter:
         else:
             verdict = "PASS"
 
+        step8_9 = cls.extract_step8_step9_telemetry(metrics)
+
         return {
             "schema_version": cls.SCHEMA_VERSION,
             "test_case_id": test_case_id,
@@ -160,6 +200,7 @@ class AIValidationReporter:
             "duration_sec": duration_sec,
             "environment": environment or {},
             "metrics": metrics,
+            "step8_step9_telemetry": step8_9,
             "counter_deltas": deltas,
             "unexpected_event_scan": {
                 "passed": len(events) == 0,
@@ -171,15 +212,21 @@ class AIValidationReporter:
 
     @staticmethod
     def render_summary_csv(rows: List[Dict[str, Any]]) -> str:
-        """Render a list of test result dicts into a CSV string."""
+        """Render a list of test result dicts into a CSV string (including Step 8/9 telemetry columns)."""
         fieldnames = [
             "test_case_id",
             "direction",
             "streams",
             "mtu",
             "throughput_gbps",
+            "steady_state_throughput_gbps",
             "tx_throughput_gbps",
             "rx_throughput_gbps",
+            "pooled_p99_latency_us",
+            "pooled_p999_latency_us",
+            "worst_flow_p999_latency_us",
+            "jains_fairness_index",
+            "core_overlap_pct",
             "cv_pct",
             "verdict",
         ]
@@ -195,8 +242,9 @@ class AIValidationReporter:
         suite_name: str,
         rows: List[Dict[str, Any]],
         environment: Optional[Dict[str, Any]] = None,
+        telemetry: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """Render a Markdown qualification dashboard with ASCII scaling bars."""
+        """Render a Markdown qualification dashboard with Step 8/9 telemetry and ASCII scaling bars."""
         lines: List[str] = [
             f"# Netperf Qualification Dashboard: `{suite_name}`",
             "",
@@ -212,8 +260,8 @@ class AIValidationReporter:
         lines.extend([
             "## Summary Table",
             "",
-            "| Test Case | Direction | Streams | MTU | Throughput (Gbps) | CV (%) | Verdict |",
-            "| :--- | :---: | :---: | :---: | ---: | ---: | :---: |",
+            "| Test Case | Direction | Streams / MTU | Throughput (Gbps) | Verdict |",
+            "| --- | --- | --- | --- | --- |",
         ])
 
         max_tput = max((float(r.get("throughput_gbps", 0.0) or 0.0) for r in rows), default=200.0)
@@ -226,11 +274,117 @@ class AIValidationReporter:
             streams = r.get("streams", 1)
             mtu = r.get("mtu", 9000)
             tput = float(r.get("throughput_gbps", 0.0) or 0.0)
+            steady = r.get("steady_state_throughput_gbps")
             cv = float(r.get("cv_pct", 0.0) or 0.0)
             verdict = r.get("verdict", "PASS")
+            tput_cell = f"{tput:.2f} Gbps (CV {cv:.2f}%)"
+            if steady is not None:
+                tput_cell += f"<br>Steady: {float(steady):.2f} Gbps"
             lines.append(
-                f"| `{tc}` | {direction} | {streams} | {mtu} | {tput:.2f} | {cv:.2f}% | **{verdict}** |"
+                f"| `{tc}` | {direction} | {streams}F / MTU {mtu} | {tput_cell} | **{verdict}** |"
             )
+
+        # Aggregate Step 8/9 telemetry from explicit telemetry dict or rows
+        merged_tel: Dict[str, Any] = dict(telemetry or {})
+        for r in rows:
+            for k in AIValidationReporter.STEP8_STEP9_KEYS:
+                if k not in merged_tel and r.get(k) is not None:
+                    merged_tel[k] = r[k]
+
+        has_tail_or_steady = any(
+            merged_tel.get(k) is not None
+            for k in (
+                "steady_state_throughput_gbps",
+                "pooled_p99_latency_us",
+                "pooled_p999_latency_us",
+                "worst_flow_p999_latency_us",
+                "jains_fairness_index",
+                "core_overlap_pct",
+            )
+        )
+        if has_tail_or_steady:
+            lines.extend([
+                "",
+                "## Step 8/9 Pooled Tail Latency & Fairness Telemetry",
+                "",
+                "| Metric | Value | Notes |",
+                "| --- | --- | --- |",
+            ])
+            if merged_tel.get("steady_state_throughput_gbps") is not None:
+                lines.append(
+                    f"| Steady-State Throughput (`--omit`) | {float(merged_tel['steady_state_throughput_gbps']):.2f} Gbps | Warm-up ramp excluded |"
+                )
+            if merged_tel.get("pooled_p99_latency_us") is not None:
+                lines.append(
+                    f"| Pooled p99 Latency | {float(merged_tel['pooled_p99_latency_us']):.2f} us | Transaction-weighted across flows |"
+                )
+            if merged_tel.get("pooled_p999_latency_us") is not None:
+                lines.append(
+                    f"| Pooled p99.9 Latency | {float(merged_tel['pooled_p999_latency_us']):.2f} us | 99.9th percentile tail latency |"
+                )
+            if merged_tel.get("worst_flow_p999_latency_us") is not None:
+                lines.append(
+                    f"| Worst-Flow p99.9 Latency | {float(merged_tel['worst_flow_p999_latency_us']):.2f} us | Straggler flow upper bound |"
+                )
+            if merged_tel.get("jains_fairness_index") is not None:
+                lines.append(
+                    f"| Jain's Fairness Index ($J$) | {float(merged_tel['jains_fairness_index']):.4f} | Inter-flow bandwidth balance |"
+                )
+            if merged_tel.get("core_overlap_pct") is not None:
+                lines.append(
+                    f"| Core Overlap (`core_overlap_pct`) | {float(merged_tel['core_overlap_pct']):.1f}% | Same-core / SMT / IRQ collision rate |"
+                )
+
+        core_matrix = merged_tel.get("per_flow_core_matrix")
+        if isinstance(core_matrix, list) and core_matrix:
+            lines.extend([
+                "",
+                "## Per-Flow Core Residency & Collision Matrix",
+                "",
+                "| Flow ID | CPU (`target` -> `exec`) | Throughput & Tail (`p99` / `p99.9`) | Collision Status |",
+                "| --- | --- | --- | --- |",
+            ])
+            for entry in core_matrix:
+                if not isinstance(entry, dict):
+                    continue
+                fid = entry.get("flow_id", "F00")
+                t_cpu = entry.get("target_cpu", "unpinned")
+                e_cpu = entry.get("exec_cpu", -1)
+                fgbps = float(entry.get("throughput_gbps", 0.0) or 0.0)
+                fp99 = float(entry.get("p99_latency_us", 0.0) or 0.0)
+                fp999 = float(entry.get("p999_latency_us", 0.0) or 0.0)
+                ctype = entry.get("collision_type", "NONE")
+                outlier_tag = " (**OUTLIER**)" if entry.get("is_outlier") else ""
+                lines.append(
+                    f"| `{fid}` | `{t_cpu}` -> `{e_cpu}` | {fgbps:.2f} Gbps (`{fp99:.1f}` / `{fp999:.1f}` us) | `{ctype}`{outlier_tag} |"
+                )
+
+        pcm = merged_tel.get("pcm_telemetry")
+        if isinstance(pcm, dict) and pcm:
+            lines.extend([
+                "",
+                "## Intel® PCM Hardware Telemetry",
+                "",
+                "| Hardware Counter Metric | Value | Architectural Target |",
+                "| --- | --- | --- |",
+                f"| DDIO / LLC Hit Ratio (`ddio_hit_pct`) | {float(pcm.get('ddio_hit_pct', 0.0) or 0.0):.2f}% | `>= 95.0%` on local NUMA node |",
+                f"| Cross-Socket UPI Traffic (`upi_traffic_gbps`) | {float(pcm.get('upi_traffic_gbps', 0.0) or 0.0):.2f} GB/s | `< 0.50 GB/s` (zero remote DMA) |",
+                f"| Total DRAM Bandwidth (`total_dram_gbps`) | {float(pcm.get('total_dram_gbps', 0.0) or 0.0):.2f} GB/s | Minimal LLC miss spill |",
+                f"| Package Power (`package_watts`) | {float(pcm.get('package_watts', 0.0) or 0.0):.1f} W | Efficiency: {float(pcm.get('gbps_per_watt', 0.0) or 0.0):.4f} Gbps/W |",
+            ])
+
+        flent = merged_tel.get("flent_working_latency")
+        if isinstance(flent, dict) and flent:
+            lines.extend([
+                "",
+                "## Flent Working Latency Under Load",
+                "",
+                "| Percentile | Latency (ms) |",
+                "| --- | --- |",
+                f"| Median (`p50_ms`) | {float(flent.get('p50_ms', 0.0) or 0.0):.3f} ms |",
+                f"| 99th Percentile (`p99_ms`) | {float(flent.get('p99_ms', 0.0) or 0.0):.3f} ms |",
+                f"| 99.9th Percentile (`p999_ms`) | {float(flent.get('p999_ms', 0.0) or 0.0):.3f} ms |",
+            ])
 
         lines.extend([
             "",
@@ -247,3 +401,11 @@ class AIValidationReporter:
         lines.append("```")
         lines.append("")
         return "\n".join(lines)
+
+
+# === METADATA_FOOTER_START ===
+# Search Keywords: netperf_report, AIValidationReporter, Step 8/9 telemetry, pooled_p999_latency_us, per_flow_core_matrix, pcm_telemetry
+# Drivers & Subsystems: ice, irdma, mlx5_core, idpf, netperf, nettest_omni.c
+# Related Units / Patches: COLLAB-012, DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001
+# Created / Last-Updated: 2026-11-05 / 2026-11-16
+# === METADATA_FOOTER_END ===

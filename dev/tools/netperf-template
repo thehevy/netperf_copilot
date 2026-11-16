@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# === METADATA_HEADER_START ===
+# File: dev/tools/netperf-template
+# Created Date: 2026-11-05
+# Last Updated Date: 2026-11-16
+# Version: v2.0
+# Status: Active
+# Target Scope: Jinja2 & Fallback Report Template Engine with Step 8/9 Telemetry Rendering
+# Summary: Renders HTML, Markdown, CSV, LaTeX, and JSON reports from netperf/netperf-multi JSON results including pooled p99/p99.9 latency, steady-state throughput, per-flow core collision matrix, Intel PCM telemetry, and Flent working latency.
+# === METADATA_HEADER_END ===
 """
 netperf-template - Advanced Template Engine for Custom Output Formats
 
@@ -383,6 +392,30 @@ class TemplateLibrary:
             <div class="metric-label">Max Throughput</div>
             <div class="metric-value">{{ (results|max_value('throughput')).throughput|format_throughput }}</div>
         </div>
+        {% if steady_state_throughput_gbps %}
+        <div class="metric">
+            <div class="metric-label">Steady-State Throughput</div>
+            <div class="metric-value">{{ steady_state_throughput_gbps }} Gbps</div>
+        </div>
+        {% endif %}
+        {% if pooled_p999_latency_us %}
+        <div class="metric">
+            <div class="metric-label">Pooled p99.9 Latency</div>
+            <div class="metric-value">{{ pooled_p999_latency_us }} us</div>
+        </div>
+        {% endif %}
+        {% if worst_flow_p999_latency_us %}
+        <div class="metric">
+            <div class="metric-label">Worst-Flow p99.9 Latency</div>
+            <div class="metric-value">{{ worst_flow_p999_latency_us }} us</div>
+        </div>
+        {% endif %}
+        {% if jains_fairness_index %}
+        <div class="metric">
+            <div class="metric-label">Jain's Fairness Index</div>
+            <div class="metric-value">{{ jains_fairness_index }}</div>
+        </div>
+        {% endif %}
     </div>
     
     <h2>Test Results</h2>
@@ -406,6 +439,35 @@ class TemplateLibrary:
         </tr>
         {% endfor %}
     </table>
+
+    {% if per_flow_core_matrix %}
+    <h2>Per-Flow Core Residency &amp; Collision Matrix</h2>
+    <table>
+        <tr>
+            <th>Flow ID</th>
+            <th>Target CPU</th>
+            <th>Exec CPU</th>
+            <th>Throughput (Gbps)</th>
+            <th>p99.9 Latency (us)</th>
+            <th>Collision Type</th>
+        </tr>
+        {% for flow in per_flow_core_matrix %}
+        <tr>
+            <td>{{ flow.flow_id }}</td>
+            <td>{{ flow.target_cpu }}</td>
+            <td>{{ flow.exec_cpu }}</td>
+            <td>{{ flow.throughput_gbps }}</td>
+            <td>{{ flow.p999_latency_us }}</td>
+            <td>{{ flow.collision_type }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+
+    {% if pcm_telemetry %}
+    <h2>Intel&reg; PCM Hardware Telemetry</h2>
+    <p>DDIO Hit Ratio: {{ pcm_telemetry.ddio_hit_pct }}% | UPI Traffic: {{ pcm_telemetry.upi_traffic_gbps }} GB/s | Total DRAM: {{ pcm_telemetry.total_dram_gbps }} GB/s | Power Efficiency: {{ pcm_telemetry.gbps_per_watt }} Gbps/W</p>
+    {% endif %}
 </body>
 </html>
 """
@@ -419,15 +481,45 @@ class TemplateLibrary:
 - **Total Tests**: {{ results|length }}
 - **Average Throughput**: {{ (results|avg_value('throughput'))|format_throughput }}
 - **Max Throughput**: {{ (results|max_value('throughput')).throughput|format_throughput }}
-
+{% if steady_state_throughput_gbps %}- **Steady-State Throughput (`--omit`)**: {{ steady_state_throughput_gbps }} Gbps
+{% endif %}{% if pooled_p99_latency_us %}- **Pooled p99 Latency**: {{ pooled_p99_latency_us }} us
+{% endif %}{% if pooled_p999_latency_us %}- **Pooled p99.9 Latency**: {{ pooled_p999_latency_us }} us
+{% endif %}{% if worst_flow_p999_latency_us %}- **Worst-Flow p99.9 Latency**: {{ worst_flow_p999_latency_us }} us
+{% endif %}{% if jains_fairness_index %}- **Jain's Fairness Index**: {{ jains_fairness_index }} (Core Overlap: {{ core_overlap_pct }}%)
+{% endif %}
 ## Test Results
 
-| Test | Direction | Throughput | Latency | CPU Local | CPU Remote |
-|------|-----------|------------|---------|-----------|------------|
+| Test | Direction | Throughput | Latency | CPU Local / Remote |
+| --- | --- | --- | --- | --- |
 {% for result in results -%}
-| {{ result.test_name }} | {{ result.direction }} | {{ result.throughput|format_throughput }} | {{ result.latency|format_latency }} | {{ result.cpu_local|format_percent }} | {{ result.cpu_remote|format_percent }} |
+| {{ result.test_name }} | {{ result.direction }} | {{ result.throughput|format_throughput }} | {{ result.latency|format_latency }} | {{ result.cpu_local|format_percent }} / {{ result.cpu_remote|format_percent }} |
 {% endfor %}
+{% if per_flow_core_matrix %}
+## Per-Flow Core Residency & Collision Matrix
 
+| Flow ID | CPU (`target` -> `exec`) | Throughput (Gbps) | p99.9 Latency (us) | Collision Status |
+| --- | --- | --- | --- | --- |
+{% for flow in per_flow_core_matrix -%}
+| `{{ flow.flow_id }}` | `{{ flow.target_cpu }}` -> `{{ flow.exec_cpu }}` | {{ flow.throughput_gbps }} | {{ flow.p999_latency_us }} | `{{ flow.collision_type }}` |
+{% endfor %}
+{% endif %}{% if pcm_telemetry %}
+## Intel® PCM Hardware Telemetry
+
+| Counter Metric | Measured Value |
+| --- | --- |
+| DDIO / LLC Hit Ratio (`ddio_hit_pct`) | {{ pcm_telemetry.ddio_hit_pct }}% |
+| Cross-Socket UPI Traffic (`upi_traffic_gbps`) | {{ pcm_telemetry.upi_traffic_gbps }} GB/s |
+| Total DRAM Bandwidth (`total_dram_gbps`) | {{ pcm_telemetry.total_dram_gbps }} GB/s |
+| Package Power Efficiency (`gbps_per_watt`) | {{ pcm_telemetry.gbps_per_watt }} Gbps/W |
+{% endif %}{% if flent_working_latency %}
+## Flent Working Latency Under Load
+
+| Percentile | Latency (ms) |
+| --- | --- |
+| Median (`p50_ms`) | {{ flent_working_latency.p50_ms }} ms |
+| 99th Percentile (`p99_ms`) | {{ flent_working_latency.p99_ms }} ms |
+| 99.9th Percentile (`p999_ms`) | {{ flent_working_latency.p999_ms }} ms |
+{% endif %}
 ## Notes
 
 - All tests run with OMNI test framework
@@ -478,6 +570,62 @@ class TemplateLibrary:
   ]
 }
 """
+
+
+def normalize_input_context(data: Any) -> Dict[str, Any]:
+    """Normalize raw netperf / netperf-multi JSON data into a template rendering context."""
+    raw_items = (
+        data
+        if isinstance(data, list)
+        else (data.get('instance_results', [data]) if isinstance(data, dict) else [data])
+    )
+    normalized_results = []
+    for idx, item in enumerate(raw_items):
+        if not isinstance(item, dict):
+            continue
+        src = dict(item.get('results', item)) if 'results' in item and isinstance(item.get('results'), dict) else dict(item)
+        meta = item.get('metadata', item.get('_metadata', {})) if isinstance(item, dict) else {}
+        norm = dict(src)
+        norm.setdefault('test_name', src.get('test_name', meta.get('test_name', src.get('PROTOCOL', f'OMNI-{idx}'))))
+        norm.setdefault('direction', src.get('direction', src.get('_direction_role', src.get('DIRECTION', 'stream'))))
+        norm.setdefault('throughput', float(src.get('throughput', src.get('THROUGHPUT', 0.0)) or 0.0))
+        norm.setdefault('steady_state_throughput', float(src.get('steady_state_throughput', src.get('_steady_state_throughput', norm['throughput'])) or 0.0))
+        norm.setdefault('latency', float(src.get('latency', src.get('MEAN_LATENCY', src.get('RT_LATENCY', 0.0))) or 0.0))
+        norm.setdefault('p99_latency', float(src.get('p99_latency', src.get('P99_LATENCY', 0.0)) or 0.0))
+        norm.setdefault('p999_latency', float(src.get('p999_latency', src.get('P999_LATENCY', 0.0)) or 0.0))
+        norm.setdefault('cpu_local', float(src.get('cpu_local', src.get('LOCAL_CPU_UTIL', meta.get('local_active_cpu_util', 0.0))) or 0.0))
+        norm.setdefault('cpu_remote', float(src.get('cpu_remote', src.get('REMOTE_CPU_UTIL', meta.get('remote_active_cpu_util', 0.0))) or 0.0))
+        norm.setdefault('local_cpu_exec', src.get('local_cpu_exec', src.get('LOCAL_CPU_EXEC', src.get('_local_cpu', -1))))
+        normalized_results.append(norm)
+
+    context: Dict[str, Any] = {
+        'results': normalized_results,
+        'timestamp': datetime.now().timestamp(),
+        'duration': 60,
+    }
+    if isinstance(data, dict):
+        for key in (
+            'steady_state_throughput_gbps',
+            'pooled_p50_latency_us',
+            'pooled_p90_latency_us',
+            'pooled_p99_latency_us',
+            'pooled_p999_latency_us',
+            'worst_flow_p99_latency_us',
+            'worst_flow_p999_latency_us',
+            'jains_fairness_index',
+            'core_overlap_count',
+            'core_overlap_pct',
+            'per_flow_core_matrix',
+            'pcm_telemetry',
+            'flent_working_latency',
+        ):
+            if key in data and data[key] is not None:
+                context[key] = data[key]
+        if 'step8_step9_telemetry' in data and isinstance(data['step8_step9_telemetry'], dict):
+            for key, val in data['step8_step9_telemetry'].items():
+                if val is not None:
+                    context.setdefault(key, val)
+    return context
 
 
 def main():
@@ -599,29 +747,8 @@ For more information, see dev/docs/TEMPLATES.md
         print(f"Error loading input: {e}", file=sys.stderr)
         return 1
     
-    # Normalize input results (handle netperf -M -- -J nested 'results' and uppercase keys)
-    raw_items = data if isinstance(data, list) else (data.get('instance_results', [data]) if isinstance(data, dict) else [data])
-    normalized_results = []
-    for item in raw_items:
-        if not isinstance(item, dict):
-            continue
-        src = dict(item.get('results', item)) if 'results' in item and isinstance(item.get('results'), dict) else dict(item)
-        meta = item.get('metadata', item.get('_metadata', {})) if isinstance(item, dict) else {}
-        norm = dict(src)
-        norm.setdefault('test_name', src.get('test_name', meta.get('test_name', src.get('PROTOCOL', 'OMNI'))))
-        norm.setdefault('direction', src.get('direction', src.get('_direction_role', src.get('DIRECTION', 'stream'))))
-        norm.setdefault('throughput', float(src.get('throughput', src.get('THROUGHPUT', 0.0)) or 0.0))
-        norm.setdefault('latency', float(src.get('latency', src.get('MEAN_LATENCY', src.get('RT_LATENCY', 0.0))) or 0.0))
-        norm.setdefault('cpu_local', float(src.get('cpu_local', src.get('LOCAL_CPU_UTIL', meta.get('local_active_cpu_util', 0.0))) or 0.0))
-        norm.setdefault('cpu_remote', float(src.get('cpu_remote', src.get('REMOTE_CPU_UTIL', meta.get('remote_active_cpu_util', 0.0))) or 0.0))
-        normalized_results.append(norm)
-
-    # Add metadata
-    context = {
-        'results': normalized_results,
-        'timestamp': datetime.now().timestamp(),
-        'duration': 60,
-    }
+    # Normalize input results and Step 8/9 telemetry fields
+    context = normalize_input_context(data)
     
     # Create engine
     template_dir = Path(args.template_dir) if args.template_dir else None
@@ -665,3 +792,10 @@ For more information, see dev/docs/TEMPLATES.md
 
 if __name__ == '__main__':
     sys.exit(main())
+
+# === METADATA_FOOTER_START ===
+# Search Keywords: netperf-template, Jinja2, SimpleTemplateEngine, Step 8/9 telemetry, pooled_p999_latency_us, per_flow_core_matrix
+# Drivers & Subsystems: ice, irdma, mlx5_core, idpf, netperf, nettest_omni.c
+# Related Units / Patches: COLLAB-012, DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001
+# Created / Last-Updated: 2026-11-05 / 2026-11-16
+# === METADATA_FOOTER_END ===

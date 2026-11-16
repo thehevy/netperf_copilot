@@ -31,11 +31,12 @@ import json
 import platform
 import random
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 sys.path.insert(0, str(Path(__file__).parent))
 from netperf_flent_bridge import compute_jains_fairness_index
@@ -523,6 +524,194 @@ class BenchmarkStudyHarness:
             "jains_fairness_index": round(jains, 4),
         }
 
+    @staticmethod
+    def parse_netperf_copilot_json_output(raw_json: str) -> Dict[str, Any]:
+        """Parse netperf-multi -o json output into total/steady-state Gbps, Jain's fairness, and pooled tail latency."""
+        data = json.loads(raw_json)
+        steady_gbps = data.get("steady_state_throughput_gbps")
+        total_gbps = float(
+            steady_gbps
+            if steady_gbps is not None
+            else (
+                data.get("total_throughput_gbps")
+                or (float(data.get("total_throughput", 0.0) or 0.0) / 1000.0)
+            )
+        )
+        instances = data.get("instance_results", [])
+        stream_gbps: List[float] = []
+        for inst in instances:
+            if not isinstance(inst, dict):
+                continue
+            src = inst.get("results", inst) if isinstance(inst.get("results"), dict) else inst
+            mbps = float(
+                src.get("_steady_state_throughput")
+                or src.get("THROUGHPUT")
+                or src.get("throughput")
+                or 0.0
+            )
+            stream_gbps.append(round(mbps / 1000.0, 3))
+        jains = float(
+            data.get("jains_fairness_index")
+            or (compute_jains_fairness_index(stream_gbps) if stream_gbps else 1.0)
+        )
+        return {
+            "tool": "netperf_copilot",
+            "num_streams": len(stream_gbps) or int(data.get("successful_instances", 1) or 1),
+            "total_throughput_gbps": round(total_gbps, 3),
+            "per_stream_gbps": stream_gbps,
+            "jains_fairness_index": round(jains, 4),
+            "pooled_p99_latency_us": data.get("pooled_p99_latency_us"),
+            "pooled_p999_latency_us": data.get("pooled_p999_latency_us"),
+        }
+
+    @staticmethod
+    def parse_classic_netperf_outputs(raw_outputs: Union[str, List[str]]) -> Dict[str, Any]:
+        """Parse one or more classic `netperf -M -- -d stream -J` JSON outputs into aggregate Gbps and Jain's fairness."""
+        chunks = [raw_outputs] if isinstance(raw_outputs, str) else list(raw_outputs)
+        stream_gbps: List[float] = []
+        for chunk in chunks:
+            text = (chunk or "").strip()
+            if not text:
+                continue
+            try:
+                obj = json.loads(text)
+                res = obj.get("results", obj) if isinstance(obj.get("results"), dict) else obj
+                mbps = float(res.get("THROUGHPUT", res.get("throughput", 0.0)) or 0.0)
+                stream_gbps.append(round(mbps / 1000.0, 3))
+            except Exception:
+                for m in re.finditer(r'"THROUGHPUT"\s*:\s*([0-9.]+)', text):
+                    stream_gbps.append(round(float(m.group(1)) / 1000.0, 3))
+        total_gbps = round(sum(stream_gbps), 3)
+        jains = compute_jains_fairness_index(stream_gbps) if stream_gbps else 1.0
+        return {
+            "tool": "classic_netperf",
+            "num_streams": len(stream_gbps),
+            "total_throughput_gbps": total_gbps,
+            "per_stream_gbps": stream_gbps,
+            "jains_fairness_index": round(jains, 4),
+        }
+
+    @classmethod
+    def parse_tool_output(cls, tool_key: str, raw_output: Union[str, List[str]]) -> Dict[str, Any]:
+        """Dispatch raw output from any Tier A / Tier B1 / Tier B2 tool key to the appropriate parser."""
+        key_lower = tool_key.lower()
+        if "netperf_copilot" in key_lower:
+            text = raw_output if isinstance(raw_output, str) else "\n".join(raw_output)
+            return cls.parse_netperf_copilot_json_output(text)
+        if "classic_netperf" in key_lower:
+            return cls.parse_classic_netperf_outputs(raw_output)
+        if "iperf2" in key_lower:
+            text = raw_output if isinstance(raw_output, str) else "\n".join(raw_output)
+            return cls.parse_iperf2_output(text)
+        if "iperf3" in key_lower:
+            if isinstance(raw_output, list):
+                stream_gbps: List[float] = []
+                total_retrans = 0
+                for item in raw_output:
+                    parsed = cls.parse_iperf3_json_output(item)
+                    stream_gbps.extend(parsed.get("per_stream_gbps", [parsed["total_throughput_gbps"]]))
+                    total_retrans += int(parsed.get("total_retransmits", 0))
+                jains = compute_jains_fairness_index(stream_gbps) if stream_gbps else 1.0
+                return {
+                    "tool": "iperf3_multiprocess",
+                    "num_streams": len(stream_gbps),
+                    "total_throughput_gbps": round(sum(stream_gbps), 3),
+                    "per_stream_gbps": stream_gbps,
+                    "jains_fairness_index": round(jains, 4),
+                    "total_retransmits": total_retrans,
+                }
+            return cls.parse_iperf3_json_output(raw_output)
+        raise ValueError(f"Unsupported tool key for output parsing: {tool_key}")
+
+    def _run_tool_command_live(self, spec: Dict[str, Any]) -> Union[str, List[str]]:
+        """Execute a single-command or multi-process command specification with explicit timeout and shell=False."""
+        cmd = spec.get("command", [])
+        timeout_sec = float(self.duration + 30)
+        if isinstance(cmd, list) and cmd and all(isinstance(x, str) for x in cmd):
+            is_multi_process_cmd_list = any(" " in tok and idx == 0 for idx, tok in enumerate(cmd))
+            if is_multi_process_cmd_list:
+                procs = [
+                    subprocess.Popen(
+                        shlex.split(cmd_str),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                    )
+                    for cmd_str in cmd
+                ]
+                outputs: List[str] = []
+                for p in procs:
+                    out, err = p.communicate(timeout=timeout_sec)
+                    outputs.append((out or err or "").strip())
+                return outputs
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout_sec,
+                shell=False,
+            )
+            return (proc.stdout or proc.stderr or "").strip()
+        raise ValueError(f"Invalid command specification: {cmd!r}")
+
+    def execute_study_plan(
+        self,
+        plan: Optional[Dict[str, Any]] = None,
+        runner_fn: Optional[Callable[[str, Dict[str, Any], int, int], Union[str, List[str]]]] = None,
+    ) -> Dict[str, Any]:
+        """Execute all randomized trials in the study plan and summarize per-tool throughput & 95% CIs."""
+        study = plan or self.generate_study_plan()
+        for flow_key, flow_entry in study.get("flow_matrix", {}).items():
+            n_flows = int(flow_entry.get("num_flows", flow_key))
+            tiers = flow_entry.get("tiers", {})
+            spec_lookup: Dict[str, Dict[str, Any]] = {}
+            for tier_dict in tiers.values():
+                if isinstance(tier_dict, dict):
+                    spec_lookup.update(tier_dict)
+
+            samples_by_tool: Dict[str, List[float]] = {k: [] for k in spec_lookup}
+            jains_by_tool: Dict[str, List[float]] = {k: [] for k in spec_lookup}
+            trial_records: List[Dict[str, Any]] = []
+
+            for sched in flow_entry.get("trial_schedule", []):
+                trial_idx = int(sched.get("trial", 1))
+                ordered_keys = sched.get("randomized_order", list(spec_lookup.keys()))
+                trial_runs: Dict[str, Any] = {}
+                for tool_key in ordered_keys:
+                    spec = spec_lookup.get(tool_key)
+                    if not spec:
+                        continue
+                    raw_out = (
+                        runner_fn(tool_key, spec, n_flows, trial_idx)
+                        if runner_fn is not None
+                        else self._run_tool_command_live(spec)
+                    )
+                    parsed = self.parse_tool_output(tool_key, raw_out)
+                    tput = float(parsed.get("total_throughput_gbps", 0.0))
+                    jains_val = float(parsed.get("jains_fairness_index", 1.0))
+                    samples_by_tool[tool_key].append(tput)
+                    jains_by_tool[tool_key].append(jains_val)
+                    trial_runs[tool_key] = parsed
+                trial_records.append({"trial": trial_idx, "runs": trial_runs})
+
+            summary_by_tool: Dict[str, Any] = {}
+            for tool_key, samples in samples_by_tool.items():
+                if not samples:
+                    continue
+                stat_summary = self.summarize_trial_samples(samples)
+                j_list = jains_by_tool.get(tool_key, [])
+                stat_summary["mean_jains_fairness_index"] = (
+                    round(sum(j_list) / len(j_list), 4) if j_list else 1.0
+                )
+                summary_by_tool[tool_key] = stat_summary
+
+            flow_entry["execution_results"] = {
+                "trials_executed": len(trial_records),
+                "trial_records": trial_records,
+                "summary_by_tool": summary_by_tool,
+            }
+        return study
+
     @classmethod
     def check_iperf3_version_gate(
         cls,
@@ -775,6 +964,42 @@ def run_self_test() -> int:
         assert cell["netperf_copilot_tier_b1_taskset_pool"]["64F"] >= cell["iperf3_ge_316_tier_b_taskset"]["64F"]
         assert cell["iperf3_ge_316_tier_a_unpinned"]["64F"] > cell["iperf3_le_315_single_reactor"]["64F"]
 
+    # Verify execute_study_plan() with deterministic mock runner_fn
+    exec_harness = BenchmarkStudyHarness(
+        host="192.0.2.10",
+        interface="ens801f0np0",
+        flow_counts=(4,),
+        duration=5,
+        trials=2,
+    )
+
+    def _mock_runner(tool_key: str, spec: Dict[str, Any], n_flows: int, trial_idx: int) -> Union[str, List[str]]:
+        if "netperf_copilot" in tool_key:
+            return json.dumps({
+                "steady_state_throughput_gbps": 98.4 + 0.1 * trial_idx,
+                "jains_fairness_index": 0.996,
+                "pooled_p99_latency_us": 28.5,
+                "pooled_p999_latency_us": 42.1,
+                "instance_results": [{"THROUGHPUT": 24600.0} for _ in range(n_flows)],
+            })
+        if "classic_netperf" in tool_key:
+            return [json.dumps({"results": {"THROUGHPUT": 24100.0}}) for _ in range(n_flows)]
+        if "iperf2" in tool_key:
+            return "[SUM] 0.00-5.00 sec  56.0 GBytes  96.2 Gbits/sec\n"
+        if "multiprocess" in tool_key:
+            return [
+                json.dumps({"end": {"sum_received": {"bits_per_second": 24200000000.0}}})
+                for _ in range(n_flows)
+            ]
+        return json.dumps({"end": {"sum_received": {"bits_per_second": 96400000000.0}}})
+
+    executed = exec_harness.execute_study_plan(runner_fn=_mock_runner)
+    exec_res = executed["flow_matrix"]["4"]["execution_results"]
+    assert exec_res["trials_executed"] == 2
+    assert "netperf_copilot_pinned" in exec_res["summary_by_tool"]
+    assert exec_res["summary_by_tool"]["netperf_copilot_pinned"]["n_trials"] == 2
+    assert exec_res["summary_by_tool"]["netperf_copilot_pinned"]["mean_gbps"] > 98.0
+
     print("netperf_benchmark_study self-test PASSED")
     return 0
 
@@ -791,7 +1016,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--mtu", type=int, default=9000, help="Link MTU (1500 or 9000)")
     parser.add_argument("--topology-snapshot", help="Optional topology snapshot file")
     parser.add_argument("--iperf3-version-override", help="Optional iperf3 version string for dry-run testing")
-    parser.add_argument("--output", help="Optional file path to write JSON study plan")
+    parser.add_argument("--output", help="Optional file path to write JSON study plan or execution report")
+    parser.add_argument("--execute", action="store_true", help="Execute live randomized benchmark trials across all tools and summarize 95%% CIs")
     parser.add_argument("--dry-run", action="store_true", help="Generate and print reproducible study plan without running live traffic")
     parser.add_argument("--self-test", action="store_true", help="Run deterministic unit self-test")
     args = parser.parse_args(argv)
@@ -810,6 +1036,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         topology_snapshot=args.topology_snapshot,
     )
     plan = harness.generate_study_plan(iperf3_version_override=args.iperf3_version_override)
+    if args.execute and not args.dry_run:
+        plan = harness.execute_study_plan(plan=plan)
     if args.output:
         Path(args.output).write_text(json.dumps(plan, indent=2), encoding="utf-8")
     if args.dry_run or not args.output:

@@ -844,6 +844,147 @@ class TestNetperfModernization(unittest.TestCase):
         improvements = BenchmarkStudyHarness.evaluate_improvement_opportunities()
         self.assertEqual(len(improvements), 5)
 
+    def test_step9_report_and_template_step89_telemetry(self) -> None:
+        """Verify COLLAB-012: netperf_report and netperf-template render Step 8/9 telemetry fields."""
+        metrics_with_telemetry = {
+            "throughput_gbps": 197.4,
+            "steady_state_throughput_gbps": 197.94,
+            "pooled_p99_latency_us": 29.4,
+            "pooled_p999_latency_us": 44.8,
+            "worst_flow_p999_latency_us": 51.2,
+            "jains_fairness_index": 0.996,
+            "core_overlap_pct": 0.0,
+            "cv_pct": 0.25,
+            "per_flow_core_matrix": [
+                {
+                    "flow_id": "F00",
+                    "target_cpu": 4,
+                    "exec_cpu": 4,
+                    "throughput_gbps": 12.37,
+                    "p99_latency_us": 28.9,
+                    "p999_latency_us": 43.5,
+                    "collision_type": "NONE",
+                    "is_outlier": False,
+                }
+            ],
+            "pcm_telemetry": {
+                "ddio_hit_pct": 99.48,
+                "upi_traffic_gbps": 0.14,
+                "total_dram_gbps": 0.82,
+                "package_watts": 248.0,
+                "gbps_per_watt": 0.7981,
+            },
+            "flent_working_latency": {
+                "p50_ms": 0.042,
+                "p99_ms": 0.118,
+                "p999_ms": 0.194,
+            },
+        }
+        res_json = AIValidationReporter.build_result_json(
+            test_case_id="FLOW-TX-16S-MTU9000",
+            suite_name="flow-scaling",
+            metrics=metrics_with_telemetry,
+            target_gbps=195.0,
+        )
+        self.assertEqual(res_json["verdict"], "PASS")
+        self.assertIn("step8_step9_telemetry", res_json)
+        self.assertEqual(res_json["step8_step9_telemetry"]["pooled_p999_latency_us"], 44.8)
+        self.assertEqual(res_json["step8_step9_telemetry"]["pcm_telemetry"]["ddio_hit_pct"], 99.48)
+
+        dash_md = AIValidationReporter.render_dashboard_markdown(
+            "flow-scaling",
+            [
+                {
+                    "test_case_id": "FLOW-TX-16S-MTU9000",
+                    "direction": "tx",
+                    "streams": 16,
+                    "mtu": 9000,
+                    **metrics_with_telemetry,
+                    "verdict": "PASS",
+                }
+            ],
+        )
+        self.assertIn("Step 8/9 Pooled Tail Latency & Fairness Telemetry", dash_md)
+        self.assertIn("44.80 us", dash_md)
+        self.assertIn("Per-Flow Core Residency & Collision Matrix", dash_md)
+        self.assertIn("Intel® PCM Hardware Telemetry", dash_md)
+        self.assertIn("99.48%", dash_md)
+        self.assertIn("Flent Working Latency Under Load", dash_md)
+
+        # Verify netperf-template normalize_input_context + MARKDOWN_REPORT / HTML_REPORT rendering
+        sample_multi_summary = {
+            "steady_state_throughput_gbps": 197.94,
+            "pooled_p99_latency_us": 29.4,
+            "pooled_p999_latency_us": 44.8,
+            "worst_flow_p999_latency_us": 51.2,
+            "jains_fairness_index": 0.996,
+            "core_overlap_pct": 0.0,
+            "per_flow_core_matrix": metrics_with_telemetry["per_flow_core_matrix"],
+            "pcm_telemetry": metrics_with_telemetry["pcm_telemetry"],
+            "flent_working_latency": metrics_with_telemetry["flent_working_latency"],
+            "instance_results": [
+                {
+                    "THROUGHPUT": 12371.25,
+                    "_steady_state_throughput": 12371.25,
+                    "MEAN_LATENCY": 14.2,
+                    "P99_LATENCY": 28.9,
+                    "P999_LATENCY": 43.5,
+                    "LOCAL_CPU_UTIL": 38.5,
+                    "REMOTE_CPU_UTIL": 41.2,
+                }
+            ],
+        }
+        ctx = netperf_template.normalize_input_context(sample_multi_summary)
+        self.assertEqual(ctx["pooled_p999_latency_us"], 44.8)
+        self.assertEqual(ctx["steady_state_throughput_gbps"], 197.94)
+        engine = netperf_template.TemplateEngine()
+        md_rendered = engine.render_template(
+            netperf_template.TemplateLibrary.get_template("markdown-report"), ctx
+        )
+        self.assertIn("197.94 Gbps", md_rendered)
+        self.assertIn("44.8 us", md_rendered)
+        self.assertIn("99.48%", md_rendered)
+        html_rendered = engine.render_template(
+            netperf_template.TemplateLibrary.get_template("html-report"), ctx
+        )
+        self.assertIn("Pooled p99.9 Latency", html_rendered)
+        self.assertIn("Per-Flow Core Residency", html_rendered)
+
+    def test_step9_benchmark_study_execute_runner(self) -> None:
+        """Verify COLLAB-011: BenchmarkStudyHarness.execute_study_plan runs randomized trials and computes 95% CIs."""
+        from netperf_benchmark_study import BenchmarkStudyHarness
+
+        ecore_topo = TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT)
+        harness = BenchmarkStudyHarness(
+            host="192.0.2.10",
+            interface="ens801f0np0",
+            flow_counts=(4,),
+            duration=5,
+            trials=3,
+            topology=ecore_topo,
+        )
+
+        def mock_runner(tool_key: str, spec: dict, n_flows: int, trial_idx: int):
+            if "netperf_copilot" in tool_key:
+                return '{"steady_state_throughput_gbps": 197.8, "jains_fairness_index": 0.996, "instance_results": [{"THROUGHPUT": 49450.0}]}'
+            if "classic_netperf" in tool_key:
+                return ['{"results": {"THROUGHPUT": 49100.0}}' for _ in range(n_flows)]
+            if "iperf2" in tool_key:
+                return "[SUM] 0.00-5.00 sec  114 GBytes  195.8 Gbits/sec\n"
+            if "multiprocess" in tool_key:
+                return ['{"end": {"sum_received": {"bits_per_second": 49150000000.0}}}' for _ in range(n_flows)]
+            return '{"end": {"sum_received": {"bits_per_second": 195600000000.0}}}'
+
+        plan = harness.generate_study_plan(iperf3_version_override="iperf 3.17.1")
+        executed = harness.execute_study_plan(plan=plan, runner_fn=mock_runner)
+        exec_block = executed["flow_matrix"]["4"]["execution_results"]
+        self.assertEqual(exec_block["trials_executed"], 3)
+        summary = exec_block["summary_by_tool"]
+        self.assertIn("netperf_copilot_pinned", summary)
+        self.assertEqual(summary["netperf_copilot_pinned"]["n_trials"], 3)
+        self.assertAlmostEqual(summary["netperf_copilot_pinned"]["mean_gbps"], 197.8, places=2)
+        self.assertAlmostEqual(summary["classic_netperf_pinned"]["mean_gbps"], 196.4, places=2)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
