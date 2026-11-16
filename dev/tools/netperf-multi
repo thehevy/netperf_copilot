@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# === METADATA_HEADER_START ===
+# File: dev/tools/netperf-multi
+# Created Date: 2026-11-05
+# Last Updated Date: 2026-11-16
+# Version: 2.1.0
+# Status: Validated
+# Target Scope: Multi-instance, multi-port, and directional netperf test runner with Intel PCM, Flent working-latency, and core-residency auditing.
+# Summary: Coordinates parallel netperf instances across 1 to 8+ ports with Xeon 6 topology affinity, synchronized Barrier launch, Intel PCM telemetry, and Jain's Fairness auditing.
+# === METADATA_HEADER_END ===
 """
 netperf-multi - Multi-Instance, Multi-Port & Directional Netperf Test Runner
 
@@ -26,7 +35,7 @@ Examples:
 
 Author: Netperf Modernization Project
 License: MIT
-Version: 2.0.0
+Version: 2.1.0
 """
 
 import argparse
@@ -37,15 +46,20 @@ import shutil
 import signal
 import subprocess
 import sys
+import threading
 import time
 from collections import defaultdict
 from pathlib import Path
+from statistics import median
 from typing import Dict, List, Optional, Tuple, Any
 
 # Ensure sibling modules in dev/tools are importable
 sys.path.insert(0, str(Path(__file__).parent))
 from netperf_topology import TopologyAnalyzer, SystemTopology, format_cpu_list
 from netperf_report import AIValidationReporter, scan_kmsg_events, parse_ethtool_stats, compute_counter_deltas
+from netperf_flent_bridge import compute_jains_fairness_index, FlentWorkingLatencyProbe
+from netperf_pcm_bridge import IntelPCMCollector, ProcStatGroundTruth
+from netperf_stats import AdvancedStatistics
 
 # Optional import for host process CPU affinity fallback
 try:
@@ -132,7 +146,8 @@ class NetperfInstance:
                  port_index: int = 0,
                  direction: Optional[str] = None,
                  extra_args: Optional[List[str]] = None,
-                 netperf_binary: str = 'netperf'):
+                 netperf_binary: str = 'netperf',
+                 barrier_wait_secs: int = 0):
         self.instance_id = instance_id
         self.host = host
         self.test_type = test_type
@@ -149,6 +164,7 @@ class NetperfInstance:
         self.interface = interface
         self.port_index = port_index
         self.netperf_binary = netperf_binary
+        self.barrier_wait_secs = barrier_wait_secs
 
         self.process: Optional[subprocess.Popen] = None
         self.returncode: Optional[int] = None
@@ -157,6 +173,9 @@ class NetperfInstance:
         self.result: Optional[Dict[str, Any]] = None
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
+        self.observed_local_cpus: List[int] = []
+        self.cpu_migrations: int = 0
+        self._last_sampled_cpu: Optional[int] = None
 
     @property
     def direction(self) -> str:
@@ -199,6 +218,9 @@ class NetperfInstance:
             cmd.extend(['-t', eff_test])
 
         cmd.extend(['-l', str(self.duration)])
+
+        if self.barrier_wait_secs > 0:
+            cmd.extend(['-w', str(self.barrier_wait_secs)])
 
         # CPU affinity (-T local_cpu,remote_cpu)
         if self.cpu_affinity is not None and self.remote_cpu_affinity is not None:
@@ -257,8 +279,14 @@ class NetperfInstance:
         return cmd
 
     def start(self, netperf_path: str, barrier: Any = None) -> subprocess.Popen:
-        """Start the netperf instance."""
+        """Start the netperf instance, optionally synchronized on a threading.Barrier."""
         cmd = self.build_command(netperf_path)
+
+        if barrier is not None:
+            try:
+                barrier.wait(timeout=5.0)
+            except Exception:
+                pass
 
         self.start_time = time.time()
         self.process = subprocess.Popen(
@@ -276,7 +304,36 @@ class NetperfInstance:
             except Exception:
                 pass
 
+        self.sample_runtime_cpu()
         return self.process
+
+    def sample_runtime_cpu(self) -> Optional[int]:
+        """Sample actual runtime logical CPU from /proc/<pid>/stat field 39 (processor) on Linux."""
+        if self.process is None or self.process.poll() is not None:
+            return None
+        pid = self.process.pid
+        proc_stat = Path(f"/proc/{pid}/stat")
+        if not proc_stat.exists():
+            return None
+        try:
+            raw = proc_stat.read_text(encoding="utf-8", errors="ignore")
+            rparen = raw.rfind(")")
+            if rparen < 0:
+                return None
+            # Field 3 is state (first token after ')'); field 39 is index 36 in post-comm tokens
+            tokens = raw[rparen + 1 :].split()
+            if len(tokens) > 36:
+                cpu_id = int(tokens[36])
+                if cpu_id >= 0:
+                    if cpu_id not in self.observed_local_cpus:
+                        self.observed_local_cpus.append(cpu_id)
+                    if self._last_sampled_cpu is not None and self._last_sampled_cpu != cpu_id:
+                        self.cpu_migrations += 1
+                    self._last_sampled_cpu = cpu_id
+                    return cpu_id
+        except Exception:
+            return None
+        return None
 
     def wait(self) -> None:
         """Wait for instance to complete and parse results."""
@@ -304,6 +361,23 @@ class NetperfInstance:
                     self.result['_local_cpu'] = self.cpu_affinity
                     self.result['_remote_cpu'] = self.remote_cpu_affinity
                     self.result['_control_port'] = self.control_port
+                    obs_cpus = list(self.observed_local_cpus)
+                    exec_from_omni = self.result.get('LOCAL_CPU_EXEC', self.result.get('local_cpu_exec'))
+                    if isinstance(exec_from_omni, (int, float)) and int(exec_from_omni) >= 0:
+                        if int(exec_from_omni) not in obs_cpus:
+                            obs_cpus.append(int(exec_from_omni))
+                    self.result['_observed_local_cpus'] = obs_cpus
+                    self.result['_primary_observed_cpu'] = (
+                        obs_cpus[0] if obs_cpus else (
+                            int(exec_from_omni) if isinstance(exec_from_omni, (int, float)) and int(exec_from_omni) >= 0
+                            else self.cpu_affinity
+                        )
+                    )
+                    omni_mig = self.result.get('LOCAL_CPU_MIGRATIONS', self.result.get('local_cpu_migrations', 0))
+                    self.result['_cpu_migrations'] = max(
+                        self.cpu_migrations,
+                        int(omni_mig) if isinstance(omni_mig, (int, float)) else 0,
+                    )
             except Exception as e:
                 print(f"Warning: Could not parse output for instance {self.instance_id}: {e}",
                       file=sys.stderr)
@@ -324,6 +398,8 @@ class NetperfInstance:
                     'local_peak_cpu_id', 'remote_peak_cpu_id',
                     'local_peak_cpu_util', 'remote_peak_cpu_util',
                     'local_softirq_pct', 'remote_softirq_pct',
+                    'local_cpu_bind', 'local_cpu_exec', 'local_cpu_migrations',
+                    'remote_cpu_bind', 'remote_cpu_exec',
                 ):
                     if meta_key in data['metadata'] and meta_key not in flat:
                         flat[meta_key] = data['metadata'][meta_key]
@@ -411,7 +487,11 @@ class MultiNetperf:
                  topology_snapshot: Optional[str] = None,
                  lp_topology_snapshot: Optional[str] = None,
                  netserver_map_file: Optional[str] = None,
-                 check_kmsg: bool = False):
+                 check_kmsg: bool = False,
+                 barrier_wait: int = 0,
+                 enable_pcm: bool = False,
+                 pcm_csv_dir: Optional[str] = None,
+                 flent_working_latency: bool = False):
         self.host = host
         self.hosts = expand_host_targets(host)
         self.num_instances = instances  # Instances per port/direction
@@ -438,11 +518,19 @@ class MultiNetperf:
         self.lp_topology_snapshot = lp_topology_snapshot
         self.netserver_map_file = netserver_map_file
         self.check_kmsg = check_kmsg
+        self.barrier_wait = barrier_wait
+        self.enable_pcm = enable_pcm
+        self.pcm_csv_dir = pcm_csv_dir
+        self.flent_working_latency = flent_working_latency
 
         self.instances: List[NetperfInstance] = []
         self.interrupted = False
         self.kmsg_events: List[Dict[str, str]] = []
         self.counter_deltas: Dict[str, int] = {}
+        self.launch_skew_ms: float = 0.0
+        self.pcm_telemetry: Dict[str, Any] = {}
+        self.procstat_ground_truth: Dict[str, Any] = {}
+        self.flent_latency_summary: Dict[str, Any] = {}
 
         # Load topologies if affinity or per-core netserver is requested
         self.dut_topo: Optional[SystemTopology] = None
@@ -639,6 +727,7 @@ class MultiNetperf:
                         direction_role=role,
                         interface=iface,
                         port_index=port_idx,
+                        barrier_wait_secs=self.barrier_wait,
                     )
                     self.instances.append(instance)
 
@@ -667,35 +756,78 @@ class MultiNetperf:
         return open_cores
 
     def start_all(self) -> None:
-        """Start all created instances."""
+        """Start all created instances (barrier-synchronized when stagger == 0)."""
         total = len(self.instances)
         if self.output_format != 'json':
             print(f"Starting {total} parallel netperf stream(s) across {len(self.hosts)} target(s) "
                   f"[direction={self.direction.upper()}]...")
 
         start_time = time.time()
-        for i, instance in enumerate(self.instances):
-            if self.interrupted:
-                break
-            instance.start(self.netperf_path)
-            if self.verbose and instance.process:
-                print(f"Started instance {i} (PID {instance.process.pid}): {' '.join(instance.build_command(self.netperf_path))}")
-            if self.stagger > 0 and i < total - 1:
-                time.sleep(self.stagger)
+        if self.stagger <= 0 and total > 1:
+            barrier = threading.Barrier(total)
+            threads: List[threading.Thread] = []
+            for instance in self.instances:
+                t = threading.Thread(
+                    target=instance.start,
+                    args=(self.netperf_path, barrier),
+                    daemon=True,
+                )
+                threads.append(t)
+                t.start()
+            for t in threads:
+                t.join(timeout=10.0)
+            if self.verbose:
+                for i, instance in enumerate(self.instances):
+                    if instance.process:
+                        print(f"Started instance {i} (PID {instance.process.pid}): {' '.join(instance.build_command(self.netperf_path))}")
+        else:
+            for i, instance in enumerate(self.instances):
+                if self.interrupted:
+                    break
+                instance.start(self.netperf_path)
+                if self.verbose and instance.process:
+                    print(f"Started instance {i} (PID {instance.process.pid}): {' '.join(instance.build_command(self.netperf_path))}")
+                if self.stagger > 0 and i < total - 1:
+                    time.sleep(self.stagger)
+
+        valid_starts = [inst.start_time for inst in self.instances if inst.start_time is not None]
+        if len(valid_starts) >= 2:
+            self.launch_skew_ms = round((max(valid_starts) - min(valid_starts)) * 1000.0, 3)
+        else:
+            self.launch_skew_ms = 0.0
 
         if self.verbose:
-            print(f"All {total} instances started in {time.time() - start_time:.3f}s")
+            print(f"All {total} instances started in {time.time() - start_time:.3f}s (skew={self.launch_skew_ms:.2f}ms)")
+
+    def _poll_runtime_cpus_loop(self, stop_event: threading.Event) -> None:
+        """Background 200ms poller sampling /proc/<pid>/stat processor field for active instances."""
+        while not stop_event.is_set():
+            any_alive = False
+            for inst in self.instances:
+                if inst.process is not None and inst.process.poll() is None:
+                    any_alive = True
+                    inst.sample_runtime_cpu()
+            if not any_alive:
+                break
+            stop_event.wait(0.2)
 
     def wait_all(self) -> None:
-        """Wait for all instances to complete."""
+        """Wait for all instances to complete while polling runtime CPU residency."""
         if self.verbose:
             print(f"Waiting for tests to complete (duration: {self.duration}s)...")
-        for i, instance in enumerate(self.instances):
-            instance.wait()
-            if self.verbose:
-                status = "✓" if instance.is_success() else "✗"
-                elapsed = instance.elapsed_time() or 0.0
-                print(f"{status} Instance {i} [{instance.direction_role.upper()}] completed in {elapsed:.2f}s")
+        stop_event = threading.Event()
+        poller = threading.Thread(target=self._poll_runtime_cpus_loop, args=(stop_event,), daemon=True)
+        poller.start()
+        try:
+            for i, instance in enumerate(self.instances):
+                instance.wait()
+                if self.verbose:
+                    status = "✓" if instance.is_success() else "✗"
+                    elapsed = instance.elapsed_time() or 0.0
+                    print(f"{status} Instance {i} [{instance.direction_role.upper()}] completed in {elapsed:.2f}s")
+        finally:
+            stop_event.set()
+            poller.join(timeout=1.0)
 
     def stop_all(self) -> None:
         """Terminate all running netperf subprocesses."""
@@ -805,7 +937,171 @@ class MultiNetperf:
                 aggregated[f'{key}_min'] = min(values)
                 aggregated[f'{key}_max'] = max(values)
 
+        audit = self.audit_core_residency_and_fairness(results)
+        aggregated.update(audit)
+        aggregated['launch_skew_ms'] = self.launch_skew_ms
+
         return aggregated
+
+    def _build_smt_and_irq_maps(self) -> Tuple[Dict[int, int], set]:
+        """Build logical_cpu -> physical_core_id map and IRQ core set from discovered topology."""
+        logical_to_phys: Dict[int, int] = {}
+        irq_set: set = set()
+        if self.dut_topo and self.dut_topo.nodes:
+            half = max(1, self.dut_topo.total_logical_cpus // 2)
+            for pool in self.dut_topo.nodes.values():
+                irq_set.update(pool.irq_cores)
+                for p in pool.physical_cores:
+                    logical_to_phys[p] = p
+                if self.dut_topo.smt_enabled:
+                    if len(pool.smt_siblings) == len(pool.physical_cores):
+                        for p, s in zip(pool.physical_cores, pool.smt_siblings):
+                            logical_to_phys[s] = p
+                    else:
+                        for s in pool.smt_siblings:
+                            logical_to_phys[s] = s - half if (s - half) >= 0 else s
+        return logical_to_phys, irq_set
+
+    def audit_core_residency_and_fairness(
+        self, results: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[str, Any]:
+        """Compute Jain's Fairness Index, Per-Flow Core Residency & Overlap Matrix, and Outlier Flags."""
+        res_list = results if results is not None else self.get_successful_results()
+        if not res_list:
+            return {
+                'jains_fairness_index': 0.0,
+                'core_overlap_count': 0,
+                'core_overlap_pct': 0.0,
+                'outlier_flow_ids': [],
+                'per_flow_core_matrix': [],
+            }
+
+        tput_key = self._find_throughput_key(res_list[0])
+        tputs_mbps = [float(r.get(tput_key, 0.0)) if tput_key else 0.0 for r in res_list]
+        tputs_gbps = [round(v / 1000.0, 3) for v in tputs_mbps]
+        jains = compute_jains_fairness_index(tputs_mbps) if any(v > 0 for v in tputs_mbps) else 1.0
+
+        med_gbps = median(tputs_gbps) if tputs_gbps else 0.0
+        iqr_outlier_indices: set = set()
+        if len(tputs_gbps) >= 4:
+            try:
+                iqr_info = AdvancedStatistics.detect_outliers(tputs_gbps, method='iqr')
+                if isinstance(iqr_info, dict):
+                    iqr_outlier_indices = set(iqr_info.get('indices', []))
+                elif isinstance(iqr_info, (list, tuple, set)):
+                    iqr_outlier_indices = set(iqr_info)
+            except Exception:
+                iqr_outlier_indices = set()
+
+        logical_to_phys, irq_set = self._build_smt_and_irq_maps()
+
+        # Resolve effective executed core per flow
+        flow_exec_cpus: List[Optional[int]] = []
+        flow_phys_cores: List[Optional[int]] = []
+        for r in res_list:
+            req_cpu = r.get('_local_cpu')
+            if req_cpu is None or int(req_cpu) < 0:
+                bind_val = r.get('LOCAL_CPU_BIND', r.get('local_cpu_bind', -1))
+                req_cpu = int(bind_val) if isinstance(bind_val, (int, float)) and int(bind_val) >= 0 else None
+
+            exec_val = r.get('LOCAL_CPU_EXEC', r.get('local_cpu_exec', -1))
+            obs_primary = r.get('_primary_observed_cpu')
+            peak_val = r.get('LOCAL_CPU_PEAK_ID', r.get('local_peak_cpu_id', -1))
+
+            if isinstance(exec_val, (int, float)) and int(exec_val) >= 0:
+                eff_cpu: Optional[int] = int(exec_val)
+            elif isinstance(obs_primary, int) and obs_primary >= 0:
+                eff_cpu = obs_primary
+            elif req_cpu is not None and int(req_cpu) >= 0:
+                eff_cpu = int(req_cpu)
+            elif isinstance(peak_val, (int, float)) and int(peak_val) >= 0:
+                eff_cpu = int(peak_val)
+            else:
+                eff_cpu = None
+
+            flow_exec_cpus.append(eff_cpu)
+            if eff_cpu is not None:
+                flow_phys_cores.append(logical_to_phys.get(eff_cpu, eff_cpu))
+            else:
+                flow_phys_cores.append(None)
+
+        matrix: List[Dict[str, Any]] = []
+        overlap_flow_count = 0
+        outlier_flow_ids: List[str] = []
+
+        for idx, r in enumerate(res_list):
+            flow_id = f"F{idx:02d}"
+            eff_cpu = flow_exec_cpus[idx]
+            phys_cpu = flow_phys_cores[idx]
+            req_cpu = r.get('_local_cpu')
+            if req_cpu is None:
+                bind_val = r.get('LOCAL_CPU_BIND', r.get('local_cpu_bind', -1))
+                req_cpu = int(bind_val) if isinstance(bind_val, (int, float)) and int(bind_val) >= 0 else None
+
+            same_logical = [
+                f"F{j:02d}" for j, other_c in enumerate(flow_exec_cpus)
+                if j != idx and eff_cpu is not None and other_c == eff_cpu
+            ]
+            smt_collides = [
+                f"F{j:02d}" for j, other_p in enumerate(flow_phys_cores)
+                if j != idx and phys_cpu is not None and other_p == phys_cpu and flow_exec_cpus[j] != eff_cpu
+            ]
+            in_irq = eff_cpu is not None and eff_cpu in irq_set
+
+            if same_logical:
+                collision_type = 'SAME_LOGICAL_CORE'
+            elif smt_collides:
+                collision_type = 'SMT_SIBLING'
+            elif in_irq:
+                collision_type = 'IRQ_CORE'
+            else:
+                collision_type = 'NONE'
+
+            if collision_type != 'NONE':
+                overlap_flow_count += 1
+
+            flow_gbps = tputs_gbps[idx]
+            is_low_outlier = (med_gbps > 0 and flow_gbps < 0.75 * med_gbps) or (
+                idx in iqr_outlier_indices and flow_gbps < med_gbps
+            )
+            if is_low_outlier:
+                outlier_flow_ids.append(flow_id)
+
+            retrans = r.get(
+                'LOCAL_TRANSPORT_RETRANS',
+                r.get('TRANSPORT_RETRANS', r.get('LOCAL_SEND_RETRANS', 0)),
+            )
+            matrix.append({
+                'flow_id': flow_id,
+                'direction': r.get('_direction_role', self.direction),
+                'requested_local_cpu': req_cpu,
+                'executed_local_cpu': eff_cpu,
+                'physical_core_id': phys_cpu,
+                'observed_local_cpus': r.get('_observed_local_cpus', [eff_cpu] if eff_cpu is not None else []),
+                'peak_local_cpu': int(r.get('LOCAL_CPU_PEAK_ID', r.get('local_peak_cpu_id', -1))),
+                'cpu_migrations': int(r.get('_cpu_migrations', r.get('LOCAL_CPU_MIGRATIONS', 0))),
+                'remote_cpu': r.get('_remote_cpu', r.get('REMOTE_CPU_BIND', -1)),
+                'throughput_gbps': flow_gbps,
+                'local_sd': float(r.get('LOCAL_SD', r.get('LOCAL_SERVICE_DEMAND', 0.0))),
+                'p50_latency_us': float(r.get('P50_LATENCY', -1)),
+                'p90_latency_us': float(r.get('P90_LATENCY', -1)),
+                'p99_latency_us': float(r.get('P99_LATENCY', -1)),
+                'p999_latency_us': float(r.get('P999_LATENCY', -1)),
+                'retransmits': int(retrans) if isinstance(retrans, (int, float)) else 0,
+                'collision_type': collision_type,
+                'collides_with_flows': same_logical + smt_collides,
+                'is_outlier': bool(is_low_outlier),
+            })
+
+        total_flows = len(res_list)
+        overlap_pct = round((overlap_flow_count / total_flows) * 100.0, 2) if total_flows > 0 else 0.0
+        return {
+            'jains_fairness_index': round(jains, 4),
+            'core_overlap_count': overlap_flow_count,
+            'core_overlap_pct': overlap_pct,
+            'outlier_flow_ids': outlier_flow_ids,
+            'per_flow_core_matrix': matrix,
+        }
 
     def _find_throughput_key(self, result: Dict[str, Any]) -> Optional[str]:
         candidates = ['THROUGHPUT', 'throughput', 'Throughput_Mbps',
@@ -837,6 +1133,8 @@ class MultiNetperf:
         print("Aggregated Results:")
         print(f"{'='*70}")
         for key, value in aggregated.items():
+            if key == 'per_flow_core_matrix':
+                continue
             if isinstance(value, float):
                 print(f"{key:32s}: {value:>15.2f}")
             else:
@@ -869,7 +1167,7 @@ class MultiNetperf:
     def build_output_payload(self, aggregate: bool = True) -> Dict[str, Any]:
         results = self.get_successful_results()
         aggregated = self.aggregate_results() if aggregate else None
-        return {
+        payload: Dict[str, Any] = {
             'test_config': {
                 'host': self.host,
                 'hosts': self.hosts,
@@ -883,6 +1181,9 @@ class MultiNetperf:
                 'layout': self.layout,
                 'per_core_netserver': self.per_core_netserver,
                 'start_cpu': self.start_cpu,
+                'barrier_wait': self.barrier_wait,
+                'enable_pcm': self.enable_pcm,
+                'flent_working_latency': self.flent_working_latency,
             },
             'instance_results': results,
             'aggregated': aggregated,
@@ -894,6 +1195,13 @@ class MultiNetperf:
             },
             'counter_deltas': self.counter_deltas,
         }
+        if self.pcm_telemetry:
+            payload['pcm_telemetry'] = self.pcm_telemetry
+        if self.procstat_ground_truth:
+            payload['procstat_ground_truth'] = self.procstat_ground_truth
+        if self.flent_latency_summary:
+            payload['flent_working_latency'] = self.flent_latency_summary
+        return payload
 
     def export_results(self, output_file: str) -> None:
         output = self.build_output_payload(aggregate=True)
@@ -905,6 +1213,25 @@ class MultiNetperf:
     def run(self, aggregate: bool = True, export: Optional[str] = None) -> bool:
         """Execute the multi-instance test (supporting sequential BX when direction == 'bx-seq')."""
         pre_dmesg, pre_stats = self._capture_kmsg_and_stats()
+        procstat_gt = ProcStatGroundTruth()
+        procstat_gt.start()
+
+        pcm_collector: Optional[IntelPCMCollector] = None
+        if self.enable_pcm or self.pcm_csv_dir:
+            pcm_collector = IntelPCMCollector(csv_dir=self.pcm_csv_dir)
+            pcm_collector.start_live_collection()
+
+        flent_probe: Optional[FlentWorkingLatencyProbe] = None
+        if self.flent_working_latency and self.hosts:
+            probe_ctrl_port = self.base_port if self.per_core_netserver else 12865
+            flent_probe = FlentWorkingLatencyProbe(
+                host=self.hosts[0],
+                duration_sec=float(self.duration),
+                step_sec=0.2,
+                netperf_bin=self.netperf_path,
+                control_port=probe_ctrl_port,
+            )
+            flent_probe.start()
 
         if self.direction == 'bx-seq':
             all_instances: List[NetperfInstance] = []
@@ -922,6 +1249,15 @@ class MultiNetperf:
             if self.interrupted:
                 return False
             self.wait_all()
+
+        self.procstat_ground_truth = procstat_gt.stop()
+        agg_for_telemetry = self.aggregate_results()
+        tput_gbps = float((agg_for_telemetry or {}).get('total_throughput_gbps', 0.0))
+
+        if pcm_collector is not None:
+            self.pcm_telemetry = pcm_collector.stop_and_collect(throughput_gbps=tput_gbps)
+        if flent_probe is not None:
+            self.flent_latency_summary = flent_probe.stop_and_collect()
 
         post_dmesg, post_stats = self._capture_kmsg_and_stats()
         if self.check_kmsg:
@@ -1033,6 +1369,14 @@ Examples:
     # Execution options
     parser.add_argument('--stagger', type=float, default=0,
                         help='Stagger start time between instances (seconds)')
+    parser.add_argument('-w', '--barrier-wait', type=int, default=0,
+                        help='Pre-traffic wait time (-w secs) after control setup for synchronized start')
+    parser.add_argument('--pcm', action='store_true',
+                        help='Capture Intel(R) PCM uncore/PCIe DDIO/UPI/DRAM/power telemetry during the run')
+    parser.add_argument('--pcm-csv-dir', metavar='DIR',
+                        help='Optional directory of Intel(R) PCM CSV artifacts to parse')
+    parser.add_argument('--flent-working-latency', action='store_true',
+                        help='Launch concurrent 200ms Flent v3 working-latency RR probe alongside streams')
     parser.add_argument('--netperf', dest='netperf_path',
                         help='Path to netperf binary (auto-detected if not specified)')
 
@@ -1051,7 +1395,7 @@ Examples:
                         help='Suppress non-JSON banner output')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose output')
-    parser.add_argument('--version', action='version', version='%(prog)s 2.0.0')
+    parser.add_argument('--version', action='version', version='%(prog)s 2.1.0')
     parser.add_argument('netperf_args', nargs='*',
                         help='Additional arguments passed to each netperf instance (after --)')
 
@@ -1090,6 +1434,10 @@ Examples:
         local_ips=args.local_ips,
         tos=args.tos,
         layout=args.layout,
+        barrier_wait=args.barrier_wait,
+        enable_pcm=args.pcm,
+        pcm_csv_dir=args.pcm_csv_dir,
+        flent_working_latency=args.flent_working_latency,
         mtu=args.mtu,
         per_core_netserver=args.per_core_netserver,
         base_port=args.base_port,
@@ -1109,3 +1457,10 @@ Examples:
 
 if __name__ == '__main__':
     sys.exit(main())
+
+# === METADATA_FOOTER_START ===
+# Search Keywords: netperf-multi, Intel PCM, Flent working latency, Jain's fairness, CPU residency
+# Drivers & Subsystems: ice, irdma, mlx5_core, idpf, Linux /proc/stat
+# Related Units / Patches: DOC-NETPERF-STEP8-BENCHMARK-METHODOLOGY
+# Created / Last-Updated: 2026-11-05 / 2026-11-16
+# === METADATA_FOOTER_END ===

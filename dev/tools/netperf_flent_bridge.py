@@ -2,7 +2,7 @@
 # === METADATA_HEADER_START ===
 # File: dev/tools/netperf_flent_bridge.py
 # Created Date: 2026-11-10
-# Last Updated Date: 2026-11-10
+# Last Updated Date: 2026-11-16
 # Version: v3.2
 # Status: Active
 # Target Scope: netperf_copilot High-Speed 100GbE-400GbE Flent v3 Working-Latency & Step-Burst Bridge
@@ -11,17 +11,21 @@
 """Flent v3 Working-Latency (RRUL) & Burst-Convergence Bridge for Modernized Netperf v3.0.
 
 Provides topology-aware stream specifications, interim `-D` + final `-M -- -J` output
-parsing, Jain's fairness index calculation, and standard Flent v3 `.flent.gz` export
-for 100GbE-400GbE Linux `net_dim` working-latency and step-burst evaluations.
+parsing, Jain's fairness index calculation, background `FlentWorkingLatencyProbe`,
+and standard Flent v3 `.flent.gz` export for 100GbE-400GbE Linux `net_dim`
+working-latency and step-burst evaluations.
 """
 from __future__ import annotations
 
+import argparse
 import datetime
 import gzip
 import json
 import math
 import os
 import re
+import sys
+import tempfile
 from dataclasses import dataclass
 from statistics import mean
 from typing import Any, Dict, List, Optional
@@ -43,8 +47,9 @@ DSCP_TOS_MAP: Dict[str, str] = {
 
 OMNI_LATENCY_SELECTORS = (
     "THROUGHPUT,THROUGHPUT_UNITS,ELAPSED_TIME,TRANS_RATE,"
-    "RT_LATENCY,MIN_LATENCY,MAX_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY,STDDEV_LATENCY,"
-    "LOCAL_SEND_RETRANS,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_SD,REMOTE_SD,UUID"
+    "RT_LATENCY,MIN_LATENCY,MAX_LATENCY,P50_LATENCY,P90_LATENCY,P99_LATENCY,P999_LATENCY,STDDEV_LATENCY,"
+    "LOCAL_SEND_RETRANS,LOCAL_CPU_UTIL,REMOTE_CPU_UTIL,LOCAL_CPU_BIND,LOCAL_CPU_EXEC,LOCAL_CPU_MIGRATIONS,"
+    "REMOTE_CPU_BIND,REMOTE_CPU_EXEC,LOCAL_SD,REMOTE_SD,UUID"
 )
 
 INTERIM_DEMO_RE = re.compile(
@@ -390,9 +395,165 @@ def save_flent_gz(payload: Dict[str, Any], out_path: str) -> str:
     return out_path
 
 
+class FlentWorkingLatencyProbe:
+    """Background 200ms working-latency RR probe that executes concurrently with netperf-multi bulk flows."""
+
+    def __init__(
+        self,
+        host: str,
+        duration_sec: float = 10.0,
+        step_sec: float = 0.2,
+        netperf_bin: str = "netperf",
+        local_cpu: Optional[int] = None,
+        remote_cpu: Optional[int] = None,
+        control_port: int = 12865,
+    ) -> None:
+        self.spec = ModernNetperfStreamSpec(
+            stream_id="rr_working_latency_0",
+            role="rr_tcp",
+            host=host,
+            duration_sec=duration_sec,
+            step_interval_sec=step_sec,
+            local_cpu=local_cpu,
+            remote_cpu=remote_cpu,
+            control_port=control_port,
+            req_resp_size="64,64",
+            netperf_bin=netperf_bin,
+        )
+        self._proc: Any = None
+        self.start_epoch: float = 0.0
+
+    def start(self) -> bool:
+        import subprocess
+        cmd = self.spec.build_command()
+        try:
+            self.start_epoch = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            self._proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            return True
+        except Exception:
+            self._proc = None
+            return False
+
+    def stop_and_collect(self) -> Dict[str, Any]:
+        if self._proc is None:
+            return {"available": False, "step_ms": int(self.spec.step_interval_sec * 1000), "samples": []}
+        try:
+            stdout, _ = self._proc.communicate(timeout=max(5, int(self.spec.duration_sec) + 10))
+        except Exception:
+            try:
+                self._proc.kill()
+            except Exception:
+                pass
+            return {"available": False, "step_ms": int(self.spec.step_interval_sec * 1000), "samples": []}
+        parsed = parse_modern_netperf_output(stdout or "", start_epoch=self.start_epoch)
+        summary = parsed.get("summary", {})
+        samples = parsed.get("samples", [])
+        return {
+            "available": bool(samples or summary),
+            "step_ms": int(self.spec.step_interval_sec * 1000),
+            "sample_count": len(samples),
+            "samples": samples,
+            "p50_latency_us": summary.get("P50_LATENCY"),
+            "p90_latency_us": summary.get("P90_LATENCY"),
+            "p99_latency_us": summary.get("P99_LATENCY"),
+            "p999_latency_us": summary.get("P999_LATENCY"),
+            "mean_latency_us": summary.get("MEAN_LATENCY", summary.get("RT_LATENCY")),
+            "stddev_latency_us": summary.get("STDDEV_LATENCY"),
+        }
+
+
+def run_self_test() -> int:
+    """Deterministic self-test for Flent v3 working-latency bridge, stream builder, and .flent.gz serializer."""
+    assert resolve_tos_hex("EF") == "0xb8,0xb8"
+    assert resolve_tos_hex("AF21,CS1") == "0x48,0x20"
+    assert abs(compute_jains_fairness_index([100.0, 100.0, 100.0, 100.0]) - 1.0) < 1e-6
+
+    pools = allocate_topology_core_pairs(list(range(0, 32)), 4, 4, 2, is_l2_clustered=True, irq_reserved_count=8)
+    assert len(pools["bulk_tx_cores"]) == 4
+    assert len(pools["bulk_rx_cores"]) == 4
+    assert len(pools["rr_probe_cores"]) == 2
+    assert set(pools["bulk_tx_cores"]).isdisjoint(set(pools["bulk_rx_cores"]))
+
+    spec = ModernNetperfStreamSpec(
+        stream_id="rr_working_latency_0",
+        role="rr_tcp",
+        host="192.0.2.10",
+        duration_sec=5.0,
+        step_interval_sec=0.2,
+        local_cpu=16,
+        remote_cpu=16,
+        control_port=18616,
+        dscp="EF",
+    )
+    cmd = spec.build_command()
+    assert "-D" in cmd and "-M" in cmd and "-J" in cmd
+
+    raw_demo = (
+        "Interim result: 18500.00 Trans/s after 0.20 seconds ending at 1000.20\n"
+        "Interim result: 18420.00 Trans/s after 0.20 seconds ending at 1000.40\n"
+        '{"metadata": {"local_cpu_bind": 16, "local_cpu_exec": 16}, '
+        '"results": {"TRANS_RATE": 18460.0, "P50_LATENCY": 48, "P90_LATENCY": 56, "P99_LATENCY": 71, "P999_LATENCY": 112}}\n'
+    )
+    parsed = parse_modern_netperf_output(raw_demo)
+    assert len(parsed["samples"]) == 2
+    assert parsed["summary"]["P999_LATENCY"] == 112
+
+    payload = build_flent_gz_payload(
+        test_name="rrul_200gbe",
+        title="200GbE Working Latency Self-Test",
+        duration_sec=0.4,
+        step_sec=0.2,
+        dut_host="dut-node",
+        lp_host="192.0.2.10",
+        interface="ens801f0np0",
+        stream_results={
+            "tx_0": {"role": "bulk_tx", "samples": [{"t": 1000.2, "val": 24000.0}, {"t": 1000.4, "val": 24100.0}], "summary": {"THROUGHPUT": 24050.0}},
+            "rr_0": {"role": "rr_tcp", "samples": parsed["samples"], "summary": parsed["summary"]},
+        },
+    )
+    with tempfile.TemporaryDirectory(prefix="flent_selftest_") as tmp:
+        gz_path = os.path.join(tmp, "selftest.flent.gz")
+        save_flent_gz(payload, gz_path)
+        assert os.path.exists(gz_path)
+
+    print("netperf_flent_bridge self-test PASSED")
+    return 0
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Flent v3 Working-Latency (RRUL) & Step-Burst Bridge for Modernized Netperf v3.0"
+    )
+    parser.add_argument("--self-test", action="store_true", help="Run deterministic unit self-test")
+    parser.add_argument("--host", default="192.0.2.10", help="Target netserver host")
+    parser.add_argument("--duration", type=float, default=10.0, help="Duration in seconds")
+    parser.add_argument("--step", type=float, default=0.2, help="Interim demo step interval in seconds")
+    args = parser.parse_args(argv)
+
+    if args.self_test:
+        return run_self_test()
+
+    spec = ModernNetperfStreamSpec(
+        stream_id="rr_working_latency_0",
+        role="rr_tcp",
+        host=args.host,
+        duration_sec=args.duration,
+        step_interval_sec=args.step,
+    )
+    print(json.dumps({"stream_id": spec.stream_id, "command": spec.build_command()}, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
 # === METADATA_FOOTER_START ===
 # Search Keywords: netperf_copilot, Flent v3, RRUL, Working Latency, Burst Convergence, OMNI, net_dim
 # Drivers & Subsystems: ice, net_dim, netperf, netserver, flent
 # Related Units / Patches: DOC-NETPERF-FLENT-V3-INTEGRATION, D1-D10 v3.2
-# Created / Last-Updated: 2026-11-10 / 2026-11-10
+# Created / Last-Updated: 2026-11-10 / 2026-11-16
 # === METADATA_FOOTER_END ===

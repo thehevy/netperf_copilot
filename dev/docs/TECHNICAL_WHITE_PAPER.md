@@ -1,8 +1,8 @@
 # Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE` | **Version**: `v7.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -565,8 +565,8 @@ RX, simultaneous bidirectional (`bx`), and sequential bidirectional (`bx-seq`) m
 | --- | --- | --- |
 | **Unidirectional `tx`** | `48 TX` | **Port 0 (`ens7np0`)**: `191.8 Gbps`<br>**Port 1 (`ens23np0`)**: `190.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.6 Gbps`<br>**Aggregate Throughput**: **`571.8 Gbps`**<br>**Line-Rate Efficiency**: **95.3% of 600GbE** |
 | **Unidirectional `rx`** | `48 RX` | **Port 0 (`ens7np0`)**: `190.9 Gbps`<br>**Port 1 (`ens23np0`)**: `189.8 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `188.7 Gbps`<br>**Aggregate Throughput**: **`569.4 Gbps`**<br>**Line-Rate Efficiency**: **94.9% of 600GbE** |
-| **Sequential `bx-seq`** | `48 TX` then `48 RX` | **Port 0 (`ens7np0`)**: `191.5 / 190.6 Gbps`<br>**Port 1 (`ens23np0`)**: `190.1 / 189.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8G TX / 568.5G RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
-| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | **Port 0 (`ens7np0`)**: `172.4G TX + 168.9G RX`<br>**Port 1 (`ens23np0`)**: `170.8G TX + 167.2G RX`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `169.5G TX + 166.1G RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
+| **Sequential `bx-seq`** | `48 TX` then `48 RX` | **Port 0 (`ens7np0`)**: `191.5 / 190.6 Gbps`<br>**Port 1 (`ens23np0`)**: `190.1 / 189.4 Gbps`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `189.2 / 188.5 Gbps`<br>**Aggregate Throughput**: **`570.8Gb TX / 568.5Gb RX`**<br>**Line-Rate Efficiency**: **95.0% Unidirectional** |
+| **Simultaneous `bx` (Disjoint Cores)** | `24 TX + 24 RX` | **Port 0 (`ens7np0`)**: `172.4Gb TX + 168.9Gb RX`<br>**Port 1 (`ens23np0`)**: `170.8Gb TX + 167.2Gb RX`<br>**Port 2 (`ens27np0`) / Aggregate Throughput / Line-Rate Efficiency**: **Port 2 (`ens27np0`)**: `169.5Gb TX + 166.1Gb RX`<br>**Aggregate Throughput**: **`1,014.9 Gbps` Total**<br>**Line-Rate Efficiency**: **84.6% of 1.2 Tbps Full-Duplex** |
 
 ---
 
@@ -616,6 +616,45 @@ normality test $p$-values.
 
 ---
 
+### Case Study 5: Two-Tier Comparative Benchmark Methodology & Reproducibility Appendix
+
+**Objective**: Establish a fair, reproducible comparative methodology across `netperf_copilot`, classic `netperf 2.7.0`,
+`iperf2`, and `iperf3` using [`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py),
+[`netperf_pcm_bridge.py`](../../dev/tools/netperf_pcm_bridge.py), and
+[`netperf_flent_bridge.py`](../../dev/tools/netperf_flent_bridge.py).
+
+#### 1. Two-Tier Experimental Design (`Tier A` vs. `Tier B`)
+
+| Tier | Configuration | Purpose & Tool Equivalence |
+| --- | --- | --- |
+| **`Tier A: Default Unpinned`** | No explicit CPU pinning; default single daemon listener; 8 parallel streams (`-n 8` / `-P 8`). | Quantifies out-of-the-box user experience and scheduler/listener bottlenecks across tools. |
+| **`Tier B: Tuned & Pinned`** | Identical NUMA-local non-IRQ core list $C = \{c_0, \dots, c_7\}$ assigned across all 4 tools (`--affinity` vs. `taskset -c` / `-A`). | Isolates intrinsic data-path efficiency when every tool is given identical core locality. |
+
+#### 2. `iperf3` Threading Regime Classification (`<= 3.15` vs. `>= 3.16`)
+
+`iperf3 3.16` (released November 2023, PR #1591) replaced the legacy single-threaded `select()` reactor with
+multi-threaded per-stream `pthread` workers when `-P > 1`.
+[`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py)
+queries `iperf3 --version` before execution and records `"threading_regime": "multithreaded_3.16+"` or
+`"single_threaded_legacy"` so multi-stream comparisons never conflate the two architectures.
+
+#### 3. Independent `/proc/stat` & Intel® PCM Ground Truth (`netperf_pcm_bridge.py`)
+
+To verify the accuracy of each benchmark's internal CPU utilization telemetry without circular self-reference:
+
+1. [`ProcStatGroundTruth`](../../dev/tools/netperf_pcm_bridge.py) snapshots `/proc/stat` before and after each trial to
+   compute independent whole-host and active-core CPU busy percentages and signed error ($\Delta\text{CPU}\%$).
+2. [`IntelPCMCollector`](../../dev/tools/netperf_pcm_bridge.py) collects hardware PMU counters (`IPC`, `L2`/`L3` cache
+   hit ratio, `DRAM` read/write bandwidth, `PCIe` read/write bandwidth, and package power in Watts -> `Gbps/Watt`).
+
+```bash
+# Run two-tier comparative study (5 randomized trials per tool per tier) with PCM and Flent working latency
+python dev/tools/netperf_benchmark_study.py -H 198.51.100.20 -i ens801f0np0 \
+    -n 8 -l 10 --trials 5 --pcm --flent-working-latency -o study_report.json
+```
+
+---
+
 ## 8. Conclusion & Future Roadmap
 
 The **Netperf Modernization Project (v3.0)** demonstrates that a foundational UNIX systems benchmark can be brought into
@@ -657,7 +696,7 @@ into a repeatable, statistically rigorous engineering discipline.
 | Field | Value |
 | --- | --- |
 | **File Path** | `dev/docs/TECHNICAL_WHITE_PAPER.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

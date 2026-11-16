@@ -1,8 +1,8 @@
 # Netperf - Modern Fork
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-README` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
+- **Document ID**: `DOC-NETPERF-README` | **Version**: `v8.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -128,6 +128,9 @@ This fork modernizes netperf with several key improvements while maintaining ful
 - **[OMNI_REFERENCE.md](dev/docs/OMNI_REFERENCE.md)** - Comprehensive OMNI test guide
 - **[FLENT_V3_WORKING_LATENCY_INTEGRATION.md](dev/docs/FLENT_V3_WORKING_LATENCY_INTEGRATION.md)** - Flent v3 `.flent.gz`
   working-latency (`RRUL`) & `net_dim` step-burst convergence guide
+- **[AGENT_COLLABORATION_HUB.md](dev/collab/AGENT_COLLABORATION_HUB.md)** - Multi-agent (`Antigravity` <->
+  `GitHub Copilot`)
+  collaboration hub, clone topology map, and shared task queue (`dev/collab/SHARED_TASK_QUEUE.json`)
 - **[MONITORING.md](dev/docs/MONITORING.md)** - Real-time monitoring and TUI
 - **[ORCHESTRATION.md](dev/docs/ORCHESTRATION.md)** - Multi-host test coordination
 - **[INTEGRATION_TESTING.md](dev/docs/INTEGRATION_TESTING.md)** - Integration test results
@@ -508,7 +511,7 @@ though some sections reference older defaults.
 | Field | Value |
 | --- | --- |
 | **File Path** | `README.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-README`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

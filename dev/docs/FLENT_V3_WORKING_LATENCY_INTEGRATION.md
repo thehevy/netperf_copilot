@@ -1,8 +1,8 @@
 # Flent v3 Working-Latency (`RRUL`) & Burst-Convergence Integration Guide
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-FLENT-V3-INTEGRATION` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-10` | **Last Updated Date**: `2026-11-10`
+- **Document ID**: `DOC-NETPERF-FLENT-V3-INTEGRATION` | **Version**: `v5.0` | **Status**: `Active`
+- **Created Date**: `2026-11-10` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed `100GbE`–`400GbE` Linux `net_dim` Working-Latency & Step-Burst Qualification
 - **Summary**: Guide to running Flent v3 (`flent.org`) working-latency (`RRUL`) and step-burst convergence tests powered by Modernized Netperf v3.0 (`-M -- -J`, `-D 0.2`, `-T lcpu,rcpu`, `-Y DSCP`, `-Z`).
 <!-- METADATA_HEADER_END -->
@@ -88,7 +88,7 @@ aligned `x_values`, `TCP upload sum`, `TCP download sum`, `TCP bidirectional sum
 | --- | --- |
 | **File Path** | `dev/docs/FLENT_V3_WORKING_LATENCY_INTEGRATION.md` |
 | **Document ID** | `DOC-NETPERF-FLENT-V3-INTEGRATION` |
-| **Created / Last Updated** | `2026-11-10` / `2026-11-10` |
+| **Created / Last Updated** | `2026-11-10` / `2026-11-16` |
 | **Keywords / Search Tags** | `netperf_copilot`, `Flent v3`, `RRUL`, `Working Latency`, `Burst Convergence`, `OMNI`, `net_dim` |
 | **Drivers & Subsystems** | `ice`, `net_dim`, `netperf`, `netserver`, `netperf_flent_bridge.py` |
 | **Validation / Patch IDs** | `DOC-NETPERF-FLENT-V3-INTEGRATION`, `D1-D10 v3.2` |

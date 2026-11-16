@@ -1,8 +1,8 @@
 # CLI Tools Reference
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-13`
+- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v5.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for CLI Tools Reference under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -37,6 +37,10 @@ affinity, per-core
 | `--base-port` | Base control port for per-core `netserver` pool (default: `18600`) |
 | `--lp-start-cpu` | Minimum starting CPU on Load Partner (e.g. `0` or `43`) |
 | `--check-kmsg` | Capture `dmesg -T` and `ethtool -S` before/after the run and fail on `U1`–`U13` faults |
+| `-w`, `--barrier-wait` | Pass `-w <sec>` pre-traffic wait to each `netperf` instance after synchronized barrier launch |
+| `--pcm` | Collect Intel® PCM hardware counters (`pcm`, `pcm-pcie -e`, `pcm-memory`, `pcm-numa`, `pcm-power`) during run |
+| `--pcm-csv-dir` | Parse existing or output Intel® PCM CSV files in `DIR` for hardware counter validation |
+| `--flent-working-latency` | Run a concurrent `TCP_RR` working-latency probe during bulk throughput transfers (`RRUL`-style) |
 | `--export <file.json>` | Export per-instance and aggregated TX/RX/BX results + fault scan to JSON |
 
 ---
@@ -178,13 +182,35 @@ starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matr
 
 ---
 
+## 9. `netperf_pcm_bridge.py`, `netperf_flent_bridge.py`, `netperf_benchmark_study.py`
+
+- **`netperf_pcm_bridge.py`**: Intel® Performance Counter Monitor (`pcm`, `pcm-pcie -e`, `pcm-memory`, `pcm-numa`,
+  `pcm-power`) and `/proc/stat` independent CPU ground-truth collector.
+  ```bash
+  python3 ./dev/tools/netperf_pcm_bridge.py --self-test
+  python3 ./dev/tools/netperf_pcm_bridge.py --csv-dir ./pcm_logs -o pcm_summary.json
+  ```
+- **`netperf_flent_bridge.py`**: Flent v3 `.flent.gz` working-latency (`RRUL`) ingester/exporter,
+  `FlentWorkingLatencyProbe`,
+  and `net_dim` step-burst convergence analyzer.
+  ```bash
+  python3 ./dev/tools/netperf_flent_bridge.py --self-test
+  ```
+- **`netperf_benchmark_study.py`**: Two-tier (`Tier A: Default Unpinned` vs. `Tier B: Tuned & Pinned`) comparative
+  benchmark study harness across `netperf_copilot`, classic `netperf`, `iperf2`, and `iperf3` (`<= 3.15` vs. `>= 3.16`).
+  ```bash
+  python3 ./dev/tools/netperf_benchmark_study.py -H 198.51.100.20 -i ens801f0np0 --dry-run -o study_plan.json
+  ```
+
+---
+
 <!-- METADATA_FOOTER_START -->
 ### Document Search & Discovery Metadata
 
 | Field | Value |
 | --- | --- |
 | **File Path** | `wiki/CLI-Tools-Reference.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-13` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

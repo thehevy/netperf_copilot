@@ -136,6 +136,9 @@ char nettest_omni_id[]="\
 
 #include <arpa/inet.h>
 #include <netdb.h>
+#if defined(__linux)
+#include <sched.h>
+#endif
 #else /* WIN32 */
 #include <process.h>
 #define netperf_socklen_t socklen_t
@@ -450,10 +453,51 @@ int         receive_timeout = -1;
 /* min and max "latency" */
 int         min_latency = -1, max_latency = -1;
 /* the percentiles */
-int         p50_latency = -1, p90_latency = -1, p99_latency = -1;
+int         p50_latency = -1, p90_latency = -1, p99_latency = -1, p999_latency = -1;
 /* mean and stddev - while the mean is reduntant with the *_RR test we
    keep it because it won't be for other tests */
 double      mean_latency = -1.0, stddev_latency = -1.0;
+
+/* Step 8 runtime CPU execution residency telemetry (sched_getcpu() / /proc/self/stat field 39) */
+int         local_cpu_exec = -1;
+int         remote_cpu_exec = -1;
+int         local_cpu_migrations = 0;
+
+static int
+get_current_runtime_cpu(void)
+{
+#if defined(__linux)
+  int cpu = sched_getcpu();
+  if (cpu >= 0) return cpu;
+  {
+    FILE *fp = fopen("/proc/self/stat", "r");
+    if (fp) {
+      char buf[1024];
+      if (fgets(buf, sizeof(buf), fp)) {
+        char *rparen = strrchr(buf, ')');
+        if (rparen && rparen[1] == ' ') {
+          char *tok = rparen + 2;
+          int field_idx = 3; /* field 3 is state */
+          char *saveptr = NULL;
+          char *part = strtok_r(tok, " ", &saveptr);
+          while (part) {
+            if (field_idx == 39) {
+              cpu = atoi(part);
+              break;
+            }
+            field_idx++;
+            part = strtok_r(NULL, " ", &saveptr);
+          }
+        }
+      }
+      fclose(fp);
+    }
+  }
+  return cpu;
+#else
+  return -1;
+#endif
+}
 
 /* default to zero to avoid randomizing */
 int local_mask_len = 0;
@@ -579,6 +623,8 @@ enum netperf_output_name {
   REMOTE_SEND_THROUGHPUT,
   REMOTE_RECV_THROUGHPUT,
   LOCAL_CPU_BIND,
+  LOCAL_CPU_EXEC,
+  LOCAL_CPU_MIGRATIONS,
   LOCAL_CPU_COUNT,
   LOCAL_CPU_PEAK_UTIL,
   LOCAL_CPU_PEAK_ID,
@@ -587,6 +633,7 @@ enum netperf_output_name {
   LOCAL_CPU_MODEL,
   LOCAL_CPU_FREQUENCY,
   REMOTE_CPU_BIND,
+  REMOTE_CPU_EXEC,
   REMOTE_CPU_COUNT,
   REMOTE_CPU_PEAK_UTIL,
   REMOTE_CPU_PEAK_ID,
@@ -687,6 +734,7 @@ enum netperf_output_name {
   P50_LATENCY,
   P90_LATENCY,
   P99_LATENCY,
+  P999_LATENCY,
   MEAN_LATENCY,
   STDDEV_LATENCY,
   LOCAL_SOCKET_PRIO,
@@ -1204,6 +1252,10 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "LOCAL_CPU_PERCENT_SWINTR";
   case   LOCAL_CPU_BIND:
     return "LOCAL_CPU_BIND";
+  case   LOCAL_CPU_EXEC:
+    return "LOCAL_CPU_EXEC";
+  case   LOCAL_CPU_MIGRATIONS:
+    return "LOCAL_CPU_MIGRATIONS";
   case   LOCAL_SD:
     return "LOCAL_SD";
   case   SD_UNITS:
@@ -1286,6 +1338,8 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "REMOTE_CPU_PERCENT_SWINTR";
   case   REMOTE_CPU_BIND:
     return "REMOTE_CPU_BIND";
+  case   REMOTE_CPU_EXEC:
+    return "REMOTE_CPU_EXEC";
   case   REMOTE_SD:
     return "REMOTE_SD";
   case   REMOTE_CPU_METHOD:
@@ -1410,6 +1464,8 @@ netperf_output_enum_to_str(enum netperf_output_name output_name)
     return "P90_LATENCY";
   case P99_LATENCY:
     return "P99_LATENCY";
+  case P999_LATENCY:
+    return "P999_LATENCY";
   case MEAN_LATENCY:
     return "MEAN_LATENCY";
   case STDDEV_LATENCY:
@@ -2182,6 +2238,12 @@ print_omni_init_list() {
   set_output_elt(LOCAL_CPU_BIND, "Local", "CPU", "Bind", "", "%d",
 		 &local_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
 
+  set_output_elt(LOCAL_CPU_EXEC, "Local", "CPU", "Exec", "Core", "%d",
+		 &local_cpu_exec, 1, 0, NETPERF_TYPE_INT32);
+
+  set_output_elt(LOCAL_CPU_MIGRATIONS, "Local", "CPU", "Core", "Migrations", "%d",
+		 &local_cpu_migrations, 1, 0, NETPERF_TYPE_INT32);
+
   set_output_elt(LOCAL_SD, "Local", "Service", "Demand", "", "%.3f",
 		 &local_service_demand_double, 1, 0, NETPERF_TYPE_DOUBLE);
 
@@ -2310,6 +2372,9 @@ print_omni_init_list() {
 
   set_output_elt(REMOTE_CPU_BIND, "Remote", "CPU", "Bind", "", "%d",
 		 &remote_proc_affinity, 1, 0, NETPERF_TYPE_INT32);
+
+  set_output_elt(REMOTE_CPU_EXEC, "Remote", "CPU", "Exec", "Core", "%d",
+		 &remote_cpu_exec, 1, 0, NETPERF_TYPE_INT32);
 
   set_output_elt(REMOTE_SD, "Remote", "Service", "Demand", "", "%.3f",
 		 &remote_service_demand_double, 1, 0, NETPERF_TYPE_DOUBLE);
@@ -2508,6 +2573,9 @@ print_omni_init_list() {
 
   set_output_elt(P99_LATENCY, "99th", "Percentile", "Latency", "Microseconds",
 		 "%d", &p99_latency, 0, OMNI_WANT_STATS, NETPERF_TYPE_INT32);
+
+  set_output_elt(P999_LATENCY, "99.9th", "Percentile", "Latency", "Microseconds",
+		 "%d", &p999_latency, 0, OMNI_WANT_STATS, NETPERF_TYPE_INT32);
 
   set_output_elt(MEAN_LATENCY, "Mean", "Latency", "Microseconds", "", "%.2f",
 		 &mean_latency, 0, OMNI_WANT_STATS, NETPERF_TYPE_DOUBLE);
@@ -2972,7 +3040,10 @@ print_omni_json()
   fprintf(where, "    \"remote_active_cpu_util\": %.2f,\n", lib_remote_cpu_stats.active_cpu_util);
   fprintf(where, "    \"remote_active_cpu_count\": %d,\n", lib_remote_cpu_stats.active_cpu_count);
   fprintf(where, "    \"local_softirq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_swintr);
-  fprintf(where, "    \"local_irq_pct\": %.2f", lib_local_cpu_stats.cpu_irq);
+  fprintf(where, "    \"local_irq_pct\": %.2f,\n", lib_local_cpu_stats.cpu_irq);
+  fprintf(where, "    \"local_cpu_exec\": %d,\n", local_cpu_exec);
+  fprintf(where, "    \"local_cpu_migrations\": %d,\n", local_cpu_migrations);
+  fprintf(where, "    \"remote_cpu_exec\": %d", remote_cpu_exec);
 
 #if defined(__linux)
   {
@@ -4714,6 +4785,8 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
     /* grab the current time, and if necessary any starting information
        for the gathering of CPU utilization at this end. */
     cpu_start(local_cpu_usage);
+    local_cpu_exec = get_current_runtime_cpu();
+    local_cpu_migrations = 0;
 
 #if defined(WANT_INTERVALS)
     INTERVALS_INIT();
@@ -4897,6 +4970,15 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	  bytes_sent += ret;
 	  send_ring = send_ring->next;
 	  local_send_calls++;
+	  if ((local_send_calls & 0x3FFFULL) == 0) {
+	    int cur_cpu = get_current_runtime_cpu();
+	    if (cur_cpu >= 0) {
+	      if (local_cpu_exec >= 0 && cur_cpu != local_cpu_exec) {
+		local_cpu_migrations++;
+	      }
+	      local_cpu_exec = cur_cpu;
+	    }
+	  }
 	}
 	else if (ret == -2) {
 	  /* what to do here -2 means a non-fatal error - probably
@@ -4966,6 +5048,15 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	  }
 	  bytes_received += rret;
 	  local_receive_calls += temp_recvs;
+	  if ((local_receive_calls & 0x3FFFULL) == 0) {
+	    int cur_cpu = get_current_runtime_cpu();
+	    if (cur_cpu >= 0) {
+	      if (local_cpu_exec >= 0 && cur_cpu != local_cpu_exec) {
+		local_cpu_migrations++;
+	      }
+	      local_cpu_exec = cur_cpu;
+	    }
+	  }
 	}
 	else if (rret == 0) {
 	  /* is this the end of a test, just a zero-byte recv, or
@@ -5203,6 +5294,15 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
        will also store-away the necessaries for cpu utilization */
 
     cpu_stop(local_cpu_usage,&elapsed_time);
+    {
+      int end_cpu = get_current_runtime_cpu();
+      if (end_cpu >= 0) {
+	if (local_cpu_exec >= 0 && end_cpu != local_cpu_exec) {
+	  local_cpu_migrations++;
+	}
+	local_cpu_exec = end_cpu;
+      }
+    }
 
     /* if we timed-out, and had padded the timer, we need to subtract
        the pad_time from the elapsed time on the assumption that we
@@ -5242,6 +5342,7 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
 	lib_remote_cpu_stats.peak_cpu_id = omni_result->peak_cpu_id;
 	lib_remote_cpu_stats.active_cpu_util = omni_result->active_cpu_util;
 	lib_remote_cpu_stats.active_cpu_count = omni_result->active_cpu_count;
+	remote_cpu_exec = (omni_result->peak_cpu_id >= 0) ? omni_result->peak_cpu_id : remote_proc_affinity;
 	/* why?  because some stacks want to be clever and autotune their
 	   socket buffer sizes, which means that if we accept the defaults,
 	   the size we get from getsockopt() at the beginning of a
@@ -5472,6 +5573,7 @@ send_omni_inner(char remote_host[], unsigned int legacy_caller, char header_str[
     p50_latency = HIST_get_percentile(time_hist, 0.50);
     p90_latency = HIST_get_percentile(time_hist, 0.90);
     p99_latency = HIST_get_percentile(time_hist, 0.99);
+    p999_latency = HIST_get_percentile(time_hist, 0.999);
 
   }
 
@@ -6250,6 +6352,10 @@ recv_omni()
      being  reached */
   stop_timer();
   cpu_stop(omni_request->flags & OMNI_MEASURE_CPU,&elapsed_time);
+  remote_cpu_exec = get_current_runtime_cpu();
+  if (lib_local_cpu_stats.peak_cpu_id < 0 && remote_cpu_exec >= 0) {
+    lib_local_cpu_stats.peak_cpu_id = remote_cpu_exec;
+  }
   close(s_listen);
 
 #if defined(WANT_INTERVALS)

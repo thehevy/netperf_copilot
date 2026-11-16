@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
+# === METADATA_HEADER_START ===
+# File: dev/tests/test_modernization.py
+# Created Date: 2026-11-05
+# Last Updated Date: 2026-11-16
+# Version: 2.1.0
+# Status: Validated
+# Target Scope: Unit and integration test suite for Netperf Modernization Steps 1-8.
+# Summary: Validates topology discovery, preflight rules, C OMNI selectors, Intel PCM bridge, Flent bridge, and two-tier benchmark study harness.
+# === METADATA_HEADER_END ===
 """
-Unit & Integration Tests for Netperf Modernization (Steps 1-5)
+Unit & Integration Tests for Netperf Modernization (Steps 1-8)
 
 Runnable via either standard library unittest (`python dev/tests/test_modernization.py`)
 or pytest (`python -m pytest dev/tests/test_modernization.py`).
@@ -612,6 +621,146 @@ class TestNetperfModernization(unittest.TestCase):
         self.assertIn('strncasecmp(tmpval, "0x", 2) == 0', omni_c)
         self.assertIn("print_headers && (netperf_output_mode != JSON)", omni_c)
 
+    def test_step8_omni_p999_and_runtime_cpu_exec(self) -> None:
+        """Verify P999_LATENCY, LOCAL_CPU_EXEC, REMOTE_CPU_EXEC, and LOCAL_CPU_MIGRATIONS in C engine and presets."""
+        omni_c = (SRC_DIR / "nettest_omni.c").read_text(encoding="utf-8", errors="ignore")
+        for selector in ("P999_LATENCY", "LOCAL_CPU_EXEC", "REMOTE_CPU_EXEC", "LOCAL_CPU_MIGRATIONS"):
+            self.assertIn(selector, omni_c)
+        self.assertIn("HIST_get_percentile(time_hist, 0.999)", omni_c)
+        self.assertIn("get_current_runtime_cpu", omni_c)
+
+        latency_out = (REPO_ROOT / "dev" / "catalog" / "output-presets" / "latency.out").read_text(encoding="utf-8")
+        cpu_out = (REPO_ROOT / "dev" / "catalog" / "output-presets" / "cpu.out").read_text(encoding="utf-8")
+        verbose_out = (REPO_ROOT / "dev" / "catalog" / "output-presets" / "verbose.out").read_text(encoding="utf-8")
+        self.assertIn("P999_LATENCY", latency_out)
+        self.assertIn("LOCAL_CPU_EXEC", cpu_out)
+        self.assertIn("LOCAL_CPU_MIGRATIONS", cpu_out)
+        self.assertIn("REMOTE_CPU_EXEC", cpu_out)
+        self.assertIn("P999_LATENCY", verbose_out)
+        self.assertIn("LOCAL_CPU_EXEC", verbose_out)
+
+    def test_step8_barrier_sync_and_core_collision_matrix(self) -> None:
+        """Verify barrier wait (-w), Jain's Fairness Index, core/SMT/IRQ collision detection, and outlier flags."""
+        inst = netperf_multi.NetperfInstance(
+            instance_id=0,
+            host="192.168.10.2",
+            test_type="OMNI",
+            duration=10,
+            output_format="json",
+            cpu_affinity=16,
+            remote_cpu_affinity=16,
+            barrier_wait_secs=2,
+        )
+        cmd = inst.build_command()
+        sep = cmd.index("--")
+        self.assertIn("-w", cmd[:sep])
+        self.assertEqual(cmd[cmd.index("-w") + 1], "2")
+
+        runner = netperf_multi.MultiNetperf(
+            host="192.168.10.2",
+            instances=4,
+            test_type="OMNI",
+            use_affinity=True,
+            barrier_wait=2,
+        )
+        runner.dut_topo = TopologyAnalyzer.from_topology_snapshot(PCORE_SMT_SNAPSHOT)
+        synthetic_results = [
+            {"THROUGHPUT": 7420.0, "_local_cpu": 4, "LOCAL_CPU_EXEC": 4, "LOCAL_SD": 0.16, "P50_LATENCY": 15, "P99_LATENCY": 31, "P999_LATENCY": 45},
+            {"THROUGHPUT": 3810.0, "_local_cpu": 4, "LOCAL_CPU_EXEC": 4, "LOCAL_SD": 0.31, "P50_LATENCY": 28, "P99_LATENCY": 74, "P999_LATENCY": 112},
+            {"THROUGHPUT": 7100.0, "_local_cpu": 6, "LOCAL_CPU_EXEC": 6, "LOCAL_SD": 0.16, "P50_LATENCY": 14, "P99_LATENCY": 30, "P999_LATENCY": 44},
+            {"THROUGHPUT": 7050.0, "_local_cpu": 134, "LOCAL_CPU_EXEC": 134, "LOCAL_SD": 0.17, "P50_LATENCY": 16, "P99_LATENCY": 33, "P999_LATENCY": 49},
+        ]
+        audit = runner.audit_core_residency_and_fairness(synthetic_results)
+        self.assertLess(audit["jains_fairness_index"], 0.96)
+        self.assertEqual(audit["core_overlap_count"], 4)
+        self.assertEqual(audit["core_overlap_pct"], 100.0)
+        self.assertIn("F01", audit["outlier_flow_ids"])
+        matrix = audit["per_flow_core_matrix"]
+        self.assertEqual(matrix[0]["collision_type"], "SAME_LOGICAL_CORE")
+        self.assertEqual(matrix[1]["collision_type"], "SAME_LOGICAL_CORE")
+        self.assertEqual(matrix[2]["collision_type"], "SMT_SIBLING")
+        self.assertEqual(matrix[3]["collision_type"], "SMT_SIBLING")
+        self.assertTrue(matrix[1]["is_outlier"])
+
+    def test_step8_intel_pcm_collector_and_cpu_error_math(self) -> None:
+        """Verify IntelPCMCollector DDIO/UPI/DRAM/Watts CSV parsing and ProcStatGroundTruth CPU error math."""
+        import tempfile
+        from netperf_pcm_bridge import IntelPCMCollector, ProcStatGroundTruth, run_self_test as pcm_self_test
+        from netperf_flent_bridge import run_self_test as flent_self_test
+
+        self.assertEqual(pcm_self_test(), 0)
+        self.assertEqual(flent_self_test(), 0)
+
+        with tempfile.TemporaryDirectory(prefix="test_pcm_") as tmp:
+            tmp_path = Path(tmp)
+            (tmp_path / "pcm.csv").write_text(
+                "IPC,L2HIT,L3HIT,UPI_GBPS\n0.90,0.88,0.93,0.19\n",
+                encoding="utf-8",
+            )
+            (tmp_path / "pcm_pcie.csv").write_text(
+                "PCIRdCur_hit,PCIRdCur_total,ItoMCacheNear_hit,ItoMCacheNear_total\n"
+                "99790,100000,199580,200000\n",
+                encoding="utf-8",
+            )
+            (tmp_path / "pcm_memory.csv").write_text(
+                "Local_DRAM_GB/s,Remote_DRAM_GB/s\n0.83,0.02\n",
+                encoding="utf-8",
+            )
+            (tmp_path / "pcm_power.csv").write_text(
+                "Package_Watts\n250.0\n",
+                encoding="utf-8",
+            )
+            collector = IntelPCMCollector(csv_dir=str(tmp_path))
+            res = collector.stop_and_collect(throughput_gbps=94.15)
+            self.assertTrue(res["available"])
+            self.assertAlmostEqual(res["ddio_hit_pct"], 99.79, places=2)
+            self.assertAlmostEqual(res["upi_traffic_gbps"], 0.19, places=2)
+            self.assertAlmostEqual(res["total_dram_gbps"], 0.85, places=2)
+            self.assertAlmostEqual(res["gbps_per_watt"], round(94.15 / 250.0, 4), places=4)
+
+        err = ProcStatGroundTruth.compute_cpu_reporting_error(tool_reported_cpu_pct=14.2, ground_truth_cpu_pct=52.0)
+        self.assertAlmostEqual(err["relative_error_pct"], 72.69, places=1)
+
+    def test_step8_fair_benchmark_study_harness(self) -> None:
+        """Verify BenchmarkStudyHarness version detection (<3.16 vs >=3.16) and Tier A / Tier B command generation."""
+        from netperf_benchmark_study import BenchmarkStudyHarness
+
+        v_old = BenchmarkStudyHarness.parse_iperf3_version("iperf 3.13 (cJSON 1.7.15)")
+        v_new = BenchmarkStudyHarness.parse_iperf3_version("iperf 3.16 (cJSON 1.7.15)")
+        self.assertFalse(v_old["is_multithreaded_p"])
+        self.assertTrue(v_new["is_multithreaded_p"])
+
+        ecore_topo = TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT)
+        harness = BenchmarkStudyHarness(
+            host="192.168.10.2",
+            interface="ens801f0np0",
+            flow_counts=(1, 4, 16),
+            duration=30,
+            trials=5,
+            topology=ecore_topo,
+        )
+        plan = harness.generate_study_plan(iperf3_version_override="iperf 3.17.1")
+        self.assertTrue(plan["environment"]["tool_versions"]["iperf3"]["is_multithreaded_p"])
+        self.assertIn("16", plan["flow_matrix"])
+        f16 = plan["flow_matrix"]["16"]
+        self.assertEqual(len(f16["trial_schedule"]), 5)
+        tier_a = f16["tiers"]["tier_a_default_unpinned"]
+        tier_b = f16["tiers"]["tier_b_tuned_pinned"]
+        self.assertIn("iperf3_default", tier_a)
+        self.assertIn("netperf_copilot_pinned", tier_b)
+        self.assertIn("classic_netperf_pinned", tier_b)
+        self.assertIn("iperf2_pinned", tier_b)
+        self.assertIn("iperf3_mt_pinned", tier_b)
+        self.assertIn("iperf3_multiprocess_pinned", tier_b)
+        self.assertEqual(len(tier_b["iperf3_multiprocess_pinned"]["command"]), 16)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+# === METADATA_FOOTER_START ===
+# Search Keywords: unit tests, test_modernization, Intel PCM, Flent working latency, two-tier benchmark study
+# Drivers & Subsystems: ice, irdma, mlx5_core, idpf, nettest_omni.c
+# Related Units / Patches: DOC-NETPERF-STEP8-BENCHMARK-METHODOLOGY
+# Created / Last-Updated: 2026-11-05 / 2026-11-16
+# === METADATA_FOOTER_END ===

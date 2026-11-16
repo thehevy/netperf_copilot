@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schema_version": "1.0.0",
+  "document_id": "DOC-NETPERF-AGENT-COLLAB-QUEUE-001",
+  "created_date": "2026-11-16",
+  "last_updated_date": "2026-11-16",
+  "timezone": "America/Los_Angeles (PST, UTC-08:00)",
+  "repository": "https://github.com/thehevy/netperf_copilot",
+  "clones": {
+    "clone_a": {
+      "path": "c:/Users/bpjohns1/OneDrive - Intel Corporation/Documents/~ND/~~~2026/Projects/Netperf_Modernization_Project/netperf_copilot",
+      "primary_agent": "antigravity"
+    },
+    "clone_b": {
+      "path": "C:/Users/bpjohns1/OneDrive - Intel Corporation/Documents/~ND/~~~2026/Projects/Network_Performance/github_projects/netperf_copilot",
+      "primary_agent": "github_copilot"
+    }
+  },
+  "shared_tasks": [
+    {
+      "task_id": "COLLAB-001",
+      "title": "Fix silent NameError for AdvancedStatistics.detect_outliers() in dev/tools/netperf-multi",
+      "assigned_agent": "antigravity",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/tools/netperf-multi"
+      ],
+      "resolution": "Imported AdvancedStatistics alongside StatisticalAnalyzer from netperf_stats so IQR outlier flow detection runs without raising NameError."
+    },
+    {
+      "task_id": "COLLAB-002",
+      "title": "Add run_self_test() and --self-test CLI entrypoint to dev/tools/netperf_flent_bridge.py",
+      "assigned_agent": "antigravity",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/tools/netperf_flent_bridge.py",
+        "dev/tests/test_modernization.py"
+      ],
+      "resolution": "Added run_self_test() and main() CLI entrypoint to netperf_flent_bridge.py matching netperf_pcm_bridge.py."
+    },
+    {
+      "task_id": "COLLAB-003",
+      "title": "Select per-core netserver control_port in FlentWorkingLatencyProbe when --per-core-netserver is enabled",
+      "assigned_agent": "antigravity",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/tools/netperf-multi"
+      ],
+      "resolution": "Passed control_port=(args.base_port if args.per_core_netserver else 12865) to FlentWorkingLatencyProbe so Tier B per-core netserver runs connect cleanly."
+    },
+    {
+      "task_id": "COLLAB-004",
+      "title": "Enforce Rules D1-D10 v3.2 metadata footers (# Search Keywords:) in Step 8 Python scripts",
+      "assigned_agent": "antigravity",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/tools/netperf_pcm_bridge.py",
+        "dev/tools/netperf_benchmark_study.py",
+        "dev/tools/netperf_flent_bridge.py"
+      ],
+      "resolution": "Added # Search Keywords: to METADATA_FOOTER_START..END blocks and updated Last Updated Date to 2026-11-16."
+    },
+    {
+      "task_id": "COLLAB-005",
+      "title": "Merge Case Study 5 into TECHNICAL_WHITE_PAPER.md while preserving Gb/GbE and PCIe 5.0/6.0 style fixes",
+      "assigned_agent": "antigravity",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "dev/docs/TECHNICAL_WHITE_PAPER.md",
+        "wiki/Technical-White-Paper.md"
+      ],
+      "resolution": "Merged Case Study 5 (Two-Tier Comparative Benchmark Methodology & Reproducibility Appendix), fixed standalone G speed notations (570.8Gb, 172.4Gb), and updated Last Updated Date to 2026-11-16."
+    },
+    {
+      "task_id": "COLLAB-006",
+      "title": "Synchronize Clone A, Clone B, origin/master, origin/main, and netperf_copilot.wiki.git",
+      "assigned_agent": "antigravity",
+      "originating_agent": "both",
+      "status": "completed",
+      "files": [
+        "dev/collab/AGENT_COLLABORATION_HUB.md",
+        "dev/collab/SHARED_TASK_QUEUE.json",
+        "README.md",
+        "wiki/CLI-Tools-Reference.md"
+      ],
+      "resolution": "Synchronized all Step 8 files and dev/collab/ across both local clones and pushed to GitHub."
+    }
+  ]
+}
