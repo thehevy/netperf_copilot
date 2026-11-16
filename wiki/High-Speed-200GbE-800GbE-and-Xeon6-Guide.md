@@ -128,6 +128,31 @@ Expands IP ranges (`192.168.10..17.74`) and round-robins symbolic DSCP markings 
 
 ---
 
+## 5. Testbed Benchmarking BKMs: $2 \times 2$ Link-Speed $\times$ MTU Matrix & 3-Tier Fairness Gate
+
+When running comparative or qualification benchmarks across `100GbE` and `200GbE` adapters, enforce these three testbed
+BKM invariants (implemented in `dev/tools/netperf_benchmark_study.py`):
+
+1. **Test Both `MTU 1500` and `MTU 9000` at Every Link Speed ($2 \times 2$ Factorial Matrix)**:
+   - Never pair `100GbE` only with `MTU 1500` and `200GbE` only with `MTU 9000`. Moving from `MTU 1500` to `MTU 9000`
+     reduces packet rate per Gbps by $6\times$ (`81,274 pps/Gbps` vs. `13,706 pps/Gbps`).
+   - Always collect all four cells (`100GbE MTU 1500`, `100GbE MTU 9000`, `200GbE MTU 1500`, `200GbE MTU 9000`) so
+     per-packet softirq/syscall overhead (`200GbE MTU 1500` = `16.25 Mpps`) is separated from DMA/PCIe bandwidth limits.
+2. **Use the 3-Tier Fairness Progression (`Tier A` $\to$ `Tier B1` $\to$ `Tier B2`)**:
+   - **`Tier A` (`default_unpinned`)**: Unpinned out-of-the-box commands against a single listener.
+   - **`Tier B1` (`shared_taskset_pool` — Strict Apples-to-Apples)**: Wrap **all tools** (`netperf-multi`, classic
+     `netperf`, `iperf2`, and `iperf3 >= 3.16`) in the **identical `numactl --cpunodebind=<node> --membind=<node>
+     taskset -c <core_list>` non-IRQ core pool** without 1:1 `--affinity`, `--per-core-netserver`, or `-Z`.
+   - **`Tier B2` (`full_capabilities_1to1`)**: Enable `netperf_copilot`'s 1:1 `--affinity` (`spread_l2` /
+     `spread_step2`), `--per-core-netserver`, `--barrier-wait 2 --omit 2`, and `-- -Z` `MSG_ZEROCOPY` to quantify the
+     exact gain unlocked by 1:1 topology orchestration (`+19.55 Gbps` at `200GbE MTU 1500 64F`).
+3. **Enforce `iperf3 >= 3.16` & Ban Single-Core `-A` with `-P N` ($N > 1$)**:
+   - Verify `iperf3 >= 3.16` (multi-threaded `-P` pthreads, PR #1591) via
+     `BenchmarkStudyHarness.check_iperf3_version_gate()`, always pass `-O 2` (`--omit 2`), and never combine `-A <cpu>`
+     with `-P N` ($N > 1$).
+
+---
+
 <!-- METADATA_FOOTER_START -->
 ### Document Search & Discovery Metadata
 

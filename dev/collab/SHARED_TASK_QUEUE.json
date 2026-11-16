@@ -193,6 +193,19 @@
         "dev/tests/test_modernization.py"
       ],
       "resolution": "Added tier_b1_shared_taskset_pool (netperf_copilot_taskset_pool wrapped in identical numactl + taskset -c pool without 1:1 --affinity or --per-core-netserver) alongside Tier B2 (full 1:1 capabilities) and expanded empirical tables to the full 2x2 Link-Speed x MTU factorial matrix (100GbE & 200GbE at both MTU 1500 and MTU 9000)."
+    },
+    {
+      "task_id": "COLLAB-015",
+      "title": "Add 2x2 Link-Speed x MTU Matrix & 3-Tier Pinning Progression BKMs to High-Speed 200GbE/800GbE Guide",
+      "assigned_agent": "both",
+      "originating_agent": "github_copilot",
+      "status": "completed",
+      "files": [
+        "wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide.md",
+        "dev/collab/AGENT_COLLABORATION_HUB.md",
+        "dev/collab/SHARED_TASK_QUEUE.json"
+      ],
+      "resolution": "Added Section 5 (Testbed Benchmarking BKMs: 2x2 Link-Speed x MTU Matrix & 3-Tier Fairness Gate) to wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide.md and synchronized cross-project testbed BKM and claims audit rules."
     }
   ]
 }
