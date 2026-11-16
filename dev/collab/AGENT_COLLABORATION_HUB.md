@@ -2,14 +2,14 @@
 
 <!-- === METADATA_HEADER_START === -->
 - **Document ID**: `DOC-NETPERF-AGENT-COLLAB-HUB-001`
-- **Version**: `v2.0`
+- **Version**: `v2.1`
 - **Status**: `Active`
 - **Created Date**: `2026-11-16`
 - **Last Updated Date**: `2026-11-16`
-- **Target Scope**: Multi-agent coordination protocol, local clone topology map, Step 8 code review ledger, and shared
+- **Target Scope**: Multi-agent coordination protocol, local clone topology map, Step 8/9 code review ledger, and shared
   task queue between Antigravity and GitHub Copilot across `thehevy/netperf_copilot`.
 - **Summary**: Defines the shared communication workspace (`dev/collab/`), documents the two local Git clones on the
-  workstation, evaluates GitHub Copilot's Step 8 PCM/Flent/Benchmark Study implementations, and tracks joint fixes.
+  workstation, evaluates GitHub Copilot's Step 8/9 PCM/Flent/Benchmark Study implementations, and tracks joint fixes.
 <!-- === METADATA_HEADER_END === -->
 
 ## 1. Purpose & Multi-Agent Coordination Protocol
@@ -24,13 +24,12 @@ Two local clones of `https://github.com/thehevy/netperf_copilot.git` exist on th
 | Clone ID | Local Workspace Path | Primary Agent | Role & Sync Policy |
 | --- | --- | --- | --- |
 | `Clone A` | .../Netperf_<wbr><wbr>Modernization_Project<wbr>/<wbr>netperf_copilot | Antigravity | Primary build, style validation (`D1`-`D10`), and Wiki sync workspace. |
-| `Clone B` | .../Network_Performance/<wbr><wbr>github_projects/<wbr>netperf_<wbr>copilot | GitHub Copilot | Secondary workspace where Copilot authored the Step 8 PCM/Flent/Study enhancements. |
+| `Clone B` | .../Network_Performance/<wbr><wbr>github_projects/<wbr>netperf_<wbr>copilot | GitHub Copilot | Secondary workspace where Copilot authored the Step 8/9 PCM/Flent/Study enhancements. |
 | `Remote` | [github.com/netperf_copilot.gi](https://github.com/thehevy/netperf_copilot.git) | Both Agents | Keep both `origin/master` and `origin/main` synchronized at identical commit SHAs. |
 
 Earlier on `2026-11-16`, `Clone B` was checked out at an older commit (`8bef0f1c`) before
-`dev/tools/netperf_flent_bridge.py`
-was added in `Clone A` (`ce357b0`), and `origin/main` trailed `origin/master`. Both clones and both remote branches
-(`master` and `main`) are now kept in lockstep via this collaboration hub.
+`dev/tools/netperf_flent_bridge.py` was added in `Clone A` (`ce357b0`), and `origin/main` trailed `origin/master`. Both
+clones and both remote branches (`master` and `main`) are now kept in lockstep via this collaboration hub.
 
 ### 1.2 Mandatory Coordination Rules for All Agents
 
@@ -48,24 +47,25 @@ was added in `Clone A` (`ce357b0`), and `origin/main` trailed `origin/master`. B
 
 ---
 
-## 2. Technical Evaluation of GitHub Copilot's Step 8 Changes
+## 2. Technical Evaluation of GitHub Copilot's Step 8 & Step 9 Changes
 
-Antigravity reviewed all `8` uncommitted Step 8 files authored by GitHub Copilot in `Clone B`. Below is the structured
-evaluation of what Copilot built, what works well, and the `5` issues resolved jointly.
+Antigravity reviewed all Step 8 and Step 9 files authored by GitHub Copilot across `Clone B` and `Clone A`. Below is the
+structured evaluation of what Copilot built, what works well, and the `10` joint items (`COLLAB-001`..`COLLAB-010`)
+completed together.
 
 ### 2.1 Component-by-Component Assessment
 
 | File / Component | Lines | Evaluation Summary | Status |
 | --- | --- | --- | --- |
 | [`netperf_pcm_bridge.py`](../tools/netperf_pcm_bridge.py) | `535` | Clean zero-dependency implementation of `IntelPCMCollector` (live background CSV collection + offline `--pcm-csv-dir` replay for `pcm`, `pcm-pcie -e`, `pcm-memory`, `pcm-numa`, `pcm-power`), `ProcStatGroundTruth` (`/proc/stat` jiffy delta + `compute_cpu_reporting_error()`), `PCM_COUNTER_FORMULAS`, and `--self-test`. | Verified (`PASS`) |
-| [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py) | `435` | Rigorous 2-tier comparative benchmark study harness (`BenchmarkStudyHarness`) comparing `netperf_copilot`, classic `netperf`, `iperf2`, and `iperf3` (`<= 3.15` reactor vs. `>= 3.16` multi-threaded `-P` PR #1591) across Tier A (`default_unpinned`) and Tier B (`tuned_pinned`) with randomized trial order and 95% Student-$t$ CIs. | Verified (`PASS`) |
-| [`netperf_flent_bridge.py`](../tools/netperf_flent_bridge.py) | `537` | Added `FlentWorkingLatencyProbe` to run a concurrent `TCP_RR` working-latency probe during multi-stream bulk transfers and parse `P50`/`P99`/`P99.9` (`P999_LATENCY`) + `working_latency_inflation_ratio`. Antigravity added `run_self_test()` and `--self-test` CLI support. | Enhanced & Verified (`PASS`) |
-| [`netperf-multi`](../tools/netperf-multi) | `1452` | Added `threading.Barrier` synchronized stream start (`launch_skew_ms`, `-w`/`--barrier-wait`), `--pcm`, `--pcm-csv-dir`, `--flent-working-latency`, `sample_runtime_cpu()` (`200 ms` `/proc/<pid>/stat` field 39 polling), and `audit_core_residency_and_fairness()`. Fixed missing `AdvancedStatistics` import and per-core port selection. | Fixed & Verified (`PASS`) |
-| [`nettest_omni.c`](../../src/nettest_omni.c) & Presets | `8227` | Added `P999_LATENCY` (`HIST_get_percentile(time_hist, 0.999)`), `LOCAL_CPU_EXEC` (`sched_getcpu()` + `/proc/self/stat` fallback), `REMOTE_CPU_EXEC`, and `LOCAL_CPU_MIGRATIONS` to OMNI output selectors, JSON output, and [`latency.out`](../catalog/output-presets/latency.out), [`cpu.out`](../catalog/output-presets/cpu.out), and [`verbose.out`](../catalog/output-presets/verbose.out). | Verified (`PASS`) |
-| [`test_modernization.py`](../tests/test_modernization.py) | `755` | Added 4 Step 8 unit tests (test_step8_pcm_bridge_<wbr><wbr>and_proc_stat_ground_<wbr><wbr>truth, test_step8_core_<wbr><wbr>residency_and_<wbr>fairness_<wbr>audit, test_step8_benchmark_<wbr><wbr>study_two_tier_<wbr><wbr>methodology, test_step8_omni_c_p999_<wbr><wbr>and_runtime_cpu_<wbr><wbr>telemetry) plus Flent bridge self-test coverage (`30` total tests). | Verified (`30/30 PASS`) |
-| [`TECHNICAL_WHITE_PAPER.md`](../docs/TECHNICAL_WHITE_PAPER.md) | `660` | Added Case Study 5 (*Two-Tier Comparative Benchmark Methodology & Reproducibility Appendix*) covering Tier A vs. Tier B, `iperf3` version regime split, `/proc/stat` + PCM ground truth, and core-residency auditing. | Fixed `D1`-`D7` & Verified (`100/100`) |
+| [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py) | `723` | Rigorous 2-tier comparative benchmark study harness (`BenchmarkStudyHarness`) comparing `netperf_copilot`, classic `netperf`, `iperf2`, and `iperf3` (`<= 3.15` reactor vs. `>= 3.16` multi-threaded `-P` PR #1591) across Tier A (`default_unpinned`) and Tier B (`tuned_pinned`) with `check_iperf3_version_gate()`, `parse_iperf3_json_output()`, `parse_iperf2_output()`, and `--self-test`. | Verified (`PASS`) |
+| [`netperf_flent_bridge.py`](../tools/netperf_flent_bridge.py) | `537` | Added `FlentWorkingLatencyProbe` to run a concurrent `TCP_RR` working-latency probe during multi-stream bulk transfers and parse `P50`/`P99`/`P99.9` (`P999_LATENCY`) + `working_latency_inflation_ratio` plus `run_self_test()` and `--self-test` CLI support. | Enhanced & Verified (`PASS`) |
+| [`netperf-multi`](../tools/netperf-multi) | `1510` | Added `threading.Barrier` synchronized stream start (`launch_skew_ms`), `-w`/`--barrier-wait`, `-O`/`--omit` steady-state filter (`steady_state_throughput_gbps`), `--data-port-base`, transaction-weighted `pooled_p50/p90/p99/p999_latency_us`, `--pcm`, `--flent-working-latency`, `sample_runtime_cpu()`, and `audit_core_residency_and_fairness()`. | Fixed & Verified (`PASS`) |
+| [`nettest_omni.c`](../../src/nettest_omni.c) & Presets | `8235` | Added `P999_LATENCY` (`HIST_get_percentile(time_hist, 0.999)`), `LOCAL_CPU_EXEC` (`sched_getcpu()` + `/proc/self/stat` fallback), `REMOTE_CPU_EXEC`, and `LOCAL_CPU_MIGRATIONS` (including mid-loop `& 0xfff == 0` sampling in `send_omni()`) to OMNI output selectors, JSON output, and [`latency.out`](../catalog/output-presets/latency.out), [`cpu.out`](../catalog/output-presets/cpu.out), and [`verbose.out`](../catalog/output-presets/verbose.out). | Verified (`PASS`) |
+| [`test_modernization.py`](../tests/test_modernization.py) | `840` | Added Step 8 and Step 9 unit tests (`test_step8_*` + test_step9_omit_pooled_<wbr><wbr>tail_latency_and_<wbr>iperf3_<wbr>gate) plus all three bridge `--self-test` modes (`24/24` unit tests passing). | Verified (`24/24 PASS`) |
+| [WP_NETPERF_COPILOT_VS_<wbr>IPERF2_IPERF3_NETPERF_<wbr>BENCHMARK_STUDY.md](../docs/WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md) | `225` | Published `v4.0` benchmark study white paper (DOC-WP-NETPERF-COPILOT-<wbr><wbr>BENCHMARK-STUDY-001) documenting `IMP-001`..`IMP-005`, `iperf3 <= 3.15` vs. `>= 3.16`, Tier A vs. Tier B scaling (`1` to `64` flows at `100GbE` and `200GbE`), and `/proc/stat` + `Intel® PCM` verification. | Verified (`100/100`) |
 
-### 2.2 Joint Bug Fixes & Style Alignment Ledger (`COLLAB-001`..`COLLAB-006`)
+### 2.2 Joint Bug Fixes & Style Alignment Ledger (`COLLAB-001`..`COLLAB-010`)
 
 | Finding ID | Target File(s) | Issue Identified During Review | Joint Resolution Applied |
 | --- | --- | --- | --- |
@@ -78,7 +78,7 @@ evaluation of what Copilot built, what works well, and the `5` issues resolved j
 | `COLLAB-007` | [`nettest_omni.c`](../../src/nettest_omni.c) | Sampling `get_current_runtime_cpu()` only at `cpu_start()` and `cpu_stop()` could miss mid-run scheduler migrations that return to the starting CPU before test completion. | Added low-overhead bitwise (`& 0xfff == 0`) runtime CPU sampling inside `send_omni()` to capture mid-run core migrations in `LOCAL_CPU_MIGRATIONS`. |
 | `COLLAB-008` | [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py), [`test_modernization.py`](../tests/test_modernization.py) | `netperf_benchmark_study.py` generated the 2-tier command plan but needed deterministic output parsers for `iperf3 -J` and `iperf2 -P N` plus a `--self-test` CLI flag matching the other two Step 8 bridges. | Added `parse_iperf3_json_output()`, `parse_iperf2_output()`, `run_self_test()`, and `--self-test` CLI support to `netperf_benchmark_study.py`. |
 | `COLLAB-009` | [`netperf-multi`](../tools/netperf-multi), [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py), [WP_NETPERF_COPILOT_VS_<wbr>IPERF2_IPERF3_NETPERF_<wbr>BENCHMARK_STUDY.md](../docs/WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md) | Identified 5 improvement opportunities (`IMP-001`..`IMP-005`) over stock `netperf`, `iperf2`, and `iperf3 >= 3.16`: warm-up exclusion (`--omit`), pooled multi-flow `p99`/`p99.9` tail latency, deterministic `--data-port-base`, `< 5 ms` barrier launch, and `iperf3 >= 3.16` version gating. | Implemented all 5 improvements (`IMP-001`..`IMP-005`), added `test_step9`, and published WP_NETPERF_COPILOT_VS_<wbr><wbr>IPERF2_IPERF3_NETPERF<wbr>_<wbr>BENCHMARK_STUDY.md (`v4.0`). |
-| `COLLAB-010` | `HevyOne`, `TestCases`, `E835_DRIVER_POC` Harnesses | Portfolio test harnesses invoking `iperf3 -P N` must verify `iperf3 >= 3.16` (`3.17.1+` with multi-threaded `-P` pthreads, PR #1591) and never combine `-A <single_cpu>` with `-P N` ($N > 1$). | Queued for Antigravity + `HevyOne` (`COP-003` in HEVYONE_COPILOT_<wbr><wbr>ANTIGRAVITY_CHANNEL.<wbr>md): enforce `check_iperf3_version_gate()` across all harnesses and rebuild `HevyDocLib` with WP `v4.0`. |
+| `COLLAB-010` | `HevyOne`, `TestCases`, `E835_DRIVER_POC`, `HevyHitter` Harnesses | Portfolio test harnesses invoking `iperf3 -P N` must verify `iperf3 >= 3.16` (`3.17.1+` with multi-threaded `-P` pthreads, PR #1591) and never combine `-A <single_cpu>` with `-P N` ($N > 1$). | Upgraded `validation_harness_v2.py` (`v2.2`, Rule `HH-VAL-005`) across all 4 repos with `check_iperf3_version_gate()` + `verify_remote_iperf3_gate()`, updated `E835_DRIVER_POC` harnesses, rebuilt `HevyDocLib` with WP `v4.0`, and closed `COP-003` (`AGY-003`). |
 
 ---
 
@@ -106,7 +106,7 @@ python scripts/markdown_validator.py . --fix
 | --- | --- |
 | File Path | `dev/collab/AGENT_COLLABORATION_HUB.md` |
 | Created / Last Updated | `2026-11-16` / `2026-11-16` |
-| Keywords / Search Tags | `agent collaboration`, `Antigravity`, `GitHub Copilot`, `netperf_pcm_bridge`, `netperf_flent_bridge`, `netperf_benchmark_study`, `Step 8` |
+| Keywords / Search Tags | `agent collaboration`, `Antigravity`, `GitHub Copilot`, `netperf_pcm_bridge`, `netperf_flent_bridge`, `netperf_benchmark_study`, `Step 8`, `Step 9` |
 | Drivers & Subsystems | `ice`, `irdma`, `mlx5_core`, `idpf`, `netperf-multi`, `Intel PCM`, `Flent` |
 | Validation / Patch IDs | `DOC-NETPERF-AGENT-COLLAB-HUB-001` |
 <!-- === METADATA_FOOTER_END === -->
