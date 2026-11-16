@@ -1,7 +1,7 @@
 # Netperf - Modern Fork
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-README` | **Version**: `v8.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-README` | **Version**: `v9.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.

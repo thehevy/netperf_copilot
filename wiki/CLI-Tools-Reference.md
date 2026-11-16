@@ -1,7 +1,7 @@
 # CLI Tools Reference
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v5.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v6.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for CLI Tools Reference under Rules `D1`–`D10` `v3.2`.

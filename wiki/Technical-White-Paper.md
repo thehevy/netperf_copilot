@@ -1,7 +1,7 @@
 # Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v8.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v9.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
