@@ -1,7 +1,7 @@
 # Technical White Paper: Modernizing High-Speed Network Benchmarking at 100GbE–200GbE (and 400GbE–1.6TbE Projections) — Comparing `netperf_copilot` (`OMNI` + `Flent` + `Intel® PCM`) Against `iperf3` (`<= 3.15` vs. `>= 3.16`), `iperf2`, and Classic `netperf`
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v5.0` | **Status**: `Production Validated`
+- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v2.0` | **Status**: `Production Validated`
 - **Created Date**: `2026-11-16` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `100GbE & 200GbE x (MTU 1500 & MTU 9000) 2x2 Matrix (400GbE–1.6TbE Projections) | Intel® Xeon® 6 Processors | netperf_copilot vs. netperf vs. iperf2 vs. iperf3 (<= 3.15 & >= 3.16)`
 - **Summary**: Reproducible three-tier (Tier A Unpinned Default, Tier B1 Strict Apples-to-Apples Shared taskset Pool, and Tier B2 1:1 Pinned + Full netperf_copilot Capabilities) evaluation across the full 2x2 Link-Speed x MTU factorial matrix (100GbE & 200GbE at both MTU 1500 and MTU 9000).
