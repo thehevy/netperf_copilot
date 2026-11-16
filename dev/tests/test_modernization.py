@@ -757,6 +757,77 @@ class TestNetperfModernization(unittest.TestCase):
         from netperf_benchmark_study import run_self_test as study_self_test
         self.assertEqual(study_self_test(), 0)
 
+    def test_step9_omit_pooled_tail_latency_and_iperf3_gate(self) -> None:
+        """Verify --omit steady-state filtering, pooled p99/p99.9 tail latency, and iperf3 >= 3.16 version gate."""
+        from netperf_benchmark_study import BenchmarkStudyHarness
+
+        inst = netperf_multi.NetperfInstance(
+            instance_id=0,
+            host="192.168.10.2",
+            test_type="OMNI",
+            duration=10,
+            output_format="json",
+            omit_secs=2,
+            data_port=20000,
+        )
+        cmd = inst.build_command()
+        sep = cmd.index("--")
+        self.assertIn("-D", cmd[:sep])
+        self.assertIn("-P", cmd[sep + 1 :])
+        self.assertEqual(cmd[cmd.index("-P") + 1], "20000,20000")
+
+        runner = netperf_multi.MultiNetperf(
+            host="192.168.10.2",
+            instances=2,
+            test_type="OMNI",
+            omit_secs=2,
+        )
+        runner.create_instances()
+        runner.instances[0].returncode = 0
+        runner.instances[0].result = {
+            "THROUGHPUT": 5800.0,
+            "_steady_state_throughput": 5920.0,
+            "TRANSACTION_RATE": 20000.0,
+            "P50_LATENCY": 15.0,
+            "P90_LATENCY": 22.0,
+            "P99_LATENCY": 30.0,
+            "P999_LATENCY": 44.0,
+            "_direction_role": "tx",
+        }
+        runner.instances[1].returncode = 0
+        runner.instances[1].result = {
+            "THROUGHPUT": 5600.0,
+            "_steady_state_throughput": 5880.0,
+            "TRANSACTION_RATE": 10000.0,
+            "P50_LATENCY": 18.0,
+            "P90_LATENCY": 28.0,
+            "P99_LATENCY": 60.0,
+            "P999_LATENCY": 92.0,
+            "_direction_role": "tx",
+        }
+        agg = runner.aggregate_results()
+        self.assertIsNotNone(agg)
+        self.assertAlmostEqual(agg["steady_state_throughput_gbps"], 11.80, places=2)
+        self.assertAlmostEqual(agg["pooled_p99_latency_us"], 40.0, places=2)
+        self.assertAlmostEqual(agg["pooled_p999_latency_us"], 60.0, places=2)
+        self.assertAlmostEqual(agg["worst_flow_p99_latency_us"], 60.0, places=2)
+        self.assertAlmostEqual(agg["worst_flow_p999_latency_us"], 92.0, places=2)
+
+        gate_315 = BenchmarkStudyHarness.check_iperf3_version_gate("iperf 3.15", ["iperf3", "-c", "10.0.0.2", "-P", "16"])
+        self.assertFalse(gate_315["passed"])
+        gate_317_trap = BenchmarkStudyHarness.check_iperf3_version_gate(
+            "iperf 3.17.1", ["iperf3", "-c", "10.0.0.2", "-A", "0", "-P", "16"]
+        )
+        self.assertFalse(gate_317_trap["passed"])
+        self.assertTrue(gate_317_trap["has_single_core_affinity_trap"])
+        gate_317_ok = BenchmarkStudyHarness.check_iperf3_version_gate(
+            "iperf 3.17.1", ["iperf3", "-c", "10.0.0.2", "-P", "16", "-O", "2"]
+        )
+        self.assertTrue(gate_317_ok["passed"])
+
+        improvements = BenchmarkStudyHarness.evaluate_improvement_opportunities()
+        self.assertEqual(len(improvements), 5)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

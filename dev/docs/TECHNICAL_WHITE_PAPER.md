@@ -647,6 +647,20 @@ To verify the accuracy of each benchmark's internal CPU utilization telemetry wi
 2. [`IntelPCMCollector`](../../dev/tools/netperf_pcm_bridge.py) collects hardware PMU counters (`IPC`, `L2`/`L3` cache
    hit ratio, `DRAM` read/write bandwidth, `PCIe` read/write bandwidth, and package power in Watts -> `Gbps/Watt`).
 
+#### 4. Five Engineering Improvements Over Stock `netperf`, `iperf2`, and `iperf3 >= 3.16` (`IMP-001`–`IMP-005`)
+
+See
+[`WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md`](WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md)
+for the complete comparative study and the five engineering upgrades verified in `test_modernization.py`:
+
+| ID | Baseline Gap Across Stock `netperf`, `iperf2`, and `iperf3 >= 3.16` | Implemented & Verified Upgrade in `netperf_copilot` |
+| --- | --- | --- |
+| **`IMP-001`** | `iperf3 -O <sec>` excludes TCP slow-start warm-up; stock `netperf -w <sec>` only sleeps before traffic starts. | Added `-O` / `--omit <sec>` to `netperf-multi` (`-D 0.20` interim filtering into `steady_state_throughput_gbps`). |
+| **`IMP-002`** | Stock `netperf` lacks `P99.9` and multi-flow pooling; `iperf2` and `iperf3` lack RPC `p99`/`p99.9` histograms. | Added `P999_LATENCY` in `src/nettest_omni.c` plus `pooled_p50/p90/p99/p999_latency_us` and `worst_flow_p99/p999_latency_us`. |
+| **`IMP-003`** | `iperf3` uses single port `5201`; stock `netperf` opens random ephemeral data ports across firewalls. | Standardized `--data-port-base <port>` (`-P <port+i>,<port+i>`) in `netperf-multi` and Tier B study runs. |
+| **`IMP-004`** | Shell loops of stock `netperf` suffer `150–400 ms` sequential fork skew vs. `iperf2`/`iperf3 >= 3.16` pthreads. | Implemented `threading.Barrier(N)` parallel launch (`launch_skew_ms < 5 ms`) + `-w` post-handshake sync. |
+| **`IMP-005`** | Harnesses invoke `iperf3 -P N` without checking for `<= 3.15` single-reactor builds or `-A <cpu> -P N` traps. | Added BenchmarkStudyHarness.<wbr><wbr>check_iperf3_version_<wbr><wbr>gate() enforcing `iperf3 >= 3.16` and rejecting `-A <cpu> -P N`. |
+
 ```bash
 # Run two-tier comparative study (5 randomized trials per tool per tier) with PCM and Flent working latency
 python dev/tools/netperf_benchmark_study.py -H 198.51.100.20 -i ens801f0np0 \

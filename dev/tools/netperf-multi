@@ -57,7 +57,11 @@ from typing import Dict, List, Optional, Tuple, Any
 sys.path.insert(0, str(Path(__file__).parent))
 from netperf_topology import TopologyAnalyzer, SystemTopology, format_cpu_list
 from netperf_report import AIValidationReporter, scan_kmsg_events, parse_ethtool_stats, compute_counter_deltas
-from netperf_flent_bridge import compute_jains_fairness_index, FlentWorkingLatencyProbe
+from netperf_flent_bridge import (
+    compute_jains_fairness_index,
+    FlentWorkingLatencyProbe,
+    parse_modern_netperf_output,
+)
 from netperf_pcm_bridge import IntelPCMCollector, ProcStatGroundTruth
 from netperf_stats import AdvancedStatistics
 
@@ -147,7 +151,8 @@ class NetperfInstance:
                  direction: Optional[str] = None,
                  extra_args: Optional[List[str]] = None,
                  netperf_binary: str = 'netperf',
-                 barrier_wait_secs: int = 0):
+                 barrier_wait_secs: int = 0,
+                 omit_secs: int = 0):
         self.instance_id = instance_id
         self.host = host
         self.test_type = test_type
@@ -165,6 +170,7 @@ class NetperfInstance:
         self.port_index = port_index
         self.netperf_binary = netperf_binary
         self.barrier_wait_secs = barrier_wait_secs
+        self.omit_secs = max(0, int(omit_secs))
 
         self.process: Optional[subprocess.Popen] = None
         self.returncode: Optional[int] = None
@@ -221,6 +227,9 @@ class NetperfInstance:
 
         if self.barrier_wait_secs > 0:
             cmd.extend(['-w', str(self.barrier_wait_secs)])
+
+        if self.omit_secs > 0 and '-D' not in cmd and '-D' not in self.netperf_args:
+            cmd.extend(['-D', '0.20'])
 
         # CPU affinity (-T local_cpu,remote_cpu)
         if self.cpu_affinity is not None and self.remote_cpu_affinity is not None:
@@ -378,6 +387,17 @@ class NetperfInstance:
                         self.cpu_migrations,
                         int(omni_mig) if isinstance(omni_mig, (int, float)) else 0,
                     )
+                    if self.omit_secs > 0:
+                        parsed_interim = parse_modern_netperf_output(self.stdout, start_epoch=self.start_time or 0.0)
+                        steady_samples = [
+                            float(s['val']) for s in parsed_interim.get('samples', [])
+                            if float(s.get('elapsed', 0.0)) > float(self.omit_secs)
+                        ]
+                        if steady_samples:
+                            self.result['_steady_state_throughput'] = round(
+                                sum(steady_samples) / len(steady_samples), 2
+                            )
+                            self.result['_omit_secs'] = self.omit_secs
             except Exception as e:
                 print(f"Warning: Could not parse output for instance {self.instance_id}: {e}",
                       file=sys.stderr)
@@ -489,6 +509,7 @@ class MultiNetperf:
                  netserver_map_file: Optional[str] = None,
                  check_kmsg: bool = False,
                  barrier_wait: int = 0,
+                 omit_secs: int = 0,
                  enable_pcm: bool = False,
                  pcm_csv_dir: Optional[str] = None,
                  flent_working_latency: bool = False):
@@ -519,6 +540,7 @@ class MultiNetperf:
         self.netserver_map_file = netserver_map_file
         self.check_kmsg = check_kmsg
         self.barrier_wait = barrier_wait
+        self.omit_secs = max(0, int(omit_secs))
         self.enable_pcm = enable_pcm
         self.pcm_csv_dir = pcm_csv_dir
         self.flent_working_latency = flent_working_latency
@@ -728,6 +750,7 @@ class MultiNetperf:
                         interface=iface,
                         port_index=port_idx,
                         barrier_wait_secs=self.barrier_wait,
+                        omit_secs=self.omit_secs,
                     )
                     self.instances.append(instance)
 
@@ -936,6 +959,50 @@ class MultiNetperf:
                 aggregated[f'{key}_avg'] = sum(values) / len(values)
                 aggregated[f'{key}_min'] = min(values)
                 aggregated[f'{key}_max'] = max(values)
+
+        # Steady-state omit-filtered throughput (improvement over stock netperf -w)
+        steady_vals = [
+            float(r['_steady_state_throughput'])
+            for r in results
+            if isinstance(r.get('_steady_state_throughput'), (int, float))
+        ]
+        if steady_vals:
+            steady_mbps = round(sum(steady_vals), 2)
+            aggregated['steady_state_throughput_mbps'] = steady_mbps
+            aggregated['steady_state_throughput_gbps'] = round(steady_mbps / 1000.0, 3)
+
+        # Transaction/throughput-weighted pooled multi-flow tail latency & worst-flow tail bounds
+        weights: List[float] = []
+        for r in results:
+            w = float(
+                r.get(
+                    'TRANSACTION_RATE',
+                    r.get('TRANS_RATE', r.get('LOCAL_SEND_CALLS', r.get('THROUGHPUT', 1.0))),
+                )
+                or 1.0
+            )
+            weights.append(max(w, 1e-6))
+        total_w = sum(weights)
+
+        for pct_label, sel_key in (
+            ('p50', 'P50_LATENCY'),
+            ('p90', 'P90_LATENCY'),
+            ('p99', 'P99_LATENCY'),
+            ('p999', 'P999_LATENCY'),
+        ):
+            valid_pairs = [
+                (float(r[sel_key]), weights[idx])
+                for idx, r in enumerate(results)
+                if isinstance(r.get(sel_key), (int, float)) and float(r.get(sel_key, -1)) >= 0
+            ]
+            if valid_pairs:
+                w_sum = sum(w for _, w in valid_pairs)
+                pooled_val = sum(val * w for val, w in valid_pairs) / max(w_sum, 1e-6)
+                aggregated[f'pooled_{pct_label}_latency_us'] = round(pooled_val, 2)
+                if pct_label in ('p99', 'p999'):
+                    aggregated[f'worst_flow_{pct_label}_latency_us'] = round(
+                        max(val for val, _ in valid_pairs), 2
+                    )
 
         audit = self.audit_core_residency_and_fairness(results)
         aggregated.update(audit)
@@ -1182,6 +1249,7 @@ class MultiNetperf:
                 'per_core_netserver': self.per_core_netserver,
                 'start_cpu': self.start_cpu,
                 'barrier_wait': self.barrier_wait,
+                'omit_secs': self.omit_secs,
                 'enable_pcm': self.enable_pcm,
                 'flent_working_latency': self.flent_working_latency,
             },
@@ -1371,6 +1439,8 @@ Examples:
                         help='Stagger start time between instances (seconds)')
     parser.add_argument('-w', '--barrier-wait', type=int, default=0,
                         help='Pre-traffic wait time (-w secs) after control setup for synchronized start')
+    parser.add_argument('-O', '--omit', dest='omit_secs', type=int, default=0,
+                        help='Omit initial N seconds of interim samples from steady-state throughput (like iperf3 -O)')
     parser.add_argument('--pcm', action='store_true',
                         help='Capture Intel(R) PCM uncore/PCIe DDIO/UPI/DRAM/power telemetry during the run')
     parser.add_argument('--pcm-csv-dir', metavar='DIR',
@@ -1435,6 +1505,7 @@ Examples:
         tos=args.tos,
         layout=args.layout,
         barrier_wait=args.barrier_wait,
+        omit_secs=args.omit_secs,
         enable_pcm=args.pcm,
         pcm_csv_dir=args.pcm_csv_dir,
         flent_working_latency=args.flent_working_latency,
