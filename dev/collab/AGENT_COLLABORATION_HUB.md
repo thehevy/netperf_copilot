@@ -2,7 +2,7 @@
 
 <!-- === METADATA_HEADER_START === -->
 - **Document ID**: `DOC-NETPERF-AGENT-COLLAB-HUB-001`
-- **Version**: `v2.1`
+- **Version**: `v3.1`
 - **Status**: `Active`
 - **Created Date**: `2026-11-16`
 - **Last Updated Date**: `2026-11-16`
@@ -78,7 +78,7 @@ completed together.
 | `COLLAB-007` | [`nettest_omni.c`](../../src/nettest_omni.c) | Sampling `get_current_runtime_cpu()` only at `cpu_start()` and `cpu_stop()` could miss mid-run scheduler migrations that return to the starting CPU before test completion. | Added low-overhead bitwise (`& 0xfff == 0`) runtime CPU sampling inside `send_omni()` to capture mid-run core migrations in `LOCAL_CPU_MIGRATIONS`. |
 | `COLLAB-008` | [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py), [`test_modernization.py`](../tests/test_modernization.py) | `netperf_benchmark_study.py` generated the 2-tier command plan but needed deterministic output parsers for `iperf3 -J` and `iperf2 -P N` plus a `--self-test` CLI flag matching the other two Step 8 bridges. | Added `parse_iperf3_json_output()`, `parse_iperf2_output()`, `run_self_test()`, and `--self-test` CLI support to `netperf_benchmark_study.py`. |
 | `COLLAB-009` | [`netperf-multi`](../tools/netperf-multi), [`netperf_benchmark_study.py`](../tools/netperf_benchmark_study.py), [WP_NETPERF_COPILOT_VS_<wbr>IPERF2_IPERF3_NETPERF_<wbr>BENCHMARK_STUDY.md](../docs/WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md) | Identified 5 improvement opportunities (`IMP-001`..`IMP-005`) over stock `netperf`, `iperf2`, and `iperf3 >= 3.16`: warm-up exclusion (`--omit`), pooled multi-flow `p99`/`p99.9` tail latency, deterministic `--data-port-base`, `< 5 ms` barrier launch, and `iperf3 >= 3.16` version gating. | Implemented all 5 improvements (`IMP-001`..`IMP-005`), added `test_step9`, and published WP_NETPERF_COPILOT_VS_<wbr><wbr>IPERF2_IPERF3_NETPERF<wbr>_<wbr>BENCHMARK_STUDY.md (`v4.0`). |
-| `COLLAB-010` | `HevyOne`, `TestCases`, `E835_DRIVER_POC`, `HevyHitter` Harnesses | Portfolio test harnesses invoking `iperf3 -P N` must verify `iperf3 >= 3.16` (`3.17.1+` with multi-threaded `-P` pthreads, PR #1591) and never combine `-A <single_cpu>` with `-P N` ($N > 1$). | Upgraded `validation_harness_v2.py` (`v2.2`, Rule `HH-VAL-005`) across all 4 repos with `check_iperf3_version_gate()` + `verify_remote_iperf3_gate()`, updated `E835_DRIVER_POC` harnesses, rebuilt `HevyDocLib` with WP `v4.0`, and closed `COP-003` (`AGY-003`). |
+| `COLLAB-010` | `auto_tune`, `HevyOne`, `TestCases`, `E835_DRIVER_POC`, `HevyHitter` Harnesses | Portfolio test harnesses invoking `iperf3 -P N` must verify `iperf3 >= 3.16` (`3.17.1+` with multi-threaded `-P` pthreads, PR #1591) and never combine `-A <single_cpu>` with `-P N` ($N > 1$). | Upgraded `validation_harness_v2.py` (`v2.2`, Rule `HH-VAL-005`) across all 5 repos (`auto_tune`, `HevyOne`, `TestCases`, `E835_DRIVER_POC`, `HevyHitter`), wired `check_iperf3_version_gate()` into `auto_tune` and 11 `E835_DRIVER_POC` harnesses, rebuilt & replicated `HevyDocLib` (`v4.0`), and closed `COP-003` (`AGY-003`). |
 
 ---
 

@@ -131,7 +131,7 @@
     },
     {
       "task_id": "COLLAB-010",
-      "title": "Instruct HevyOne & portfolio test harnesses (TestCases, E835_DRIVER_POC, HevyHitter) to enforce iperf3 >= 3.16 (multi-threaded -P, PR #1591) and republish WP v4.0 to HevyDocLib",
+      "title": "Instruct HevyOne & portfolio test harnesses (auto_tune, TestCases, E835_DRIVER_POC, HevyHitter) to enforce iperf3 >= 3.16 (multi-threaded -P, PR #1591) and republish/replicate WP v4.0 to HevyDocLib",
       "assigned_agent": "antigravity",
       "originating_agent": "github_copilot",
       "status": "completed",
@@ -142,14 +142,23 @@
         "../Intel-Sandbox-Repos/docs/cross_project_bus/HEVYONE_COPILOT_ANTIGRAVITY_CHANNEL.md",
         "../TestCases/tools/runner/validation_harness_v2.py",
         "../Intel-Sandbox-Repos/scripts/validation_harness_v2.py",
+        "../auto_tune/intel-ethernet-auto-tune/scripts/validation_harness_v2.py",
+        "../auto_tune/intel-ethernet-auto-tune/scripts/run_v26_4state_critic_autotune_validation.py",
         "../E835_DRIVER_POC/scripts/validation_harness_v2.py",
         "../HevyHitter/scripts/validation_harness_v2.py",
         "../E835_DRIVER_POC/scripts/benchmark_sf_netdev_approaches.py",
         "../E835_DRIVER_POC/scripts/run_suite4_aa_lag_coexistence.py",
         "../E835_DRIVER_POC/scripts/run_v261_tb1_tb3_5state_validation.py",
+        "../E835_DRIVER_POC/scripts/run_v262_core_ab_validation.py",
+        "../E835_DRIVER_POC/scripts/run_v262_core_tb2_tb4_tb5_ab_validation.py",
+        "../E835_DRIVER_POC/scripts/run_v262_core_tb7_tb8_ab.py",
+        "../E835_DRIVER_POC/scripts/run_v262_dissenting_tb1_tb3_suite.py",
+        "../E835_DRIVER_POC/scripts/run_v262_dissenting_tb2_tb4_tb5.py",
+        "../E835_DRIVER_POC/scripts/run_v262_dissenting_tb7_tb8.py",
+        "../E835_DRIVER_POC/scripts/run_v262_r2_gap_closure_and_soak.py",
         "../E835_DRIVER_POC/scripts/run_v26_multiport_snc_cursor_validation.py"
       ],
-      "resolution": "Upgraded validation_harness_v2.py (v2.2, Rule HH-VAL-005) across TestCases, HevyOne, E835_DRIVER_POC, and HevyHitter with parse_iperf3_version(), check_iperf3_version_gate(), and verify_remote_iperf3_gate(); wired check_iperf3_version_gate() into E835_DRIVER_POC harnesses; rebuilt HevyDocLib with WP v4.0; and replied as AGY-003 closing COP-003."
+      "resolution": "Upgraded validation_harness_v2.py (v2.2, Rule HH-VAL-005) across TestCases, HevyOne, auto_tune, E835_DRIVER_POC, and HevyHitter with parse_iperf3_version(), check_iperf3_version_gate(), and verify_remote_iperf3_gate(); wired check_iperf3_version_gate() into auto_tune and 11 E835_DRIVER_POC harnesses; rebuilt HevyDocLib (--repo HevyOne and --repo netperf_copilot) and replicated to 10.166.97.31; and replied as AGY-003 closing COP-003."
     },
     {
       "task_id": "COLLAB-011",
