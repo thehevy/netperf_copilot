@@ -1,7 +1,7 @@
 # Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v12.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v13.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
@@ -519,8 +519,8 @@ organized into 4-core shared-L2 modules) with a 200GbE PCIe 5.0 x16 adapter at M
 Running 16 parallel legacy `netperf` instances against a single `netserver` on port `12865` with default driver rings
 (`tx_ring = 2048, rx_ring = 2048`) and linear core pinning (`cores 0..15`):
 
-- **Observed Result**: Mean throughput plateaued at **128.4 Gbps** with high run-to-run instability ($\text{CV} =
-  14.2\%$).
+- **Observed Result**: Mean throughput plateaued at **128.4 Gbps** with high run-to-run instability
+  ($\text{CV} = 14.2\\%$).
 - **Root Cause Diagnosed by `netperf-preflight`**:
   1. `AA-016` / `AA-022`: Application threads on cores `0..15` collided directly with network adapter RSS softirq cores
      `0..15`, and
@@ -625,9 +625,10 @@ $t_{\alpha/2, n-1}$ rather than a normal $z$-approximation:
 
 $$\text{CI}_{95\\%} = \bar{x} \pm t_{0.025, n-1} \cdot \frac{s}{\sqrt{n}}$$
 
-Outliers are automatically flagged using Tukey's Interquartile Range (IQR) fence ($[Q_1 - 1.5\text{ IQR},\; Q_3 +
-1.5\text{ IQR}]$), and both raw and outlier-cleaned means are reported alongside skewness, excess kurtosis, and
-normality test $p$-values.
+Outliers are automatically flagged using Tukey's Interquartile Range (IQR) fence
+($[Q_1 - 1.5\text{ IQR},\; Q_3 + 1.5\text{ IQR}]$), and both raw and outlier-cleaned means
+are reported alongside skewness,
+excess kurtosis, and normality test $p$-values.
 
 #### Automated Baseline vs. Candidate Comparison (`netperf-aggregate`)
 ```bash

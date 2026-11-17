@@ -1,7 +1,7 @@
 # Phase 1: Core Defaults & Build Optimization - Implementation Plan
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-1-IMPLEM` | **Version**: `v5.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-1-IMPLEM` | **Version**: `v6.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Phase 1: Core Defaults & Build Optimization - Implementation Plan under Rules `D1`–`D10` `v3.2`.

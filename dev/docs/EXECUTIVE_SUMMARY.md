@@ -1,7 +1,7 @@
 # Executive Summary: Netperf Modernization Project (v3.0)
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-DEV-DOCS-EXECUTIVE-SUMMA` | **Version**: `v4.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-EXECUTIVE-SUMMA` | **Version**: `v5.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Executive Summary: Netperf Modernization Project (v3.0) under Rules `D1`–`D10` `v3.2`.
@@ -98,7 +98,7 @@ flowchart LR
   kernel
   anti-affinity rules (`AA-001`–`AA-024`, covering dual XPS conflicts, E-core `busy_poll` starvation, GRO/TSO state,
   IOMMU passthrough, PCIe lane degradation, C-states, and NUMA alignment), scans for noisy background processes, runs a
-  **5-iteration warmup stability gate** (requiring $\text{CV} < 5.0\%$), and verifies DUT↔LP hardware symmetry.
+  **5-iteration warmup stability gate** (requiring $\text{CV} < 5.0\\%$), and verifies DUT↔LP hardware symmetry.
 - **Automated BKM Tuner & A/B Sweep Runner (`netperf-tuner`)**: Applies architecture-specific Best Known Methods
   (`ecore` with `tx_ring=512` to avoid L2/LLC thrashing, `pcore` with `tx_ring=2048` , and `mtu1500` for
   small-packet PPS) and executes automated A/B parameter sweeps across ring sizes, coalesce timers, and stream counts.

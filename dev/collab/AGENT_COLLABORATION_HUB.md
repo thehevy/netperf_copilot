@@ -2,7 +2,7 @@
 
 <!-- === METADATA_HEADER_START === -->
 - **Document ID**: `DOC-NETPERF-AGENT-COLLAB-HUB-001`
-- **Version**: `v7.0`
+- **Version**: `v8.0`
 - **Status**: `Active`
 - **Created Date**: `2026-11-16`
 - **Last Updated Date**: `2026-11-16`
