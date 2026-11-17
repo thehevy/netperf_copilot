@@ -220,18 +220,18 @@ diff results-no-demo.txt results-with-demo.txt
 
 Create: `dev/docs/analysis/configure-options-analysis.md`
 
-| Option | Current Default | Recommended | Reason | Performance Impact |
-| --- | --- | --- | --- | --- |
-| --enable-demo | no | **yes** | Useful by default | <1% |
-| --enable-omni | yes | yes | Core feature | N/A |
-| --enable-histogram | no | no | 5-10% overhead | High |
-| --enable-intervals | no | **yes** | Modern feature | <2% |
-| --enable-burst | no | **yes** | Useful for RR tests | None |
-| --enable-sctp | no | **yes** | If available | None |
-| --enable-unixdomain | no | **yes** | Common use case | None |
-| --enable-dlpi | no | no | Specialized | None |
-| --enable-xti | no | no | Legacy | None |
-| --enable-dirty | no | no | Testing only | None |
+| Option | Current Default | Recommended / Reason / Performance Impact |
+| --- | --- | --- |
+| --enable-demo | no | **Recommended**: **yes**<br>**Reason**: Useful by default<br>**Performance Impact**: <1% |
+| --enable-omni | yes | **Recommended**: yes<br>**Reason**: Core feature |
+| --enable-histogram | no | **Recommended**: no<br>**Reason**: 5-10% overhead<br>**Performance Impact**: High |
+| --enable-intervals | no | **Recommended**: **yes**<br>**Reason**: Modern feature<br>**Performance Impact**: <2% |
+| --enable-burst | no | **Recommended**: **yes**<br>**Reason**: Useful for RR tests<br>**Performance Impact**: None |
+| --enable-sctp | no | **Recommended**: **yes**<br>**Reason**: If available<br>**Performance Impact**: None |
+| --enable-unixdomain | no | **Recommended**: **yes**<br>**Reason**: Common use case<br>**Performance Impact**: None |
+| --enable-dlpi | no | **Recommended**: no<br>**Reason**: Specialized<br>**Performance Impact**: None |
+| --enable-xti | no | **Recommended**: no<br>**Reason**: Legacy<br>**Performance Impact**: None |
+| --enable-dirty | no | **Recommended**: no<br>**Reason**: Testing only<br>**Performance Impact**: None |
 
 #### Recommended Default Configure
 

@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-NETPERF-UPGRADING` | **Version**: `v3.2` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-09`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Upgrading to the Modernized Netperf Fork under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -459,18 +459,18 @@ netperf -H host -M -l 300 -D -1
 
 ## Compatibility Matrix
 
-| Feature | Upstream | This Fork | Compatible? |
-| --- | --- | --- | --- |
-| Command-line options | ✓ | ✓ | ✅ Yes |
-| Test names | ✓ | ✓ | ✅ Yes |
-| Network protocol | v2.7 | v2.7 | ✅ Yes |
-| Columnar output | Default | `-- -O` | ✅ Yes |
-| Key-value output | `-- -k` | Default | ✅ Yes |
-| JSON output | ✗ | `-- -J` | ⚠️ New |
-| CSV output | `-- -o` | `-- -o` | ✅ Yes |
-| Interval reporting | Optional | Default | ⚠️ Changed |
-| MAXCPUS | 512 | 2048 | ✅ Compatible |
-| Build system | autoconf | autoconf+ | ✅ Compatible |
+| Feature | Upstream | This Fork / Compatible? |
+| --- | --- | --- |
+| Command-line options | ✓ | **This Fork**: ✓<br>**Compatible?**: ✅ Yes |
+| Test names | ✓ | **This Fork**: ✓<br>**Compatible?**: ✅ Yes |
+| Network protocol | v2.7 | **This Fork**: v2.7<br>**Compatible?**: ✅ Yes |
+| Columnar output | Default | **This Fork**: `-- -O`<br>**Compatible?**: ✅ Yes |
+| Key-value output | `-- -k` | **This Fork**: Default<br>**Compatible?**: ✅ Yes |
+| JSON output | ✗ | **This Fork**: `-- -J`<br>**Compatible?**: ⚠️ New |
+| CSV output | `-- -o` | **This Fork**: `-- -o`<br>**Compatible?**: ✅ Yes |
+| Interval reporting | Optional | **This Fork**: Default<br>**Compatible?**: ⚠️ Changed |
+| MAXCPUS | 512 | **This Fork**: 2048<br>**Compatible?**: ✅ Compatible |
+| Build system | autoconf | **This Fork**: autoconf+<br>**Compatible?**: ✅ Compatible |
 
 ## Common Issues and Solutions
 
@@ -707,7 +707,7 @@ scripts, it's likely a bug - please report it.
 | Field | Value |
 | --- | --- |
 | **File Path** | `UPGRADING.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-09` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Intel® Xeon® 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-UPGRADING`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

@@ -2,7 +2,7 @@
 
 <!-- METADATA_HEADER_START -->
 - **Document ID**: `DOC-TEMPLATE-ENG-AB-REPORT-001` | **Version**: `v3.2` | **Status**: `Canonical Template`
-- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-13`
+- **Created Date**: `2026-11-09` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: Executive Engineering Reports, Code Audits, and Multi-Node A/B Validation Reports
 - **Summary**: Canonical technical report template for `100GbE`–`800GbE` network adapter and multi-core server validation reports under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -69,10 +69,10 @@ When documenting falsified hypotheses or rejected bug claims, consolidate `Claim
 For multi-node A/B comparisons, use at most `4` columns by combining **Baseline (`State A`)** and **Tuned (`State B`)**
 in Column 3 with `<br>` and combining **Delta**, **Pass Gate**, and **`dmesg` Status** in Column 4.
 
-| Testbed & Hardware Topology | Workload & Metric | Baseline (`State A`) vs. Tuned (`State B`) | Measured Delta & Pass Gate |
-| --- | --- | --- | --- |
-| **`Node-Pair A` — P-Core (`SMT`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>Multi-Node NUMA | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: Node-local `spread_step2` | **State A (Baseline)**: `148.2Gb/s` (`Retrans: 0.14%`)<br>**State B (Tuned)**: `191.4Gb/s` (`Retrans: 0.00%`) | **Delta**: `+29.1%` (`+43.2Gb/s`)<br>**Gate**: `PASS` (`>= 188Gb/s`)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
-| **`Node-Pair B` — E-Core (`Shared-L2`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>`4`-Core L2 Modules | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: `spread_l2` (`TX=512`) | **State A (Baseline)**: `139.5Gb/s` (`CV: 8.4%`)<br>**State B (Tuned)**: `189.4Gb/s` (`CV: 0.42%`) | **Delta**: `+35.8%` (`CV <= 1%`)<br>**Gate**: `PASS` (`0` queue stalls)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
+| Testbed & Hardware Topology | Workload & Metric | Baseline (`State A`) vs. Tuned (`State B`) & Measured Delta & Pass Gate |
+| --- | --- | --- |
+| **`Node-Pair A` — P-Core (`SMT`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>Multi-Node NUMA | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: Node-local `spread_step2` | **Baseline (`State A`) vs. Tuned (`State B`)**: **State A (Baseline)**: `148.2Gb/s` (`Retrans: 0.14%`)<br>**State B (Tuned)**: `191.4Gb/s` (`Retrans: 0.00%`)<br>**Measured Delta & Pass Gate**: **Delta**: `+29.1%` (`+43.2Gb/s`)<br>**Gate**: `PASS` (`>= 188Gb/s`)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
+| **`Node-Pair B` — E-Core (`Shared-L2`)**<br>Dual `200GbE` (`PCIe 5.0 x16`)<br>`4`-Core L2 Modules | **16-Stream `TCP_STREAM`**<br>MTU: `9000` (`30s` sync)<br>Pinning: `spread_l2` (`TX=512`) | **Baseline (`State A`) vs. Tuned (`State B`)**: **State A (Baseline)**: `139.5Gb/s` (`CV: 8.4%`)<br>**State B (Tuned)**: `189.4Gb/s` (`CV: 0.42%`)<br>**Measured Delta & Pass Gate**: **Delta**: `+35.8%` (`CV <= 1%`)<br>**Gate**: `PASS` (`0` queue stalls)<br>**`dmesg`**: `DMAR=0`, `MDD=0` |
 
 ---
 
@@ -122,7 +122,7 @@ link text.
 | Field | Value |
 | --- | --- |
 | **File Path** | templates/<wbr>TEMPLATE_<wbr>01<wbr>_Engineering_<wbr>Validation_and_<wbr>Executive_<wbr>Report<wbr>.md |
-| **Created / Last Updated** | `2026-11-09` / `2026-11-13` |
+| **Created / Last Updated** | `2026-11-09` / `2026-11-16` |
 | **Keywords / Search Tags** | `Engineering Report Template`, `A/B Validation Report`, `Zero-Scroll 3-Column Table`, `Rules D1-D10 v3.2`, `ASD-STE100` |
 | **Drivers & Subsystems** | `Linux networking`, `ethtool`, `devlink`, `netperf_copilot`, `markdown_validator.py` |
 | **Validation / Patch IDs** | `DOC-TEMPLATE-ENG-AB-REPORT-001`, `D1-D10 v3.2`, `MD013`, `MD007`, `MD032`, `D7-ID-MATCH` |

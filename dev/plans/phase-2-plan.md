@@ -433,14 +433,14 @@ class NetperfAggregator:
 
 ## Timeline
 
-| Task | Duration | Dependencies | Status |
-| --- | --- | --- | --- |
-| 2.1: Enhanced JSON | 3 days | Phase 1 | Not started |
-| 2.2: CSV Enhancement | 2 days | None | Not started |
-| 2.3: File Output | 2 days | None | Not started |
-| 2.4: Output Templates | 3 days | Task 2.3 | Not started |
-| 2.5: Aggregation Tool | 3 days | Task 2.1, 2.2 | Not started |
-| 2.6: Documentation | 2 days | All tasks | Not started |
+| Task | Duration | Dependencies / Status |
+| --- | --- | --- |
+| 2.1: Enhanced JSON | 3 days | **Dependencies**: Phase 1<br>**Status**: Not started |
+| 2.2: CSV Enhancement | 2 days | **Dependencies**: None<br>**Status**: Not started |
+| 2.3: File Output | 2 days | **Dependencies**: None<br>**Status**: Not started |
+| 2.4: Output Templates | 3 days | **Dependencies**: Task 2.3<br>**Status**: Not started |
+| 2.5: Aggregation Tool | 3 days | **Dependencies**: Task 2.1, 2.2<br>**Status**: Not started |
+| 2.6: Documentation | 2 days | **Dependencies**: All tasks<br>**Status**: Not started |
 
 **Total estimated time**: 15 days (3 weeks)
 

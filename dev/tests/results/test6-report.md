@@ -18,9 +18,9 @@
 
 ## Test Results
 
-| Test | Direction | Throughput | Latency / CPU Local / CPU Remote |
-| --- | --- | --- | --- |
-| Integration Test | send | 9.47 Gbps | 0.00 us<br>**CPU Local / CPU Remote**: **CPU Local**: 45.2%<br>**CPU Remote**: 32.1% |
+| Test | Direction | Throughput / Latency / CPU Local / CPU Remote |
+| --- | --- | --- |
+| Integration Test | send | **Throughput**: 9.47 Gbps<br>**Latency / CPU Local / CPU Remote**: 0.00 us<br>**CPU Local / CPU Remote**: **CPU Local**: 45.2%<br>**CPU Remote**: 32.1% |
 
 ## Notes
 

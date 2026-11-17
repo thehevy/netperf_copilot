@@ -929,15 +929,15 @@ Next Steps:
 
 ## Implementation Priority Matrix
 
-| Phase | Feature | Impact | Complexity | Priority |
-| --- | --- | --- | --- | --- |
-| 1 | OMNI default + intervals | High | Low | P0 |
-| 2 | JSON/CSV output | High | Medium | P0 |
-| 3 | Multi-instance testing | High | High | P1 |
-| 4 | Directional testing | Medium | Low | P1 |
-| 5 | Config testing agent | High | High | P1 |
-| 6 | Netserver management | Medium | Medium | P2 |
-| 7 | Test catalog | Medium | Medium | P2 |
+| Phase | Feature | Impact / Complexity / Priority |
+| --- | --- | --- |
+| 1 | OMNI default + intervals | **Impact**: High<br>**Complexity**: Low<br>**Priority**: P0 |
+| 2 | JSON/CSV output | **Impact**: High<br>**Complexity**: Medium<br>**Priority**: P0 |
+| 3 | Multi-instance testing | **Impact**: High<br>**Complexity**: High<br>**Priority**: P1 |
+| 4 | Directional testing | **Impact**: Medium<br>**Complexity**: Low<br>**Priority**: P1 |
+| 5 | Config testing agent | **Impact**: High<br>**Complexity**: High<br>**Priority**: P1 |
+| 6 | Netserver management | **Impact**: Medium<br>**Complexity**: Medium<br>**Priority**: P2 |
+| 7 | Test catalog | **Impact**: Medium<br>**Complexity**: Medium<br>**Priority**: P2 |
 
 ---
 
