@@ -1,7 +1,7 @@
 # Netperf Modernized Fork Wiki
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-HOME` | **Version**: `v7.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-WIKI-HOME` | **Version**: `v8.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Netperf Modernized Fork Wiki under Rules `D1`–`D10` `v3.2`.
@@ -67,9 +67,13 @@ Clone: git clone https://github.com/thehevy/netperf_copilot.git
 4. **[Executive Summary](https://github.com/thehevy/netperf_copilot/wiki/Executive-Summary)** — Strategic overview of
    the modernization project, the four engineering
    pillars, and quantified before-vs-after impact
-5. **[Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper)** — In-depth 10-page
-   architectural white paper explaining why
-   `netperf` modernization is essential at 100GbE–800GbE, mathematical models, and 4 empirical case studies
+5. **[Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper)** — In-depth
+   architectural white paper explaining why `netperf` modernization is essential at 100GbE–800GbE, mathematical models,
+   and 5 empirical case studies (including the 2x2 100GbE/200GbE x MTU 1500/9000 matrix)
+6. **[Benchmark Study vs. iperf3, iperf2, and Classic netperf](https://github.com/thehevy/netperf_copilot/wiki/Benchmark-Study-vs-iperf2-iperf3-netperf)**
+   — Three-tier (`Tier A`, `Tier B1`, `Tier B2`) comparative white paper across `100GbE` & `200GbE` (`MTU 1500` &
+   `9000`)
+   with `Flent` working latency and `Intel® PCM` silicon telemetry
 6. **[Getting Started & Installation](https://github.com/thehevy/netperf_copilot/wiki/Getting-Started-and-Installation)**
    — Building `netperf`, configure options,
    and installing `dev/tools/`

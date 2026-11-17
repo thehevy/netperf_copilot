@@ -1,7 +1,7 @@
 # Netperf - Modern Fork
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-README` | **Version**: `v9.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-README` | **Version**: `v10.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Netperf - Modern Fork under Rules `D1`–`D10` `v3.2`.
@@ -115,7 +115,10 @@ This fork modernizes netperf with several key improvements while maintaining ful
 ### Core Documentation
 
 - **[EXECUTIVE_SUMMARY.md](dev/docs/EXECUTIVE_SUMMARY.md)** - Executive summary & live hardware validation report
-- **[TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md)** - 10-page architecture & benchmark white paper
+- **[TECHNICAL_WHITE_PAPER.md](dev/docs/TECHNICAL_WHITE_PAPER.md)** - Architecture & benchmark white paper (Cases 1–5)
+- **[WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md](dev/docs/WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md)**
+  - Three-tier (`Tier A`/`B1`/`B2`) comparative benchmark study vs. `iperf3` (`<= 3.15` & `>= 3.16`), `iperf2`, and
+    classic `netperf` across `100GbE` & `200GbE` (`MTU 1500` & `MTU 9000`)
 - **[Architecture-and-Insights.md](wiki/Architecture-and-Insights.md)** - Core architecture & performance insights
 - **[Commit-Log-and-Roadmap.md](wiki/Commit-Log-and-Roadmap.md)** - Chronological commit log & engineering roadmap
 - **[BUILD_CONFIGURATION.md](dev/docs/BUILD_CONFIGURATION.md)** - Complete guide to configure options

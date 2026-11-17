@@ -5,6 +5,7 @@
 * **[🗺️ Commit Log & Roadmap](https://github.com/thehevy/netperf_copilot/wiki/Commit-Log-and-Roadmap)**
 * **[📊 Executive Summary](https://github.com/thehevy/netperf_copilot/wiki/Executive-Summary)**
 * **[📄 Technical White Paper](https://github.com/thehevy/netperf_copilot/wiki/Technical-White-Paper)**
+* **[📈 Benchmark Study vs. iperf2/iperf3/netperf](https://github.com/thehevy/netperf_copilot/wiki/Benchmark-Study-vs-iperf2-iperf3-netperf)**
 * **[🚀 Getting Started & Install](https://github.com/thehevy/netperf_copilot/wiki/Getting-Started-and-Installation)**
 * **[⚙️ Core C Engine & OMNI](https://github.com/thehevy/netperf_copilot/wiki/Core-Engine-and-OMNI-Guide)**
 * **[⚡ 200GbE–800GbE & Intel® Xeon® 6 Guide](https://github.com/thehevy/netperf_copilot/wiki/High-Speed-200GbE-800GbE-and-Xeon6-Guide)**

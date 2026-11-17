@@ -1,7 +1,7 @@
 # Technical White Paper: Modernizing High-Speed Network Benchmarking at 100GbE–200GbE (and 400GbE–1.6TbE Projections) — Comparing `netperf_copilot` (`OMNI` + `Flent` + `Intel® PCM`) Against `iperf3` (`<= 3.15` vs. `>= 3.16`), `iperf2`, and Classic `netperf`
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v2.0` | **Status**: `Production Validated`
+- **Document ID**: `DOC-WP-NETPERF-COPILOT-BENCHMARK-STUDY-001` | **Version**: `v3.0` | **Status**: `Production Validated`
 - **Created Date**: `2026-11-16` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `100GbE & 200GbE x (MTU 1500 & MTU 9000) 2x2 Matrix (400GbE–1.6TbE Projections) | Intel® Xeon® 6 Processors | netperf_copilot vs. netperf vs. iperf2 vs. iperf3 (<= 3.15 & >= 3.16)`
 - **Summary**: Reproducible three-tier (Tier A Unpinned Default, Tier B1 Strict Apples-to-Apples Shared taskset Pool, and Tier B2 1:1 Pinned + Full netperf_copilot Capabilities) evaluation across the full 2x2 Link-Speed x MTU factorial matrix (100GbE & 200GbE at both MTU 1500 and MTU 9000).
@@ -143,6 +143,15 @@ A rigorous benchmark study must eliminate two common experimental confounders:
 
 ### 4.2 `100GbE` Empirical Matrix: `MTU 1500` (`94.15 Gbps` Ceiling) vs. `MTU 9000` (`98.96 Gbps` Ceiling)
 
+```mermaid
+xychart-beta
+    title "100GbE 64-Flow Throughput by Tool and Tier (MTU 1500 Bar vs MTU 9000 Line, Gbps)"
+    x-axis ["NC B2", "NP B2", "i3.16 B2", "NC B1", "i3.16 B1", "i2 B1", "NC TierA", "i3.16 TierA", "i2 TierA", "i3<=3.15"]
+    y-axis "Throughput (Gbps)" 40 --> 100
+    bar [94.13, 93.85, 93.70, 93.55, 93.40, 92.90, 87.10, 82.40, 81.50, 58.20]
+    line [98.95, 98.84, 98.78, 98.40, 98.20, 97.90, 93.80, 90.40, 89.50, 71.40]
+```
+
 | Tier & Tool Configuration | `100GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `100GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500`)<br>`DDIO Hit %` & CPU Error |
 | --- | --- | --- | --- | --- |
 | **Tier B2: `netperf_copilot` (1:1 Pinned + Pool + `-Z`)** | **`94.15 ± 0.11` / `94.13 ± 0.14 Gbps`** | **`98.96 ± 0.08` / `98.95 ± 0.10 Gbps`** | **`Jain = 0.996`**<br>`0.0%` Overlap | **`99.41%` DDIO Hit**<br>**`0.9%` CPU Error** |
@@ -159,6 +168,15 @@ A rigorous benchmark study must eliminate two common experimental confounders:
 | **Tier A/B1: `iperf3 <= 3.15` (Single Reactor)** | `88.90 ± 1.45` / `58.20 ± 2.95 Gbps` | `94.20 ± 1.10` / `71.40 ± 2.60 Gbps` | `Jain = 0.462`<br>`100.0%` Overlap | `22.40%` DDIO Hit<br>**`86.9%` CPU Error** |
 
 ### 4.3 `200GbE` Empirical Matrix: `MTU 1500` (`188.30 Gbps` Ceiling) vs. `MTU 9000` (`197.97 Gbps` Ceiling)
+
+```mermaid
+xychart-beta
+    title "200GbE 64-Flow Throughput by Tool and Tier (MTU 1500 Bar vs MTU 9000 Line, Gbps)"
+    x-axis ["NC B2", "NP B2", "i3.16 B2", "NC B1", "i3.16 B1", "i2 B1", "NC TierA", "i3.16 TierA", "i2 TierA", "i3<=3.15"]
+    y-axis "Throughput (Gbps)" 50 --> 200
+    bar [187.95, 179.80, 178.60, 168.40, 165.90, 163.20, 141.20, 129.60, 126.80, 61.80]
+    line [197.94, 196.10, 195.60, 192.10, 191.20, 189.60, 178.20, 162.40, 159.80, 89.60]
+```
 
 | Tier & Tool Configuration | `200GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `200GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500` / `9000`)<br>Intel® PCM `DDIO Hit %` |
 | --- | --- | --- | --- | --- |

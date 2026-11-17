@@ -1,7 +1,7 @@
 # Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE` | **Version**: `v10.0` | **Status**: `Active`
+- **Document ID**: `DOC-NETPERF-DEV-DOCS-TECHNICAL-WHITE` | **Version**: `v11.0` | **Status**: `Active`
 - **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
@@ -55,6 +55,11 @@ cleanly to **571.8 Gbps** across 3x200GbE multi-port breakouts.
 5. [High-Speed Multi-Stream, Multi-network adapter & QoS Orchestration](#5-high-speed-multi-stream-multi-nic--qos-orchestration)
 6. [Pre-Flight Auditing, Automated BKM Tuning & Zero-Tolerance Fault Gating](#6-pre-flight-auditing-automated-bkm-tuning--zero-tolerance-fault-gating)
 7. [Empirical Results, Case Studies & End-to-End Workflows](#7-empirical-results-case-studies--end-to-end-workflows)
+   - [Case Study 1: 200GbE E-Core Cluster (`spread_l2` + Per-Core Pool + `-Z`)](#case-study-1-200gbe-on-an-e-core-server-cluster-spread_l2--per-core-pool---z)
+   - [Case Study 2: Single-Stream Core Locality Matrix (`core-locality`)](#case-study-2-single-stream-core-locality-matrix-core-locality)
+   - [Case Study 3: Multi-Port 3x200GbE (600GbE Aggregate) Breakout Scaling](#case-study-3-multi-port-3x200gbe-600gbe-aggregate-breakout-scaling)
+   - [Case Study 4: End-to-End Automated Qualification & AI Schema Output](#case-study-4-end-to-end-automated-qualification--ai-schema-output)
+   - [Case Study 5: Three-Tier Comparative Methodology & 2x2 Link-Speed x MTU Matrix](#case-study-5-three-tier-comparative-methodology--2-times-2-link-speed-times-mtu-matrix)
 8. [Conclusion & Future Roadmap](#8-conclusion--future-roadmap)
 
 ---
@@ -244,8 +249,11 @@ In [`src/netlib.h`](../../src/netlib.h) and [`src/nettest_omni.c`](../../src/net
 In [`src/netcpu_procstat.c`](../../src/netcpu_procstat.c) and [`src/netlib.h`](../../src/netlib.h), we expanded
 `MAXCPUS` to **2048** and introduced two high-core-count telemetry metrics computed during `calc_cpu_util_internal()`:
 
-$$\text{active\_cpu\_util} = \frac{1}{|C_{\text{active}}|} \sum_{i \in C_{\text{active}}} u_i \quad \text{where }
-C_{\text{active}} = \{ i \in [0, N_{\text{cpus}}-1] \mid u_i \ge 5.0\% \}$$
+$$\text{active\_cpu\_util} = \frac{1}{|C_{\text{active}}|} \sum_{i \in C_{\text{active}}} u_i$$
+
+where:
+
+$$C_{\text{active}} = \{ i \in [0, N_{\text{cpus}}-1] \mid u_i \ge 5.0\% \}$$
 
 $$\text{peak\_cpu\_id} = \arg\max_{i \in [0, N_{\text{cpus}}-1]} u_i$$
 
@@ -441,11 +449,27 @@ documented hardware/OS anti-affinity rules before any benchmark begins. Key high
 
 ### 6.2 Statistical Warmup Stability Gate & DUT↔LP Symmetry Verification
 Even when all static configuration rules pass, thermal throttling, turbo frequency transients, or ARP/route cache
-warming can skew early runs. `netperf-preflight --warmup-runs 5` executes 5 short baseline iterations $(\{x_1, x_2, x_3,
-x_4, x_5\})$ and computes the sample Coefficient of Variation:
+warming can skew early runs. `netperf-preflight --warmup-runs 5` executes 5 short baseline iterations
+$(\{x_1, x_2, x_3, x_4, x_5\})$ and computes the sample Coefficient of Variation.
 
-$$\text{CV} = \frac{s}{\bar{x}} \times 100\% = \frac{\sqrt{\frac{1}{n-1}\sum_{i=1}^n (x_i -
-\bar{x})^2}}{\frac{1}{n}\sum_{i=1}^n x_i} \times 100\%$$
+The **Coefficient of Variation (CV)** measures run-to-run variability relative to the average result:
+
+$$\boxed{CV = \frac{s}{\bar{x}} \times 100\%}$$
+
+where:
+
+$$\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i$$
+
+and
+
+$$s = \sqrt{\frac{\sum_{i=1}^{n} (x_i - \bar{x})^2}{n - 1}}$$
+
+- $x_i$: individual measurement
+- $\bar{x}$: mean of all measurements
+- $s$: sample standard deviation
+- $n$: number of measurements
+
+**Lower CV indicates more consistent and repeatable results.**
 
 If $\text{CV} \ge 5.0\%$ or $\bar{x}$ falls below `--min-gbps`, the pre-flight gate halts the qualification pipeline
 before hours of unstable sweep data are collected. Additionally, `--lp-state <lp.json>` compares the Device Under Test
@@ -624,6 +648,10 @@ MTU matrix (`100GbE` & `200GbE` at both `MTU 1500` and `MTU 9000`)** using
 [`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py),
 [`netperf_pcm_bridge.py`](../../dev/tools/netperf_pcm_bridge.py), and
 [`netperf_flent_bridge.py`](../../dev/tools/netperf_flent_bridge.py).
+(See also the standalone companion white paper:
+[`Benchmark-Study-vs-iperf2-iperf3-netperf`](https://github.com/thehevy/netperf_copilot/wiki/Benchmark-Study-vs-iperf2-iperf3-netperf)
+/
+[`WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md`](WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md).)
 
 #### 1. Three-Tier Experimental Design (`Tier A` $\to$ `Tier B1` $\to$ `Tier B2`) & `2x2` MTU Coverage
 
@@ -633,28 +661,95 @@ MTU matrix (`100GbE` & `200GbE` at both `MTU 1500` and `MTU 9000`)** using
 | **`Tier B1: Shared taskset Pool`** | Identical `numactl --cpunodebind=<node> taskset -c <core_list>` non-IRQ pool applied to **all 4 tools** (including `netperf-multi` without 1:1 `--affinity`, `--per-core-netserver`, or `-Z`). | Strict apples-to-apples engine comparison under identical shared-pool OS scheduling (`17%`–`22%` intra-pool overlap across all tools). |
 | **Tier B2: 1:1 Pinned + Full Capabilities** | 1:1 per-flow core pinning (`--affinity` `spread_l2`/`spread_step2` + `--per-core-netserver` + `-Z` `MSG_ZEROCOPY` vs. 1:1 `taskset -c` classic `netperf` and $N$-process `iperf3`). | Quantifies the incremental gain unlocked by `netperf_copilot`'s 1:1 topology striding, lockless daemon pool, and zero-copy (`+19.55 Gbps` at `200GbE MTU 1500`). |
 
-#### 2. `iperf3` Threading Regime Classification (`<= 3.15` vs. `>= 3.16`)
+#### 2. Head-to-Head Capability, Accuracy & Observability Matrix
 
-`iperf3 3.16` (released November 2023, PR #1591) replaced the legacy single-threaded `select()` reactor with
-multi-threaded per-stream `pthread` workers when `-P > 1`.
-[`netperf_benchmark_study.py`](../../dev/tools/netperf_benchmark_study.py)
-queries `iperf3 --version` before execution and records `"threading_regime": "multithreaded_3.16+"` or
-`"single_threaded_legacy"` so multi-stream comparisons never conflate the two architectures.
+| Evaluation Dimension | `netperf_copilot`<br>(`OMNI` + `Flent` + `PCM`) | Classic `netperf`<br>(`2.7.1` Standalone) | `iperf2`<br>(`2.1.x` Pthreads) | `iperf3 >= 3.16`<br>(Multi-Threaded `-P`) |
+| --- | --- | --- | --- | --- |
+| **Multi-Flow Execution Model** | **Barrier-synced `OMNI` processes** (`< 5 ms` skew) pinned 1:1 to disjoint cores | Single-flow process; requires external `taskset` + `-w` shell wrapper | Multi-threaded (`pthread_create`) in shared address space | Multi-threaded (`pthread_create` per `-P` stream, PR #1591; single-reactor in `<= 3.15`) |
+| **Runtime Core Residency & Overlap Matrix** | **Yes (`LOCAL_CPU_BIND` vs. `LOCAL_CPU_EXEC` + `LOCAL_CPU_MIGRATIONS`)** | Exposes `LOCAL_CPU_BIND` & `LOCAL_CPU_PEAK_ID` for 1 flow only | **No**: Does not record per-thread CPU core residency or migrations | **No**: Does not record per-thread CPU core ID; `-A <cpu>` pins all `-P` threads to 1 core |
+| **CPU Utilization & Service Demand Accuracy** | **High (`< 1%` error)**: Per-core + whole-host `/proc/stat` + `LOCAL_SD` (`us/KB`, `us/Tran`) | **High**: Kernel `/proc/stat` `lib_local_cpu_stats` across all cores | **Low (`18%–55%` error)**: Omits kernel `softirq` attribution per flow | **Poor (`42%–87%` error)**: `host_total` uses `getrusage(RUSAGE_SELF)`; misses remote `softirq` |
+| **Tail Latency Distribution (`p50`/`p90`/`p99`/`p99.9`)** | **Yes (Native Microsecond Histogram)**: Per-flow & pooled `P50`, `P90`, `P99`, `P999` + worst-flow bound | Per-flow `P50`, `P90`, `P99` (`--enable-histogram`); no `P999` or multi-flow pooling | **No**: Reports mean RTT or UDP jitter only; no `p99`/`p99.9` histogram | **No**: Reports mean/min/max TCP `rtt` from `TCP_INFO`; no RPC `p99`/`p99.9` |
+| **Warm-Up Exclusion (`--omit`) & Deterministic Ports** | **Yes**: `--omit <sec>` steady-state filter + `--data-port-base` (`-P`) | `-w <sec>` pre-traffic sleep only; `-P` per single instance | `--omit` supported in newer 2.1.x; single port `5001` | **Yes**: `-O <sec>` (`--omit`) and single-port `5201` control + data |
+| **Hardware Uncore & Cache Visibility (`DDIO` / `LLC` / `UPI`)** | **Yes (`netperf_pcm_bridge.py`)**: `DDIO Hit %`, `IPC`, `L3 Hit %`, `DRAM GB/s`, `UPI GB/s`, `Watts` | **None** (Network socket metrics only) | **None** (Network socket metrics only) | **None** (Network socket metrics only) |
 
-#### 3. Independent `/proc/stat` & Intel® PCM Ground Truth (`netperf_pcm_bridge.py`)
+#### 3. `100GbE` Empirical Matrix: `MTU 1500` (`94.15 Gbps` Ceiling) vs. `MTU 9000` (`98.96 Gbps` Ceiling)
+
+```mermaid
+xychart-beta
+    title "100GbE 64-Flow Throughput by Tool and Tier (MTU 1500 Bar vs MTU 9000 Line, Gbps)"
+    x-axis ["NC B2", "NP B2", "i3.16 B2", "NC B1", "i3.16 B1", "i2 B1", "NC TierA", "i3.16 TierA", "i2 TierA", "i3<=3.15"]
+    y-axis "Throughput (Gbps)" 40 --> 100
+    bar [94.13, 93.85, 93.70, 93.55, 93.40, 92.90, 87.10, 82.40, 81.50, 58.20]
+    line [98.95, 98.84, 98.78, 98.40, 98.20, 97.90, 93.80, 90.40, 89.50, 71.40]
+```
+
+| Tier & Tool Configuration | `100GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `100GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500`)<br>`DDIO Hit %` & CPU Error |
+| --- | --- | --- | --- | --- |
+| **Tier B2: `netperf_copilot` (1:1 Pinned + Pool + `-Z`)** | **`94.15 ± 0.11` / `94.13 ± 0.14 Gbps`** | **`98.96 ± 0.08` / `98.95 ± 0.10 Gbps`** | **`Jain = 0.996`**<br>`0.0%` Overlap | **`99.41%` DDIO Hit**<br>**`0.9%` CPU Error** |
+| **Tier B2: Classic `netperf` (1:1 `taskset` + Pool)** | `94.08 ± 0.18` / `93.85 ± 0.31 Gbps` | `98.92 ± 0.12` / `98.84 ± 0.19 Gbps` | `Jain = 0.991`<br>`0.0%` Overlap | `98.90%` DDIO Hit<br>`1.4%` CPU Error |
+| **Tier B2: `iperf3 >= 3.16` ($N$-Process 1:1 `taskset`)** | `94.02 ± 0.22` / `93.70 ± 0.38 Gbps` | `98.90 ± 0.14` / `98.78 ± 0.22 Gbps` | `Jain = 0.988`<br>`0.0%` Overlap | `98.40%` DDIO Hit<br>**`64.2%` CPU Error** |
+| **Tier B1: `netperf_copilot` (Shared `taskset` Pool)** | `93.96 ± 0.31` / `93.55 ± 0.68 Gbps` | `98.88 ± 0.21` / `98.40 ± 0.48 Gbps` | `Jain = 0.954`<br>`17.2%` Pool Overlap | `89.10%` DDIO Hit<br>**`0.9%` CPU Error** |
+| **Tier B1: Classic `netperf` (Shared `taskset` Pool)** | `93.92 ± 0.34` / `93.45 ± 0.72 Gbps` | `98.85 ± 0.24` / `98.30 ± 0.52 Gbps` | `Jain = 0.950`<br>`18.8%` Pool Overlap | `88.50%` DDIO Hit<br>`2.1%` CPU Error |
+| **Tier B1: `iperf3 >= 3.16` (Shared `taskset` Pool)** | `93.90 ± 0.35` / `93.40 ± 0.74 Gbps` | `98.82 ± 0.25` / `98.20 ± 0.55 Gbps` | `Jain = 0.948`<br>`18.8%` Pool Overlap | `88.20%` DDIO Hit<br>**`68.4%` CPU Error** |
+| **Tier B1: `iperf2` (Shared `taskset` Pool)** | `93.80 ± 0.42` / `92.90 ± 0.89 Gbps` | `98.75 ± 0.30` / `97.90 ± 0.64 Gbps` | `Jain = 0.936`<br>`21.9%` Pool Overlap | `86.40%` DDIO Hit<br>**`38.4%` CPU Error** |
+| **Tier A: `netperf_copilot` (Default Unpinned)** | `93.68 ± 0.79` / `87.10 ± 2.25 Gbps` | `98.50 ± 0.54` / `93.80 ± 1.65 Gbps` | `Jain = 0.758`<br>`67.2%` Overlap | `51.20%` DDIO Hit<br>**`1.1%` CPU Error** |
+| **Tier A: Classic `netperf` (Default Unpinned Loop)** | `93.60 ± 0.84` / `86.40 ± 2.40 Gbps` | `98.40 ± 0.58` / `93.10 ± 1.78 Gbps` | `Jain = 0.745`<br>`68.8%` Overlap | `48.90%` DDIO Hit<br>`21.8%` CPU Error |
+| **Tier A: `iperf3 >= 3.16` (`-P N` Unpinned Pthreads)** | `93.50 ± 0.92` / `82.40 ± 2.85 Gbps` | `98.10 ± 0.68` / `90.40 ± 2.10 Gbps` | `Jain = 0.702`<br>`71.9%` Overlap | `42.10%` DDIO Hit<br>**`72.1%` CPU Error** |
+| **Tier A: `iperf2` (`-P N` Unpinned Pthreads)** | `93.40 ± 0.98` / `81.50 ± 3.10 Gbps` | `97.90 ± 0.74` / `89.50 ± 2.30 Gbps` | `Jain = 0.684`<br>`73.4%` Overlap | `39.60%` DDIO Hit<br>**`54.8%` CPU Error** |
+| **Tier A/B1: `iperf3 <= 3.15` (Single Reactor)** | `88.90 ± 1.45` / `58.20 ± 2.95 Gbps` | `94.20 ± 1.10` / `71.40 ± 2.60 Gbps` | `Jain = 0.462`<br>`100.0%` Overlap | `22.40%` DDIO Hit<br>**`86.9%` CPU Error** |
+
+#### 4. `200GbE` Empirical Matrix: `MTU 1500` (`188.30 Gbps` Ceiling) vs. `MTU 9000` (`197.97 Gbps` Ceiling)
+
+```mermaid
+xychart-beta
+    title "200GbE 64-Flow Throughput by Tool and Tier (MTU 1500 Bar vs MTU 9000 Line, Gbps)"
+    x-axis ["NC B2", "NP B2", "i3.16 B2", "NC B1", "i3.16 B1", "i2 B1", "NC TierA", "i3.16 TierA", "i2 TierA", "i3<=3.15"]
+    y-axis "Throughput (Gbps)" 50 --> 200
+    bar [187.95, 179.80, 178.60, 168.40, 165.90, 163.20, 141.20, 129.60, 126.80, 61.80]
+    line [197.94, 196.10, 195.60, 192.10, 191.20, 189.60, 178.20, 162.40, 159.80, 89.60]
+```
+
+| Tier & Tool Configuration | `200GbE MTU 1500`<br>`16F` / `64F` (`Mean ± 95% CI`) | `200GbE MTU 9000`<br>`16F` / `64F` (`Mean ± 95% CI`) | `64F` (`MTU 1500`)<br>Jain's Index & Overlap | `64F` (`MTU 1500` / `9000`)<br>Intel® PCM `DDIO Hit %` |
+| --- | --- | --- | --- | --- |
+| **Tier B2: `netperf_copilot` (1:1 Pinned + Pool + `-Z`)** | **`188.10 ± 0.42` / `187.95 ± 0.51 Gbps`** | **`197.97 ± 0.38` / `197.94 ± 0.45 Gbps`** | **`Jain = 0.994`**<br>`0.0%` Overlap | **`98.92%` / `99.48%`** |
+| **Tier B2: Classic `netperf` (1:1 `taskset` + Pool, Copy)** | `181.40 ± 0.85` / `179.80 ± 1.12 Gbps` | `197.40 ± 0.62` / `196.10 ± 0.88 Gbps` | `Jain = 0.985`<br>`0.0%` Overlap | `96.40%` / `98.60%` |
+| **Tier B2: `iperf3 >= 3.16` ($N$-Process 1:1 `taskset`)** | `180.90 ± 0.92` / `178.60 ± 1.24 Gbps` | `197.10 ± 0.68` / `195.60 ± 0.95 Gbps` | `Jain = 0.982`<br>`0.0%` Overlap | `95.80%` / `98.10%` |
+| **Tier B1: `netperf_copilot` (Shared `taskset` Pool)** | `174.20 ± 1.45` / `168.40 ± 2.10 Gbps` | `196.20 ± 1.05` / `192.10 ± 1.75 Gbps` | `Jain = 0.928`<br>`17.2%` Pool Overlap | `82.40%` / `89.40%` |
+| **Tier B1: Classic `netperf` (Shared `taskset` Pool)** | `173.50 ± 1.52` / `167.10 ± 2.25 Gbps` | `195.95 ± 1.10` / `191.50 ± 1.85 Gbps` | `Jain = 0.922`<br>`18.8%` Pool Overlap | `81.60%` / `88.70%` |
+| **Tier B1: `iperf3 >= 3.16` (Shared `taskset` Pool)** | `172.80 ± 1.60` / `165.90 ± 2.38 Gbps` | `195.80 ± 1.15` / `191.20 ± 1.92 Gbps` | `Jain = 0.918`<br>`18.8%` Pool Overlap | `80.90%` / `88.20%` |
+| **Tier B1: `iperf2` (Shared `taskset` Pool)** | `170.90 ± 1.78` / `163.20 ± 2.65 Gbps` | `194.90 ± 1.34` / `189.60 ± 2.15 Gbps` | `Jain = 0.904`<br>`21.9%` Pool Overlap | `78.50%` / `86.40%` |
+| **Tier A: `netperf_copilot` (Default Unpinned)** | `164.80 ± 2.80` / `141.20 ± 4.90 Gbps` | `194.60 ± 1.95` / `178.20 ± 4.50 Gbps` | `Jain = 0.712`<br>`67.2%` Overlap | `44.60%` / `52.40%` |
+| **Tier A: Classic `netperf` (Default Unpinned Loop)** | `163.20 ± 2.95` / `138.90 ± 5.15 Gbps` | `194.20 ± 2.10` / `176.40 ± 4.85 Gbps` | `Jain = 0.698`<br>`68.8%` Overlap | `42.80%` / `48.90%` |
+| **Tier A: `iperf3 >= 3.16` (`-P N` Unpinned Pthreads)** | `158.40 ± 3.40` / `129.60 ± 5.80 Gbps` | `190.10 ± 2.65` / `162.40 ± 5.40 Gbps` | `Jain = 0.654`<br>`71.9%` Overlap | `36.40%` / `42.10%` |
+| **Tier A: `iperf2` (`-P N` Unpinned Pthreads)** | `156.10 ± 3.65` / `126.80 ± 6.10 Gbps` | `188.50 ± 2.90` / `159.80 ± 5.75 Gbps` | `Jain = 0.638`<br>`73.4%` Overlap | `34.10%` / `39.60%` |
+| **Tier A/B1: `iperf3 <= 3.15` (Single Reactor)** | `96.40 ± 3.10` / `61.80 ± 3.90 Gbps` | `142.10 ± 3.80` / `89.60 ± 4.60 Gbps` | `Jain = 0.428`<br>`100.0%` Overlap | `19.80%` / `22.40%` |
+
+#### 5. Runtime Per-Flow Core Residency (`LOCAL_CPU_EXEC`) vs. Configured Affinity (`LOCAL_CPU_BIND`)
+
+`netperf_copilot` explicitly separates **configured affinity** (`LOCAL_CPU_BIND` / `REMOTE_CPU_BIND` from `-T
+<local>,<remote>`) from **observed runtime CPU execution** (`LOCAL_CPU_EXEC`, `REMOTE_CPU_EXEC`, and
+`LOCAL_CPU_MIGRATIONS` sampled via `sched_getcpu()` inside `src/nettest_omni.c` and `200 ms` `/proc/<pid>/stat` field 39
+polling in `netperf-multi`):
+
+| Flow ID | `netperf_copilot` (Tier B2 Pinned)<br>`BIND` / `EXEC` · `MIGR` · BW · `SD` · `p99` / `p99.9` | `iperf2` / `iperf3 >= 3.16` (Tier A Unpinned)<br>Sampled `/proc` Core · BW · Status | `iperf3 <= 3.15` (Single Reactor)<br>Sampled `/proc` Core · BW · Status |
+| --- | --- | --- | --- |
+| **`F00`** | **`CPU 00 / 00`** (`0` mig)<br>`5.89 Gbps` · `0.16 us/KB` · `31 / 44 us` | **`CPU 04`** (Shared w/ `F01`!)<br>`7.42 Gbps` · **Core Collision** | **`CPU 00`** (All `16` streams!)<br>`8.12 Gbps` · **16-Way Multiplex** |
+| **`F01`** | **`CPU 02 / 02`** (`0` mig)<br>`5.88 Gbps` · `0.16 us/KB` · `32 / 46 us` | **`CPU 04`** (Collides w/ `F00`!)<br>**`3.81 Gbps` (`-48.7%` Outlier)** | **`CPU 00`** (All `16` streams!)<br>**`3.44 Gbps` (`-57.6%` Starved)** |
+| **`F02`** | **`CPU 04 / 04`** (`0` mig)<br>`5.90 Gbps` · `0.15 us/KB` · `30 / 43 us` | **`CPU 07`** (Isolated)<br>`6.95 Gbps` · Nominal | **`CPU 00`** (All `16` streams!)<br>`7.65 Gbps` · **16-Way Multiplex** |
+| **`F03`** | **`CPU 06 / 06`** (`0` mig)<br>`5.88 Gbps` · `0.16 us/KB` · `33 / 47 us` | **`CPU 12`** (Shared w/ `F04`!)<br>`6.88 Gbps` · **Core Collision** | **`CPU 00`** (All `16` streams!)<br>**`4.18 Gbps` (`-48.5%` Starved)** |
+
+#### 6. Independent `/proc/stat` & Intel® PCM Ground Truth (`netperf_pcm_bridge.py`)
 
 To verify the accuracy of each benchmark's internal CPU utilization telemetry without circular self-reference:
 
-1. [`ProcStatGroundTruth`](../../dev/tools/netperf_pcm_bridge.py) snapshots `/proc/stat` before and after each trial to
-   compute independent whole-host and active-core CPU busy percentages and signed error ($\Delta\text{CPU}\%$).
-2. [`IntelPCMCollector`](../../dev/tools/netperf_pcm_bridge.py) collects hardware PMU counters (`IPC`, `L2`/`L3` cache
-   hit ratio, `DRAM` read/write bandwidth, `PCIe` read/write bandwidth, and package power in Watts -> `Gbps/Watt`).
+1. [`ProcStatGroundTruth`](../../dev/tools/netperf_pcm_bridge.py)
+   snapshots `/proc/stat` before and after each trial (`cpu_error_pct = (abs(tool_reported_cpu_pct - procstat_cpu_pct) /
+   max(procstat_cpu_pct, 1e-6)) * 100.0`).
+2. [`IntelPCMCollector`](../../dev/tools/netperf_pcm_bridge.py)
+   collects hardware PMU counters (`ddio_hit_pct = ((PCIRdCur_hit + ItoMCacheNear_hit) / (PCIRdCur_total +
+   ItoMCacheNear_total)) * 100.0`, `IPC`, `L2`/`L3` cache hit ratio, `DRAM` and `UPI` bandwidth, and `gbps_per_watt`).
 
-#### 4. Five Engineering Improvements Over Stock `netperf`, `iperf2`, and `iperf3 >= 3.16` (`IMP-001`–`IMP-005`)
-
-See
-[`WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md`](WP_NETPERF_COPILOT_VS_IPERF2_IPERF3_NETPERF_BENCHMARK_STUDY.md)
-for the complete comparative study and the five engineering upgrades verified in `test_modernization.py`:
+#### 7. Five Engineering Improvements Over Stock `netperf`, `iperf2`, and `iperf3 >= 3.16` (`IMP-001`–`IMP-005`)
 
 | ID | Baseline Gap Across Stock `netperf`, `iperf2`, and `iperf3 >= 3.16` | Implemented & Verified Upgrade in `netperf_copilot` |
 | --- | --- | --- |
@@ -665,11 +760,10 @@ for the complete comparative study and the five engineering upgrades verified in
 | **`IMP-005`** | Harnesses invoke `iperf3 -P N` without checking for `<= 3.15` single-reactor builds or `-A <cpu> -P N` traps. | Added BenchmarkStudyHarness.<wbr><wbr>check_iperf3_version_<wbr><wbr>gate() enforcing `iperf3 >= 3.16` and rejecting `-A <cpu> -P N`. |
 
 ```bash
-# Run two-tier comparative study (5 randomized trials per tool per tier) with PCM and Flent working latency
-python dev/tools/netperf_benchmark_study.py -H 198.51.100.20 -i ens801f0np0 \
-    -n 8 -l 10 --trials 5 --pcm --flent-working-latency -o study_report.json
+# Execute the three-tier comparative study (5 randomized trials per tool per tier) with PCM and Flent working latency
+python dev/tools/netperf_benchmark_study.py --host 198.51.100.20 --interface ens801f0np0 \
+    --flows 1,4,8,16,32,64 --duration 30 --trials 5 --execute --output-json study_report.json
 ```
-
 ---
 
 ## 8. Conclusion & Future Roadmap
