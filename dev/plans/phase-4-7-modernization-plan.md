@@ -1,8 +1,8 @@
 # Netperf Evaluation & 2026 Modernization Plan (Phases 4–7)
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-4-7-MODE` | **Version**: `v8.0` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
+- **Document ID**: `DOC-NETPERF-DEV-PLANS-PHASE-4-7-MODE` | **Version**: `v10.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-18`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Netperf Evaluation & 2026 Modernization Plan (Phases 4–7) under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -114,7 +114,7 @@ flowchart TD
 ### Step 4: Automated Pre-Flight Gate (`netperf-preflight`) & BKM Tuner (`netperf-tuner`)
 
 - Implement 24 hardware/kernel anti-affinity rules (`AA-001`–`AA-024`), background process isolation checks, a 5-run
-  warmup stability gate ($\text{CV} < 5\%$), and DUT↔LP hardware symmetry checks.
+  warmup stability gate ($\text{CV} < 5\\%$), and DUT↔LP hardware symmetry checks.
 - Implement `netperf-tuner` with architecture-aware BKM profiles (`ecore`, `pcore` , `mtu1500` ) and automated
   A/B parameter sweeps.
 
@@ -134,7 +134,7 @@ flowchart TD
 | Field | Value |
 | --- | --- |
 | **File Path** | dev/plans/phase-4-7-mode<wbr>rnization-plan.md |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-18` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-DEV-PLANS-PHASE-4-7-MODE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

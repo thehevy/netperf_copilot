@@ -72,8 +72,237 @@ SUPPORTED_MERMAID_TYPES = (
 )
 
 _ATOMIC_SPAN_RE = re.compile(
-    r"(`+[^`]+`+|!?\[(?:[^\[\]]|`[^`]*`|\*\*[^*]+\*\*)+\]\([^)\s]+\))"
+    r"(`+[^`]+`+|!?\[(?:[^\[\]]|`[^`]*`|\*\*[^*]+\*\*)+\]\([^)\s]+\)|(?<!\$)\$(?!\$)(?!\d)[^$\n]+\$(?!\$))"
 )
+
+_ODD_CMARK_MATH_ESC_RE = re.compile(r"(?<!\\)(?:\\\\)*\\([%_{}])")
+_TEX_UNCLOSED_MARKERS_RE = re.compile(
+    r"\\(?:text|mathrm|textbf|operatorname|frac|sqrt|sum|boxed|cdot|times|bar|overline|arg|max|min|alpha|beta|sigma|ell|in|le|ge|mid|pm)\b"
+)
+
+
+def is_strict_3col_doc_path(rel_path: str) -> bool:
+    """Return True when `rel_path` targets a GitHub Wiki or White Paper / Executive Summary doc requiring `<= 3` cols."""
+    norm = (rel_path or "").replace("\\", "/").lower()
+    if not norm:
+        return False
+    if "/wiki/" in f"/{norm}" or norm.endswith(".wiki.md"):
+        return True
+    base = posixpath.basename(norm)
+    return any(
+        tok in base
+        for tok in (
+            "white_paper",
+            "white-paper",
+            "technical-white-paper",
+            "wp_",
+            "wp-",
+            "executive_summary",
+            "executive-summary",
+        )
+    )
+
+
+def _extract_tex_text_bodies(expr: str) -> List[str]:
+    """Extract balanced `{...}` arguments of `\\text`, `\\mathrm`, `\\textbf`, and `\\operatorname` commands."""
+    bodies: List[str] = []
+    for m in re.finditer(r"\\(?:text|mathrm|textbf|operatorname)\s*\{", expr):
+        pos = m.end()
+        depth = 1
+        start = pos
+        while pos < len(expr) and depth > 0:
+            ch = expr[pos]
+            if ch == "\\" and pos + 1 < len(expr):
+                pos += 2
+                continue
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    bodies.append(expr[start:pos])
+                    break
+            pos += 1
+    return bodies
+
+
+def _check_mathjax_expr_commonmark_safety(expr: str, line_no: int, issues: List[Dict[str, Any]], tag_ref: str = "") -> None:
+    """Detect CommonMark-before-MathJax escape stripping and text-mode underscores in a single math expression."""
+    m_esc = _ODD_CMARK_MATH_ESC_RE.search(expr)
+    if m_esc:
+        ch = m_esc.group(1)
+        alt = "`\\lbrace`/`\\rbrace`" if ch in ("{", "}") else f"`\\\\{ch}`"
+        issues.append(
+            {
+                "rule": "D11-GITHUB-MATHJAX",
+                "line": line_no,
+                "message": (
+                    f"Single-backslash `\\{ch}` inside MathJax block is stripped by GitHub CommonMark before TeX parsing; "
+                    f"use {alt}{tag_ref}."
+                ),
+            }
+        )
+        return
+    for tbody in _extract_tex_text_bodies(expr):
+        if re.search(r"(?<!\\)_", tbody) or re.search(r"(?<!\\)(?:\\\\)*\\_", tbody):
+            issues.append(
+                {
+                    "rule": "D11-GITHUB-MATHJAX",
+                    "line": line_no,
+                    "message": (
+                        f"Unescaped or single-escaped underscore in `\\text{{{tbody[:40]}}}` fails on GitHub with "
+                        f"`'_' allowed only in math mode`; escape as `\\\\_` or keep in math mode{tag_ref}."
+                    ),
+                }
+            )
+            return
+
+
+def _check_mermaid_xychart_constraints(buf: List[str], block_start: int, issues: List[Dict[str, Any]], tag_ref: str = "") -> None:
+    """Check `xychart-beta` Mermaid blocks for title clipping, overlapping x-axis labels, and `<`/`>` escaping."""
+    for ln in buf:
+        s = ln.strip()
+        m_title = re.match(r'^title\s+["\'](.*)["\']\s*$', s)
+        if m_title:
+            title_txt = m_title.group(1)
+            if len(title_txt) > 52:
+                issues.append(
+                    {
+                        "rule": "D11-MERMAID-XYCHART",
+                        "line": block_start + 1,
+                        "message": (
+                            f"Mermaid `xychart-beta` title is {len(title_txt)} chars (> 52-char GitHub ~700px SVG limit) "
+                            f"and clips left/right{tag_ref}."
+                        ),
+                    }
+                )
+            if "<" in title_txt or ">" in title_txt:
+                issues.append(
+                    {
+                        "rule": "D11-MERMAID-XYCHART",
+                        "line": block_start + 1,
+                        "message": (
+                            f"Unescaped `<` or `>` inside `xychart-beta` title renders as literal `&lt;`/`&gt;` "
+                            f"in GitHub Mermaid SVG{tag_ref}."
+                        ),
+                    }
+                )
+        m_xaxis = re.match(r"^x-axis\s*\[(.*)\]\s*$", s)
+        if m_xaxis:
+            raw_list = m_xaxis.group(1)
+            if "<" in raw_list or ">" in raw_list:
+                issues.append(
+                    {
+                        "rule": "D11-MERMAID-XYCHART",
+                        "line": block_start + 1,
+                        "message": (
+                            f"Unescaped `<` or `>` inside `xychart-beta` `x-axis` renders as literal `&lt;`/`&gt;`{tag_ref}."
+                        ),
+                    }
+                )
+            labels = [lbl.strip().strip('"').strip("'") for lbl in raw_list.split(",") if lbl.strip()]
+            max_lbl = max((len(lbl) for lbl in labels), default=0)
+            if len(labels) >= 8 and max_lbl > 6:
+                issues.append(
+                    {
+                        "rule": "D11-MERMAID-XYCHART",
+                        "line": block_start + 1,
+                        "message": (
+                            f"Mermaid `xychart-beta` has {len(labels)} `x-axis` labels up to {max_lbl} chars; "
+                            f"labels collide horizontally inside GitHub ~700px SVG when count >= 8 and len > 6{tag_ref}."
+                        ),
+                    }
+                )
+
+
+def scan_github_wiki_and_math_render_defects(text: str, rel_path: str = "", tag_ref: str = "") -> List[Dict[str, Any]]:
+    """
+    Detect GitHub Wiki / CommonMark+MathJax (`D11-GITHUB-MATHJAX`) and Mermaid `xychart-beta` (`D11-MERMAID-XYCHART`)
+    rendering defects (CommonMark escape stripping, split inline math, xychart-beta label/title bounds).
+    """
+    issues: List[Dict[str, Any]] = []
+    lines = text.splitlines()
+    in_fence = False
+    fence_char = ""
+    is_mermaid = False
+    merm_start = 0
+    merm_buf: List[str] = []
+    in_display_math = False
+    math_start = 0
+    math_buf: List[str] = []
+
+    for idx, line in enumerate(lines, 1):
+        s = line.strip()
+        if not in_display_math and (s.startswith("```") or s.startswith("~~~")):
+            fc = s[:3]
+            if not in_fence:
+                in_fence = True
+                fence_char = fc
+                is_mermaid = s[3:].strip().lower().startswith("mermaid")
+                merm_start = idx
+                merm_buf = []
+            elif fc == fence_char:
+                if is_mermaid:
+                    non_c = [ln.strip() for ln in merm_buf if ln.strip() and not ln.strip().startswith("%%")]
+                    if non_c and non_c[0].split()[0] == "xychart-beta":
+                        _check_mermaid_xychart_constraints(merm_buf, merm_start, issues, tag_ref=tag_ref)
+                in_fence = False
+                is_mermaid = False
+                fence_char = ""
+            continue
+        if in_fence:
+            if is_mermaid:
+                merm_buf.append(line)
+            continue
+
+        if in_display_math:
+            if s.endswith("$$") or "$$" in s:
+                before = s.split("$$", 1)[0]
+                if before:
+                    math_buf.append(before)
+                _check_mathjax_expr_commonmark_safety("\n".join(math_buf), math_start, issues, tag_ref=tag_ref)
+                in_display_math = False
+                math_buf = []
+            else:
+                math_buf.append(line)
+            continue
+
+        if s.startswith("$$"):
+            rest = s[2:]
+            if "$$" in rest:
+                body = rest.split("$$", 1)[0]
+                _check_mathjax_expr_commonmark_safety(body, idx, issues, tag_ref=tag_ref)
+            else:
+                in_display_math = True
+                math_start = idx
+                math_buf = [rest] if rest else []
+            continue
+
+        no_code = re.sub(r"`+[^`]+`+", "", line)
+        for m_disp in re.finditer(r"\$\$(.+?)\$\$", no_code):
+            _check_mathjax_expr_commonmark_safety(m_disp.group(1), idx, issues, tag_ref=tag_ref)
+        no_disp = re.sub(r"\$\$.*?\$\$", "", no_code)
+        inline_no_esc = re.sub(r"\\\$", "", no_disp)
+        dollar_positions = [m.start() for m in re.finditer(r"\$", inline_no_esc)]
+        for p_idx in range(0, len(dollar_positions) - 1, 2):
+            span = inline_no_esc[dollar_positions[p_idx] + 1 : dollar_positions[p_idx + 1]]
+            if not re.match(r"^\d", span):
+                _check_mathjax_expr_commonmark_safety(span, idx, issues, tag_ref=tag_ref)
+        if len(dollar_positions) % 2 == 1:
+            tail = inline_no_esc[dollar_positions[-1] + 1 :]
+            if _TEX_UNCLOSED_MARKERS_RE.search(tail):
+                issues.append(
+                    {
+                        "rule": "D11-GITHUB-MATHJAX",
+                        "line": idx,
+                        "message": (
+                            "Unclosed inline `$...$` TeX expression on a single line (likely split across lines by "
+                            f"wrapping); keep inline math unbroken on one line{tag_ref}."
+                        ),
+                    }
+                )
+
+    return issues
 
 
 def _sanitize_table_line(line: str) -> str:
@@ -643,6 +872,7 @@ def validate_and_fix_markdown_text(
     max_cols: int = 5,
     max_token_len: int = 40,
     max_line_len: int = 120,
+    rel_path: str = "",
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Validate (and optionally auto-fix) Markdown content against the Single Source of Truth
@@ -650,6 +880,10 @@ def validate_and_fix_markdown_text(
     """
     lines = text.splitlines()
     issues: List[Dict[str, Any]] = []
+    if rel_path and is_strict_3col_doc_path(rel_path):
+        max_cols = min(max_cols, 3)
+    if not auto_fix:
+        issues.extend(scan_github_wiki_and_math_render_defects(text, rel_path=rel_path))
     out_lines: List[str] = []
     in_code = False
     in_meta_header = False
@@ -969,6 +1203,7 @@ def validate_and_fix_markdown_text(
             max_cols=max_cols,
             max_token_len=max_token_len,
             max_line_len=max_line_len,
+            rel_path=rel_path,
         )
         return fixed_text, remaining
 
@@ -994,6 +1229,8 @@ def validate_mermaid_blocks(markdown_text: str) -> Dict[str, Any]:
             non_comment = [ln.strip() for ln in buf if ln.strip() and not ln.strip().startswith("%%")]
             if non_comment:
                 first = non_comment[0].split()[0]
+                if first == "xychart-beta":
+                    _check_mermaid_xychart_constraints(buf, block_start, issues, tag_ref="")
                 if first not in SUPPORTED_MERMAID_TYPES:
                     issues.append(
                         {
@@ -1085,6 +1322,7 @@ def check_markdown_quality(
         max_cols=max_cols,
         max_token_len=max_token_len,
         max_line_len=max_line_len,
+        rel_path=str(p),
     )
 
     if auto_fix:
@@ -1094,6 +1332,7 @@ def check_markdown_quality(
             max_cols=max_cols,
             max_token_len=max_token_len,
             max_line_len=max_line_len,
+            rel_path=str(p),
         )
         if fixed_text != original_text:
             fixed_text = _bump_metadata_last_updated(fixed_text)
@@ -1226,5 +1465,5 @@ if __name__ == "__main__":
 # Search Keywords: markdown_validator, D5-SEP, D5-PAD, D5-COLS, D5-TOKEN, D5-WRAP, D5-PIPE, MD013, MD007, MD032, compact tables
 # Drivers & Subsystems: documentation, markdownlint, netperf_copilot
 # Related Units / Patches: DOC-RULE-D5, DOC-RULE-D5, Rule D1-D10 v3.1
-# Created / Last-Updated: 2026-02-02 / 2026-11-13
+# Created / Last-Updated: 2026-02-02 / 2026-11-16
 # === METADATA_FOOTER_END ===

@@ -1,8 +1,8 @@
 # Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v13.0` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
+- **Document ID**: `DOC-NETPERF-WIKI-TECHNICAL-WHITE` | **Version**: `v15.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-18`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for Modernizing Network Performance Benchmarking for 100GbE–800GbE Fabrics and Next-Generation Multi-Core Server Architectures under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -830,7 +830,7 @@ into a repeatable, statistically rigorous engineering discipline.
 | Field | Value |
 | --- | --- |
 | **File Path** | `wiki/Technical-White-Paper.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-18` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-TECHNICAL-WHITE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |

@@ -2,10 +2,10 @@
 
 <!-- === METADATA_HEADER_START === -->
 - **Document ID**: `DOC-NETPERF-AGENT-COLLAB-HUB-001`
-- **Version**: `v8.0`
+- **Version**: `v10.0`
 - **Status**: `Active`
 - **Created Date**: `2026-11-16`
-- **Last Updated Date**: `2026-11-16`
+- **Last Updated Date**: `2026-11-18`
 - **Target Scope**: Multi-agent coordination protocol, local clone topology map, Step 8/9 code review ledger, and shared
   task queue between Antigravity and GitHub Copilot across `thehevy/netperf_copilot`.
 - **Summary**: Defines the shared communication workspace (`dev/collab/`), documents the two local Git clones on the

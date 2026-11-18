@@ -1,8 +1,8 @@
 # CLI Tools Reference
 
 <!-- METADATA_HEADER_START -->
-- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v6.0` | **Status**: `Active`
-- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-16`
+- **Document ID**: `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE` | **Version**: `v8.0` | **Status**: `Active`
+- **Created Date**: `2026-11-05` | **Last Updated Date**: `2026-11-18`
 - **Target Scope**: `netperf_copilot` High-Speed 100GbE–800GbE Qualification & Automation Suite
 - **Summary**: Technical documentation for CLI Tools Reference under Rules `D1`–`D10` `v3.2`.
 <!-- METADATA_HEADER_END -->
@@ -210,7 +210,7 @@ starts concurrent RoCEv2 (`ib_write_bw`) traffic, and runs client-to-server matr
 | Field | Value |
 | --- | --- |
 | **File Path** | `wiki/CLI-Tools-Reference.md` |
-| **Created / Last Updated** | `2026-11-05` / `2026-11-16` |
+| **Created / Last Updated** | `2026-11-05` / `2026-11-18` |
 | **Keywords / Search Tags** | `netperf_copilot`, `OMNI`, `100GbE-800GbE`, `Intel Ethernet 200GbE`, `Xeon 6`, `Rules D1-D10 v3.2` |
 | **Drivers & Subsystems** | `ice`, `netperf`, `netserver`, `netperf-multi`, `netperf-preflight` |
 | **Validation / Patch IDs** | `DOC-NETPERF-WIKI-CLI-TOOLS-REFERENCE`, `D1-D10 v3.2`, `MD013`, `D7-ID-MATCH` |
