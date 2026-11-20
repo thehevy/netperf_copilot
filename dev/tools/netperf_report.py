@@ -28,6 +28,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from netperf_tunings import extract_non_default_tunings
+
 
 # U1-U13 Unexpected Event Signatures from Intel_Ethernet_AI_Driven_Validation
 UNEXPECTED_EVENT_PATTERNS: List[Tuple[str, str, str]] = [
@@ -143,6 +145,8 @@ class AIValidationReporter:
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         duration_sec: float = 30.0,
+        non_default_tunings: Optional[Dict[str, Any]] = None,
+        explicit_tunings: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         now_iso = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         events = scan_kmsg_events(kmsg_text)
@@ -189,6 +193,12 @@ class AIValidationReporter:
             verdict = "PASS"
 
         step8_9 = cls.extract_step8_step9_telemetry(metrics)
+        if non_default_tunings is not None:
+            tunings = non_default_tunings
+        else:
+            env_iface = (environment or {}).get("interface")
+            ifaces = [env_iface] if env_iface and env_iface != "unknown" else None
+            tunings = extract_non_default_tunings(interfaces=ifaces, explicit_overrides=explicit_tunings)
 
         return {
             "schema_version": cls.SCHEMA_VERSION,
@@ -199,6 +209,7 @@ class AIValidationReporter:
             "end_time": end_time or now_iso,
             "duration_sec": duration_sec,
             "environment": environment or {},
+            "non_default_tunings": tunings,
             "metrics": metrics,
             "step8_step9_telemetry": step8_9,
             "counter_deltas": deltas,
@@ -243,6 +254,7 @@ class AIValidationReporter:
         rows: List[Dict[str, Any]],
         environment: Optional[Dict[str, Any]] = None,
         telemetry: Optional[Dict[str, Any]] = None,
+        non_default_tunings: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Render a Markdown qualification dashboard with Step 8/9 telemetry and ASCII scaling bars."""
         lines: List[str] = [
@@ -385,6 +397,21 @@ class AIValidationReporter:
                 f"| 99th Percentile (`p99_ms`) | {float(flent.get('p99_ms', 0.0) or 0.0):.3f} ms |",
                 f"| 99.9th Percentile (`p999_ms`) | {float(flent.get('p999_ms', 0.0) or 0.0):.3f} ms |",
             ])
+
+        tunings_block = non_default_tunings or merged_tel.get("non_default_tunings")
+        summary_rows = tunings_block.get("summary_rows") if isinstance(tunings_block, dict) else None
+        if summary_rows:
+            lines.extend([
+                "",
+                "## Active Non-Default Tunings",
+                "",
+                "| Parameter | Active Value | Baseline Default |",
+                "| --- | --- | --- |",
+            ])
+            for item in summary_rows:
+                lines.append(
+                    f"| `{item.get('parameter', '')}` | `{item.get('value', '')}` | `{item.get('default', '')}` |"
+                )
 
         lines.extend([
             "",

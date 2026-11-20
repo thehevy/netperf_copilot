@@ -985,6 +985,311 @@ class TestNetperfModernization(unittest.TestCase):
         self.assertAlmostEqual(summary["netperf_copilot_pinned"]["mean_gbps"], 197.8, places=2)
         self.assertAlmostEqual(summary["classic_netperf_pinned"]["mean_gbps"], 196.4, places=2)
 
+    def test_step10_orchestrate_hardening_and_profile_no_yaml(self) -> None:
+        """Verify orchestrate --profile works without PyYAML, quotes args, checks deploy, and cleans RDMA."""
+        import tempfile
+        from unittest import mock
+
+        cli_host = netperf_orchestrate.RemoteHost("cli1", "192.0.2.10", role="client")
+        srv_host = netperf_orchestrate.RemoteHost("srv1", "192.0.2.11", role="server")
+        inv = netperf_orchestrate.HostInventory([cli_host, srv_host])
+
+        # 1) _run_single_test quotes args and scales timeout dynamically with duration (-l)
+        mock_conn = mock.MagicMock()
+        mock_conn.execute.return_value = (0, "ok", "")
+        with mock.patch.object(cli_host, "get_connection", return_value=mock_conn):
+            orch = netperf_orchestrate.RemoteOrchestrator(inv)
+            res = orch._run_single_test(cli_host, srv_host, ["-l", "100", "--", "-d", "stream;echo_pwn"])
+        self.assertTrue(res["success"])
+        called_cmd, called_kwargs = mock_conn.execute.call_args[0][0], mock_conn.execute.call_args[1]
+        self.assertIn("'stream;echo_pwn'", called_cmd)
+        self.assertGreaterEqual(called_kwargs["timeout"], 260)
+
+        # 2) deploy_netserver fails safely when local_netserver is missing
+        deploy_res = orch.deploy_netserver(local_netserver="/nonexistent/netserver")
+        self.assertEqual(deploy_res, {"srv1": False})
+
+        # 3) --profile works with HAS_YAML=False, runs all tests, and calls stop_rdma_background on error
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_path = Path(tmpdir)
+            hosts_file = tmp_path / "hosts.yaml"
+            hosts_file.write_text("hosts:\n  - name: cli1\n    address: 192.0.2.10\n    role: client\n  - name: srv1\n    address: 192.0.2.11\n    role: server\n", encoding="utf-8")
+            prof_file = tmp_path / "multi_test.yaml"
+            prof_file.write_text(
+                "name: multi\nglobal:\n  duration: 5\ntests:\n  - name: t1\n    direction: tx\n  - name: t2\n    direction: rx\n",
+                encoding="utf-8",
+            )
+
+            seen_batches = []
+            stop_calls = []
+
+            def fake_run_matrix(self_obj, clients, servers, test_args, parallel=True):
+                seen_batches.append(list(test_args))
+                if len(seen_batches) == 2:
+                    raise RuntimeError("boom on second test")
+                return [{"success": True}]
+
+            with mock.patch.object(netperf_orchestrate, "HAS_YAML", False), \
+                 mock.patch.object(netperf_orchestrate.RemoteOrchestrator, "start_rdma_background", return_value={"base_port": 18515}), \
+                 mock.patch.object(netperf_orchestrate.RemoteOrchestrator, "stop_rdma_background", side_effect=lambda h: stop_calls.append(h)), \
+                 mock.patch.object(netperf_orchestrate.RemoteOrchestrator, "run_matrix_tests", autospec=True, side_effect=fake_run_matrix), \
+                 mock.patch.object(sys, "argv", ["netperf-orchestrate", "--hosts", str(hosts_file), "--profile", str(prof_file), "--rdma-coexist"]):
+                with self.assertRaises(RuntimeError):
+                    netperf_orchestrate.main()
+
+            self.assertEqual(len(seen_batches), 2)
+            self.assertEqual(len(stop_calls), 1)
+
+    def test_step10_tuner_apply_error_propagation(self) -> None:
+        """Verify netperf_tuner --apply-bkm returns exit code 1 when subprocess command fails."""
+        import subprocess
+        from unittest import mock
+        import netperf_tuner
+
+        topo = TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT)
+        failed_proc = subprocess.CompletedProcess(args=["ethtool"], returncode=1, stdout="", stderr="Operation not permitted")
+        with mock.patch.object(TopologyAnalyzer, "discover_local", return_value=topo), \
+             mock.patch.object(netperf_tuner.subprocess, "run", return_value=failed_proc):
+            rc = netperf_tuner.main(["--interface", "eth0", "--apply-bkm", "auto"])
+        self.assertEqual(rc, 1)
+
+    def test_step10_multi_timeout_cleanup_and_shared_tos(self) -> None:
+        """Verify netperf-multi shares resolve_tos_value, kills hung processes, and runs finally cleanup."""
+        import subprocess
+        from unittest import mock
+
+        self.assertEqual(netperf_multi.resolve_tos_value("AF41"), "0x88")
+
+        inst = netperf_multi.NetperfInstance(instance_id=0, host="192.0.2.10", duration=5)
+        fake_proc = mock.MagicMock()
+        fake_proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd=["netperf"], timeout=70),
+            ("", "timed out cleanly"),
+        ]
+        fake_proc.returncode = -9
+        inst.process = fake_proc
+        inst.wait()
+        fake_proc.kill.assert_called_once()
+        self.assertEqual(inst.returncode, -9)
+
+        mn = netperf_multi.MultiNetperf(host="192.0.2.10", instances=1, duration=5, enable_pcm=True)
+        stop_all_calls = []
+        pcm_stop_calls = []
+        with mock.patch.object(mn, "create_instances"), \
+             mock.patch.object(mn, "start_all"), \
+             mock.patch.object(mn, "wait_all", side_effect=RuntimeError("wait failure")), \
+             mock.patch.object(mn, "stop_all", side_effect=lambda: stop_all_calls.append(True)), \
+             mock.patch.object(netperf_multi.IntelPCMCollector, "start_live_collection"), \
+             mock.patch.object(netperf_multi.IntelPCMCollector, "stop_and_collect", side_effect=lambda **kw: pcm_stop_calls.append(kw) or {}):
+            with self.assertRaises(RuntimeError):
+                mn.run(aggregate=False)
+        self.assertGreaterEqual(len(stop_all_calls), 1)
+        self.assertEqual(len(pcm_stop_calls), 1)
+
+    def test_step10_monitor_interim_parsing(self) -> None:
+        """Verify netperf-monitor parses 10^6bits/s, 10^9bits/s, Trans/s, and usec interim output."""
+        mon = netperf_monitor.TestMonitor("unit", duration=10)
+        netperf_monitor.NetperfMonitor._parse_interim_line(
+            "Interim result: 9473.56 10^6bits/s over 0.500 seconds ending at 1.500", mon
+        )
+        self.assertAlmostEqual(mon.throughput.current(), 9473.56, places=2)
+        netperf_monitor.NetperfMonitor._parse_interim_line(
+            "Interim result: 9.45 10^9bits/s over 0.500 seconds ending at 2.000", mon
+        )
+        self.assertAlmostEqual(mon.throughput.current(), 9450.0, places=2)
+        netperf_monitor.NetperfMonitor._parse_interim_line(
+            "Interim result: 18500.00 Trans/s over 0.500 seconds ending at 2.500", mon
+        )
+        self.assertAlmostEqual(mon.throughput.current(), 18500.0, places=2)
+        netperf_monitor.NetperfMonitor._parse_interim_line(
+            "Interim result: 14.20 usec latency over 0.500 seconds ending at 3.000", mon
+        )
+        self.assertAlmostEqual(mon.latency.current(), 14.20, places=2)
+
+    def test_step10_catalog_precmd_throughput_and_verdict(self) -> None:
+        """Verify netperf_catalog fails on pre_commands error and distinguishes Mbps vs Gbps keys."""
+        import json
+        import subprocess
+        import tempfile
+        from unittest import mock
+        import netperf_catalog
+
+        topo = TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT)
+        with tempfile.TemporaryDirectory() as tmpdir, \
+             mock.patch.object(TopologyAnalyzer, "discover_local", return_value=topo):
+            out_dir = Path(tmpdir) / "out"
+
+            # 1) Failing pre_commands marks ring-coalesce-matrix cases FAIL without launching netperf-multi
+            fail_proc = subprocess.CompletedProcess(args=["ethtool"], returncode=1, stdout="", stderr="Permission denied")
+            with mock.patch.object(netperf_catalog.subprocess, "run", return_value=fail_proc) as m_run:
+                rc = netperf_catalog.main([
+                    "--suite", "ring-coalesce-matrix",
+                    "--host", "192.0.2.10",
+                    "--interface", "eth0",
+                    "--output-dir", str(out_dir),
+                ])
+            self.assertEqual(rc, 1)
+            self.assertTrue(all("netperf-multi" not in str(c) for c in m_run.call_args_list))
+            res_json = json.loads((out_dir / "result.json").read_text(encoding="utf-8"))
+            self.assertEqual(res_json["results"][0]["verdict"], "FAIL")
+
+            # 2) Valid execution with 1500.0 Mbps THROUGHPUT scales cleanly to 1.5 Gbps and matches report verdict
+            ok_dir = Path(tmpdir) / "out_ok"
+
+            def ok_subproc(cmd, **kwargs):
+                return subprocess.CompletedProcess(
+                    args=cmd,
+                    returncode=0,
+                    stdout=json.dumps({"results": {"THROUGHPUT": 1500.0}}),
+                    stderr="",
+                )
+
+            with mock.patch.object(netperf_catalog.subprocess, "run", side_effect=ok_subproc):
+                rc2 = netperf_catalog.main([
+                    "--suite", "flow-scaling",
+                    "--host", "192.0.2.10",
+                    "--interface", "eth0",
+                    "--output-dir", str(ok_dir),
+                ])
+            self.assertEqual(rc2, 0)
+            csv_txt = (ok_dir / "summary.csv").read_text(encoding="utf-8")
+            self.assertIn(",1.5,", csv_txt)
+            ok_json = json.loads((ok_dir / "result.json").read_text(encoding="utf-8"))
+            self.assertAlmostEqual(ok_json["results"][0]["metrics"]["throughput_gbps"], 1.5, places=3)
+            self.assertEqual(ok_json["results"][0]["verdict"], "PASS")
+
+    def test_step10_stats_and_pool_scoping(self) -> None:
+        """Verify exact Student-t critical values and pool-scoped netserver PID stop/strict SSH flags."""
+        from unittest import mock
+        from netperf_stats import AdvancedStatistics
+
+        self.assertAlmostEqual(AdvancedStatistics._t_critical(1, 0.95), 12.706, places=3)
+        self.assertAlmostEqual(AdvancedStatistics._t_critical(4, 0.95), 2.776, places=3)
+        self.assertAlmostEqual(AdvancedStatistics._t_critical(20, 0.80), 1.325, delta=0.01)
+
+        topo = TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT)
+        mgr = NetserverPoolManager(host="192.0.2.11", base_port=18700, strict_host_key=True, topology=topo)
+        with mock.patch.object(mgr, "_run_cmd", return_value=(0, "", "")) as mock_cmd:
+            ok, msg = mgr.stop_pool()
+        self.assertTrue(ok)
+        self.assertIn("/tmp/netserver_pool_18700.pids", mock_cmd.call_args[0][0])
+        self.assertNotIn("pkill -9 netserver", mock_cmd.call_args[0][0])
+
+        with mock.patch("netserver_manager.subprocess.run") as mock_ssh:
+            mock_ssh.return_value = mock.MagicMock(returncode=0, stdout="", stderr="")
+            mgr._run_cmd("echo ok")
+        ssh_argv = mock_ssh.call_args[0][0]
+        self.assertIn("StrictHostKeyChecking=yes", ssh_argv)
+
+    def test_step10_monitor_live_stops_display_thread(self) -> None:
+        """Verify monitor_live stops and joins its daemon display thread on completion."""
+        import io
+        import threading
+        from unittest import mock
+
+        mon_runner = netperf_monitor.NetperfMonitor(netperf_path="netperf")
+        fake_proc = mock.MagicMock()
+        fake_proc.stdout = iter([
+            "Interim result: 12345.67 10^6bits/s over 0.500 seconds ending at 1700000000.000\n",
+            "NETPERF_INTERIM_RESULT[0]=48705.72\n",
+            "NETPERF_UNITS[0]=10^6bits/s\n",
+            "NETPERF_INTERIM_RESULT[1]=49.00\n",
+            "NETPERF_UNITS[1]=10^9bits/s\n",
+            "LOCAL_CPU_UTIL=-1.00\n",
+        ])
+        fake_proc.returncode = 0
+        fake_proc.wait.return_value = 0
+
+        spawned_threads = []
+        real_thread = threading.Thread
+
+        def _capture_thread(*args, **kwargs):
+            t = real_thread(*args, **kwargs)
+            spawned_threads.append(t)
+            return t
+
+        with mock.patch.object(netperf_monitor.subprocess, "Popen", return_value=fake_proc), \
+             mock.patch.object(netperf_monitor.threading, "Thread", side_effect=_capture_thread), \
+             mock.patch.object(netperf_monitor.sys, "stdout", new_callable=io.StringIO):
+            mon_runner.monitor_live("192.0.2.10", ["-t", "TCP_STREAM"], duration=1)
+
+        self.assertEqual(len(mon_runner.display.monitors), 1)
+        result = mon_runner.display.monitors[0]
+        self.assertFalse(mon_runner.display.running)
+        self.assertFalse(result.running)
+        self.assertTrue(result.completed)
+        self.assertEqual(result.throughput.count, 3)
+        self.assertAlmostEqual(result.throughput.samples[2], 49000.0, places=2)
+        self.assertEqual(result.cpu_local.count, 0)
+        self.assertEqual(len(spawned_threads), 1)
+        self.assertTrue(spawned_threads[0].daemon)
+        self.assertFalse(spawned_threads[0].is_alive())
+
+    def test_step11_non_default_tunings_in_results(self) -> None:
+        """Verify non-default tunings rule and automatic provenance capture in result payloads and dashboards."""
+        import json
+        import tempfile
+        from unittest import mock
+        from netperf_tunings import extract_non_default_tunings
+
+        rule_path = REPO_ROOT / ".agents" / "rules" / "non-default-tunings-in-results.md"
+        self.assertTrue(rule_path.is_file())
+        rule_txt = rule_path.read_text(encoding="utf-8")
+        self.assertIn("Mandatory Non-Default Tunings", rule_txt)
+        self.assertIn("non_default_tunings", rule_txt)
+
+        raw = {
+            "probe_supported": True,
+            "sysctls": {
+                "net.core.rmem_max": "2147483647",
+                "net.core.netdev_budget": "600",
+                "net.ipv4.tcp_limit_output_bytes": "1048576",
+            },
+            "cmdline": "BOOT_IMAGE=/vmlinuz iommu=pt isolcpus=2-15",
+            "cpu_governors": ["performance"],
+            "irqbalance": "inactive",
+            "nics": {"eth0": {"mtu": 9000, "ring_rx": 4096, "qdisc": "fq"}},
+            "module_params": {},
+        }
+        diffed = extract_non_default_tunings(raw_probe=raw, explicit_overrides={"layout": "spread_step2"})
+        self.assertEqual(diffed["sysctl_overrides"]["net.core.rmem_max"]["value"], "2147483647")
+        self.assertEqual(diffed["sysctl_overrides"]["net.core.netdev_budget"]["value"], "600")
+        self.assertNotIn("net.ipv4.tcp_limit_output_bytes", diffed["sysctl_overrides"])
+        self.assertEqual(diffed["nic_overrides"]["eth0"]["mtu"]["value"], 9000)
+
+        rec = AIValidationReporter.build_result_json(
+            test_case_id="T-TUNINGS-01",
+            suite_name="flow-scaling",
+            metrics={"throughput_gbps": 188.25, "cv_pct": 0.4},
+            non_default_tunings=diffed,
+        )
+        self.assertIn("non_default_tunings", rec)
+        self.assertEqual(rec["non_default_tunings"]["nic_overrides"]["eth0"]["mtu"]["value"], 9000)
+
+        md = AIValidationReporter.render_dashboard_markdown(
+            "flow-scaling",
+            [{"test_case_id": "T-TUNINGS-01", "direction": "tx", "streams": 16, "mtu": 9000, "throughput_gbps": 188.25, "cv_pct": 0.4, "verdict": "PASS"}],
+            non_default_tunings=diffed,
+        )
+        self.assertIn("## Active Non-Default Tunings", md)
+        self.assertIn("sysctl:net.core.netdev_budget", md)
+
+        multi = netperf_multi.MultiNetperf(host="192.0.2.10", instances=4, direction="tx", mtu=9000, interfaces="eth0")
+        payload = multi.build_output_payload(aggregate=False)
+        self.assertIn("non_default_tunings", payload)
+
+        tuner = NetperfTuner(interface="eth0", topology=TopologyAnalyzer.from_topology_snapshot(ECORE_288_SNAPSHOT))
+        sweep = tuner.run_ab_sweep(knob="mtu", values=[1500, 9000])
+        self.assertIn("non_default_tunings", sweep)
+
+        import netperf_catalog
+        with tempfile.TemporaryDirectory() as tmpdir:
+            rc = netperf_catalog.main(["--suite", "flow-scaling", "--host", "192.0.2.10", "--interface", "eth0", "--dry-run", "--output-dir", tmpdir])
+            self.assertEqual(rc, 0)
+            cat_json = json.loads((Path(tmpdir) / "result.json").read_text(encoding="utf-8"))
+            self.assertIn("non_default_tunings", cat_json)
+            self.assertIn("non_default_tunings", cat_json["results"][0])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

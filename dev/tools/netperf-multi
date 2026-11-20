@@ -61,9 +61,11 @@ from netperf_flent_bridge import (
     compute_jains_fairness_index,
     FlentWorkingLatencyProbe,
     parse_modern_netperf_output,
+    resolve_tos_value,
 )
 from netperf_pcm_bridge import IntelPCMCollector, ProcStatGroundTruth
 from netperf_stats import AdvancedStatistics
+from netperf_tunings import extract_non_default_tunings
 
 # Optional import for host process CPU affinity fallback
 try:
@@ -71,44 +73,6 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
-
-
-DSCP_SYMBOLIC_MAP: Dict[str, str] = {
-    'CS0': '0x00', 'BE': '0x00', 'DEFAULT': '0x00',
-    'CS1': '0x20', 'AF11': '0x28', 'AF12': '0x30', 'AF13': '0x38',
-    'CS2': '0x40', 'AF21': '0x48', 'AF22': '0x50', 'AF23': '0x58',
-    'CS3': '0x60', 'AF31': '0x68', 'AF32': '0x70', 'AF33': '0x78',
-    'CS4': '0x80', 'AF41': '0x88', 'AF42': '0x90', 'AF43': '0x98',
-    'CS5': '0xa0', 'EF': '0xb8',
-    'CS6': '0xc0', 'CS7': '0xe0',
-}
-
-
-def resolve_tos_value(tos_spec: str) -> str:
-    """Convert symbolic DSCP name ('EF', 'AF21', 'CS3'), 'dscp:46', or integer to IP_TOS hex."""
-    if not tos_spec:
-        return ""
-    spec = str(tos_spec).strip()
-    if ',' in spec:
-        parts = [resolve_tos_value(p) for p in spec.split(',', 1)]
-        return f"{parts[0]},{parts[1]}"
-    upper = spec.upper()
-    if upper in DSCP_SYMBOLIC_MAP:
-        return DSCP_SYMBOLIC_MAP[upper]
-    if upper.startswith('DSCP:') or upper.startswith('DSCP'):
-        num_str = re.sub(r'^DSCP:?', '', upper).strip()
-        if num_str.isdigit():
-            dscp = int(num_str)
-            return f"0x{(dscp & 0x3f) << 2:02x}"
-    if upper.startswith('0X'):
-        return spec.lower()
-    if spec.isdigit():
-        val = int(spec)
-        # Values 1..63 that aren't multiples of 4 or common DSCPs (46, 24, 18, 10) -> treat as DSCP if <= 63
-        if val in (10, 12, 14, 18, 20, 22, 24, 26, 28, 30, 34, 36, 38, 46, 48, 56):
-            return f"0x{(val & 0x3f) << 2:02x}"
-        return f"0x{val & 0xff:02x}"
-    return spec
 
 
 def expand_host_targets(host_spec: str) -> List[str]:
@@ -349,7 +313,14 @@ class NetperfInstance:
         if self.process is None:
             return
 
-        self.stdout, self.stderr = self.process.communicate()
+        wait_timeout = max(30, int(self.duration) * 2 + 60)
+        try:
+            self.stdout, self.stderr = self.process.communicate(timeout=wait_timeout)
+        except subprocess.TimeoutExpired:
+            self.process.kill()
+            self.stdout, self.stderr = self.process.communicate()
+            if not self.stderr:
+                self.stderr = f"netperf instance timed out after {wait_timeout}s"
         self.returncode = self.process.returncode
         self.end_time = time.time()
 
@@ -1253,6 +1224,19 @@ class MultiNetperf:
                 'enable_pcm': self.enable_pcm,
                 'flent_working_latency': self.flent_working_latency,
             },
+            'non_default_tunings': extract_non_default_tunings(
+                interfaces=self.interfaces or None,
+                explicit_overrides={
+                    'mtu': self.mtu,
+                    'cpu_affinity': self.use_affinity,
+                    'layout': self.layout,
+                    'per_core_netserver': self.per_core_netserver,
+                    'instances_per_port': self.num_instances,
+                    'direction': self.direction,
+                    'omit_secs': self.omit_secs or None,
+                    'netperf_args': self.netperf_args,
+                },
+            ),
             'instance_results': results,
             'aggregated': aggregated,
             'unexpected_event_scan': {
@@ -1301,31 +1285,42 @@ class MultiNetperf:
             )
             flent_probe.start()
 
-        if self.direction == 'bx-seq':
-            all_instances: List[NetperfInstance] = []
-            for phase_dir in ('tx', 'rx'):
-                if self.interrupted:
-                    return False
-                self.create_instances(direction_override=phase_dir)
+        aborted = False
+        try:
+            if self.direction == 'bx-seq':
+                all_instances: List[NetperfInstance] = []
+                for phase_dir in ('tx', 'rx'):
+                    if self.interrupted:
+                        aborted = True
+                        break
+                    self.create_instances(direction_override=phase_dir)
+                    self.start_all()
+                    self.wait_all()
+                    all_instances.extend(self.instances)
+                self.instances = all_instances
+            else:
+                self.create_instances()
                 self.start_all()
-                self.wait_all()
-                all_instances.extend(self.instances)
-            self.instances = all_instances
-        else:
-            self.create_instances()
-            self.start_all()
-            if self.interrupted:
-                return False
-            self.wait_all()
+                if self.interrupted:
+                    aborted = True
+                else:
+                    self.wait_all()
+        except Exception:
+            self.stop_all()
+            raise
+        finally:
+            if aborted or self.interrupted:
+                self.stop_all()
+            self.procstat_ground_truth = procstat_gt.stop()
+            agg_for_telemetry = self.aggregate_results() if self.instances else {}
+            tput_gbps = float((agg_for_telemetry or {}).get('total_throughput_gbps', 0.0))
+            if pcm_collector is not None:
+                self.pcm_telemetry = pcm_collector.stop_and_collect(throughput_gbps=tput_gbps)
+            if flent_probe is not None:
+                self.flent_latency_summary = flent_probe.stop_and_collect()
 
-        self.procstat_ground_truth = procstat_gt.stop()
-        agg_for_telemetry = self.aggregate_results()
-        tput_gbps = float((agg_for_telemetry or {}).get('total_throughput_gbps', 0.0))
-
-        if pcm_collector is not None:
-            self.pcm_telemetry = pcm_collector.stop_and_collect(throughput_gbps=tput_gbps)
-        if flent_probe is not None:
-            self.flent_latency_summary = flent_probe.stop_and_collect()
+        if aborted:
+            return False
 
         post_dmesg, post_stats = self._capture_kmsg_and_stats()
         if self.check_kmsg:

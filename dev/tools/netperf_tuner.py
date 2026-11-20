@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from netperf_topology import SystemTopology, TopologyAnalyzer
+from netperf_tunings import extract_non_default_tunings
 
 
 SYSCTL_BKM_BASE: Dict[str, str] = {
@@ -322,6 +323,10 @@ class NetperfTuner:
             "winner_mean_gbps": winner.mean_gbps,
             "winner_cv_pct": winner.cv_pct,
             "rollback_command": " ".join(winner_cmd),
+            "non_default_tunings": extract_non_default_tunings(
+                interfaces=[self.interface],
+                explicit_overrides={"sweep_knob": knob, "winner_value": winner.value},
+            ),
             "results": [asdict(r) for r in results],
         }
 
@@ -350,34 +355,67 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.apply_bkm:
         plan = tuner.build_tuning_plan(args.apply_bkm)
+        failed_cmds: List[str] = []
         if not args.dry_run:
             for cmd in plan.commands:
-                subprocess.run(cmd, check=False, capture_output=True)
+                try:
+                    proc = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=15)
+                    if proc.returncode != 0:
+                        err = (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
+                        failed_cmds.append(f"{' '.join(cmd)}: {err}")
+                except (subprocess.TimeoutExpired, OSError) as exc:
+                    failed_cmds.append(f"{' '.join(cmd)}: {exc}")
         if args.json:
-            print(json.dumps(plan.to_dict(), indent=2))
+            payload = plan.to_dict()
+            payload["non_default_tunings"] = extract_non_default_tunings(
+                interfaces=[plan.interface],
+                explicit_overrides={"profile": plan.profile, "sysctls": plan.sysctls, **plan.parameters},
+            )
+            if failed_cmds:
+                payload["errors"] = failed_cmds
+            print(json.dumps(payload, indent=2))
+        elif failed_cmds:
+            print(f"[FAILED] BKM Profile '{plan.profile}' for {plan.interface}:", file=sys.stderr)
+            for msg in failed_cmds:
+                print(f"  ! {msg}", file=sys.stderr)
+            for cmd in plan.commands:
+                print(f"  $ {' '.join(cmd)}")
         else:
             mode = "DRY-RUN" if args.dry_run else "APPLIED"
             print(f"[{mode}] BKM Profile '{plan.profile}' for {plan.interface} (PCI {plan.pci_bdf}, NUMA {plan.numa_node}):")
             for cmd in plan.commands:
                 print(f"  $ {' '.join(cmd)}")
-        return 0
+        return 1 if failed_cmds else 0
 
     if args.sweep:
         vals: Optional[List[Any]] = None
         if args.values:
             raw = [v.strip() for v in args.values.split(",") if v.strip()]
             vals = [int(v) if v.isdigit() else v for v in raw]
-        apply_fn = (
-            None
-            if args.dry_run
-            else (lambda cmd: subprocess.run(cmd, check=False, capture_output=True).returncode)
-        )
+        sweep_errors: List[str] = []
+
+        def _apply_tuning_cmd(cmd: List[str]) -> int:
+            try:
+                proc = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=15)
+                if proc.returncode != 0:
+                    err = (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
+                    sweep_errors.append(f"{' '.join(cmd)}: {err}")
+                return proc.returncode
+            except (subprocess.TimeoutExpired, OSError) as exc:
+                sweep_errors.append(f"{' '.join(cmd)}: {exc}")
+                return 1
+
+        apply_fn = None if args.dry_run else _apply_tuning_cmd
         report = tuner.run_ab_sweep(knob=args.sweep, values=vals, apply_fn=apply_fn)
+        if sweep_errors:
+            report["errors"] = sweep_errors
         if args.json:
             print(json.dumps(report, indent=2))
         else:
             print(f"Sweep [{args.sweep}] on {args.interface}: Winner = {report['winner_value']} ({report['winner_mean_gbps']} Gbps)")
-        return 0
+            for msg in sweep_errors:
+                print(f"  ! {msg}", file=sys.stderr)
+        return 1 if sweep_errors else 0
 
     parser.print_help()
     return 0

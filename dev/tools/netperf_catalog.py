@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 from netperf_report import AIValidationReporter
 from netperf_topology import SystemTopology, TopologyAnalyzer
+from netperf_tunings import extract_non_default_tunings
 
 
 @dataclass
@@ -302,65 +303,112 @@ def main(argv: Optional[List[str]] = None) -> int:
             verdict = "SKIP" if args.dry_run else "PASS"
 
             if not args.dry_run:
+                pre_failed = False
                 for pre_cmd in c.pre_commands:
                     try:
-                        subprocess.run(pre_cmd, capture_output=True, text=True, timeout=15)
+                        pre_proc = subprocess.run(pre_cmd, capture_output=True, text=True, timeout=15)
+                        if pre_proc.returncode != 0:
+                            pre_failed = True
+                            verdict = "FAIL"
+                            break
                     except Exception:
-                        pass
-                try:
-                    exec_cmd = list(c.command)
-                    if exec_cmd and exec_cmd[0] == "netperf-multi" and "-o" not in exec_cmd:
-                        if "--" in exec_cmd:
-                            sep_i = exec_cmd.index("--")
-                            exec_cmd = exec_cmd[:sep_i] + ["-o", "json", "-q"] + exec_cmd[sep_i:]
-                        else:
-                            exec_cmd.extend(["-o", "json", "-q"])
-                    elif exec_cmd and exec_cmd[0] == "netperf" and "-p" in exec_cmd:
-                        import socket
-                        p_idx = exec_cmd.index("-p")
-                        target_port = int(exec_cmd[p_idx + 1])
-                        port_open = False
-                        try:
-                            with socket.create_connection((args.host, target_port), timeout=0.05):
-                                port_open = True
-                        except OSError:
-                            pass
-                        if not port_open:
-                            exec_cmd[p_idx + 1] = "12865"
-                    proc = subprocess.run(
-                        exec_cmd,
-                        capture_output=True,
-                        text=True,
-                        timeout=max(60, args.duration * 2 + 30),
-                    )
-                    if proc.returncode != 0:
+                        pre_failed = True
                         verdict = "FAIL"
-                    elif proc.stdout:
-                        try:
+                        break
+                if not pre_failed:
+                    try:
+                        exec_cmd = list(c.command)
+                        if exec_cmd and exec_cmd[0] == "netperf-multi":
+                            local_multi = Path(__file__).resolve().parent / "netperf-multi"
+                            if local_multi.exists():
+                                exec_cmd = [sys.executable, str(local_multi)] + exec_cmd[1:]
+                            if "-o" not in exec_cmd:
+                                if "--" in exec_cmd:
+                                    sep_i = exec_cmd.index("--")
+                                    exec_cmd = exec_cmd[:sep_i] + ["-o", "json", "-q"] + exec_cmd[sep_i:]
+                                else:
+                                    exec_cmd.extend(["-o", "json", "-q"])
+                        elif exec_cmd and exec_cmd[0] == "netperf" and "-p" in exec_cmd:
+                            import socket
+                            p_idx = exec_cmd.index("-p")
+                            target_port = int(exec_cmd[p_idx + 1])
+                            port_open = False
+                            try:
+                                with socket.create_connection((args.host, target_port), timeout=0.05):
+                                    port_open = True
+                            except OSError:
+                                pass
+                            if not port_open:
+                                exec_cmd[p_idx + 1] = "12865"
+                        proc = subprocess.run(
+                            exec_cmd,
+                            capture_output=True,
+                            text=True,
+                            timeout=max(60, args.duration * 2 + 30),
+                        )
+                        if proc.returncode != 0 or not proc.stdout.strip():
+                            verdict = "FAIL"
+                        else:
                             text = proc.stdout.strip()
                             j_start = text.find("{")
                             j_end = text.rfind("}")
-                            if j_start >= 0 and j_end > j_start:
+                            if j_start < 0 or j_end <= j_start:
+                                verdict = "FAIL"
+                            else:
                                 parsed = json.loads(text[j_start : j_end + 1])
                                 agg = parsed.get("aggregated") or parsed.get("summary") or {}
                                 res = parsed.get("results") or {}
-                                raw_tput = float(
-                                    agg.get("total_throughput_gbps")
-                                    or agg.get("THROUGHPUT")
-                                    or agg.get("throughput_gbps")
-                                    or res.get("THROUGHPUT")
-                                    or 0.0
+
+                                def _extract_gbps(sources: List[Dict[str, Any]], gbps_keys: Tuple[str, ...], mbps_keys: Tuple[str, ...]) -> float:
+                                    for src in sources:
+                                        for gk in gbps_keys:
+                                            if src.get(gk) is not None:
+                                                return float(src[gk])
+                                        for mk in mbps_keys:
+                                            if src.get(mk) is not None:
+                                                return float(src[mk]) / 1000.0
+                                    return 0.0
+
+                                tput_gbps = _extract_gbps(
+                                    [agg, res],
+                                    ("total_throughput_gbps", "steady_state_throughput_gbps", "throughput_gbps"),
+                                    ("THROUGHPUT",),
                                 )
-                                tput_gbps = raw_tput / 1000.0 if raw_tput > 1000.0 else raw_tput
-                                raw_tx = float(agg.get("tx_throughput_mbps") or agg.get("tx_throughput_gbps") or 0.0)
-                                raw_rx = float(agg.get("rx_throughput_mbps") or agg.get("rx_throughput_gbps") or 0.0)
-                                tx_gbps = (raw_tx / 1000.0 if raw_tx > 1000.0 else raw_tx) or (tput_gbps if c.direction == "tx" else 0.0)
-                                rx_gbps = (raw_rx / 1000.0 if raw_rx > 1000.0 else raw_rx) or (tput_gbps if c.direction == "rx" else 0.0)
-                                cv_pct = float(agg.get("cv_pct", 0.0))
-                        except Exception:
-                            pass
-                except Exception:
-                    verdict = "SKIP"
+                                tx_gbps = _extract_gbps(
+                                    [agg],
+                                    ("tx_throughput_gbps",),
+                                    ("tx_throughput_mbps",),
+                                ) or (tput_gbps if c.direction == "tx" else 0.0)
+                                rx_gbps = _extract_gbps(
+                                    [agg],
+                                    ("rx_throughput_gbps",),
+                                    ("rx_throughput_mbps",),
+                                ) or (tput_gbps if c.direction == "rx" else 0.0)
+                                cv_pct = float(agg.get("cv_pct", 0.0) or 0.0)
+                    except Exception:
+                        verdict = "FAIL"
+
+            rec = AIValidationReporter.build_result_json(
+                test_case_id=c.test_case_id,
+                suite_name=args.suite,
+                metrics={
+                    "throughput_gbps": tput_gbps,
+                    "tx_throughput_gbps": tx_gbps,
+                    "rx_throughput_gbps": rx_gbps,
+                    "cv_pct": cv_pct,
+                },
+                environment=env_info,
+                duration_sec=float(args.duration),
+                explicit_tunings={**c.parameters, "mtu": c.mtu, "streams": c.streams, "direction": c.direction},
+            )
+            if args.dry_run:
+                verdict = "SKIP"
+                rec["verdict"] = "SKIP"
+            elif verdict == "FAIL" or rec["verdict"] == "FAIL":
+                verdict = "FAIL"
+                rec["verdict"] = "FAIL"
+            else:
+                verdict = rec["verdict"]
 
             row = {
                 "test_case_id": c.test_case_id,
@@ -374,27 +422,18 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "verdict": verdict,
             }
             rows.append(row)
-            rec = AIValidationReporter.build_result_json(
-                test_case_id=c.test_case_id,
-                suite_name=args.suite,
-                metrics={
-                    "throughput_gbps": tput_gbps,
-                    "tx_throughput_gbps": tx_gbps,
-                    "rx_throughput_gbps": rx_gbps,
-                    "cv_pct": cv_pct,
-                },
-                environment=env_info,
-                duration_sec=float(args.duration),
-            )
-            if args.dry_run or verdict == "SKIP":
-                rec["verdict"] = "SKIP"
             result_records.append(rec)
 
+        suite_tunings = extract_non_default_tunings(
+            interfaces=[args.interface],
+            explicit_overrides={"suite": args.suite, "duration": args.duration},
+        )
         (out_dir / "result.json").write_text(
             json.dumps(
                 {
                     "suite_name": args.suite,
                     "environment": env_info,
+                    "non_default_tunings": suite_tunings,
                     "results": result_records,
                 },
                 indent=2,
@@ -409,6 +448,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.suite,
                 rows,
                 environment=env_info,
+                non_default_tunings=suite_tunings,
             ),
             encoding="utf-8",
         )
@@ -420,6 +460,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         for c in cases:
             print(f"  [{c.test_case_id}] {c.description}")
             print(f"    $ {' '.join(c.command)}")
+    if args.output_dir and not args.dry_run and any(r.get("verdict") == "FAIL" for r in rows):
+        return 1
     return 0
 
 
